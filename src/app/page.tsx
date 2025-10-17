@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { PLATFORMS, RULES, PlatformKey } from '@/data/fees';
 
 type Num = number | string;
-
 function toNum(v: Num) {
   const n = typeof v === 'string' ? parseFloat(v) : v;
   return Number.isFinite(n) ? n : 0;
@@ -33,18 +32,13 @@ export default function Page() {
     const paymentFee = subtotal * r.paymentPct + r.paymentFixed;
     const listingFee = r.listingFixed ?? 0;
 
-    const fees = marketplaceFee + paymentFee + listingFee;
-    const totalFees = fees;
-
-    const netProceeds =
-      subtotal - totalFees - toNum(shippingCost) - toNum(cogs);
-
+    const totalFees = marketplaceFee + paymentFee + listingFee;
+    const netProceeds = subtotal - totalFees - toNum(shippingCost) - toNum(cogs);
     const profit = netProceeds;
     const margin = subtotal > 0 ? profit / subtotal : 0;
 
-    // Backsolve required *sale price* for a desired profit
+    // Backsolve required sale price for target profit
     // profit = subtotal*(1 - (marketplacePct+paymentPct)) - (paymentFixed+listingFixed) - shippingCost - cogs
-    // subtotal = price*(1-discountPct) + taxCollected + shippingCharge
     const A = r.marketplacePct + r.paymentPct;
     const fixed = r.paymentFixed + (r.listingFixed ?? 0);
     const other = toNum(shippingCost) + toNum(cogs);
@@ -53,24 +47,21 @@ export default function Page() {
       denomSubtotal > 0 ? (toNum(targetProfit) + fixed + other) / denomSubtotal : Infinity;
 
     const denomPrice = 1 - toNum(discountPct) / 100;
+    const requiredPriceBeforeDiscount =
+      requiredSubtotal - toNum(taxCollected) - toNum(shippingCharge);
     const requiredPrice =
-      denomPrice > 0
-        ? requiredSubtotal - toNum(taxCollected) - toNum(shippingCharge)
-        : Infinity;
-
-    const requiredPriceFinal = denomPrice > 0 ? requiredPrice / denomPrice : Infinity;
+      denomPrice > 0 ? requiredPriceBeforeDiscount / denomPrice : Infinity;
 
     return {
       subtotal,
       marketplaceFee,
       paymentFee,
       listingFee,
-      fees,
       totalFees,
       netProceeds,
       profit,
       margin,
-      requiredPrice: isFinite(requiredPriceFinal) ? requiredPriceFinal : NaN,
+      requiredPrice: isFinite(requiredPrice) ? requiredPrice : NaN,
     };
   }, [
     platform,
@@ -92,12 +83,30 @@ export default function Page() {
             <div className="h-4 w-4 rounded bg-emerald-500 shadow-[0_0_20px_3px_rgba(16,185,129,0.5)]" />
             <h1 className="text-xl font-semibold tracking-tight">FeePilot</h1>
           </div>
-          <a
-            href="https://vercel.com"
-            className="rounded-full border border-neutral-800 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-900"
-          >
-            Pro
-          </a>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(window.location.href);
+                  alert('Link copied!');
+                } catch {
+                  alert('Copy failed—try manually copying the URL.');
+                }
+              }}
+              className="rounded-full border border-neutral-800 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-900"
+              title="Copy current page link"
+            >
+              Share
+            </button>
+
+            <a
+              href="https://vercel.com"
+              className="rounded-full border border-neutral-800 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-900"
+            >
+              Pro
+            </a>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -117,17 +126,14 @@ export default function Page() {
                 ))}
               </select>
               <p className="mt-2 text-xs text-neutral-500">
-                Rules last updated: <span className="text-neutral-300">{RULES[platform].lastUpdated}</span>
+                Rules last updated:{' '}
+                <span className="text-neutral-300">{RULES[platform].lastUpdated}</span>
               </p>
             </div>
 
             <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field
-                  label="Item price ($)"
-                  value={price}
-                  onChange={(v) => setPrice(toNum(v))}
-                />
+                <Field label="Item price ($)" value={price} onChange={(v) => setPrice(toNum(v))} />
                 <Field
                   label="Shipping charged to buyer ($)"
                   value={shippingCharge}
@@ -138,11 +144,7 @@ export default function Page() {
                   value={shippingCost}
                   onChange={(v) => setShippingCost(toNum(v))}
                 />
-                <Field
-                  label="Cost of goods ($)"
-                  value={cogs}
-                  onChange={(v) => setCogs(toNum(v))}
-                />
+                <Field label="Cost of goods ($)" value={cogs} onChange={(v) => setCogs(toNum(v))} />
                 <Field
                   label="Tax collected ($)"
                   value={taxCollected}
@@ -191,7 +193,6 @@ export default function Page() {
                   </p>
                 </div>
               </div>
-              {/* Progress bar */}
               <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-neutral-800">
                 <div
                   className="h-full bg-emerald-500"
