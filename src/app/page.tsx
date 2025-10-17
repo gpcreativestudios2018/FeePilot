@@ -33,16 +33,7 @@ function readInitialFromUrl() {
   const v = q.get('v');
   if (v) {
     const parts = v.split('.').map((s) => (s.trim() === '' ? NaN : Number(s)));
-    const [
-      idx,
-      pr,
-      sc,
-      ss,
-      cg,
-      tx,
-      dc,
-      tp,
-    ] = parts as number[];
+    const [idx, pr, sc, ss, cg, tx, dc, tp] = parts as number[];
 
     return {
       platform: indexToKey(Number.isFinite(idx) ? idx : 0),
@@ -56,7 +47,7 @@ function readInitialFromUrl() {
     };
   }
 
-  // Legacy format fallback: ?p=mercari&pr=...&sc=... (so old links still work)
+  // Legacy format fallback: ?p=mercari&pr=... (keeps old links working)
   const platform = (q.get('p') as PlatformKey) || 'etsy';
   const price = parseFloat(q.get('pr') || '') || 120;
   const shipCharge = parseFloat(q.get('sc') || '') || 0;
@@ -183,9 +174,6 @@ export default function Page() {
       requiredPrice: Number.isFinite(requiredPrice) ? requiredPrice : NaN,
     };
   }, [platform, price, shippingCharge, shippingCost, cogs, taxCollected, discountPct, targetProfit]);
-
-  const profitIsNeg = calc.profit < 0;
-  const marginIsNeg = calc.margin < 0;
 
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100">
@@ -366,7 +354,7 @@ function Field({
       <span className="text-sm text-neutral-400">{label}</span>
       <input
         value={value}
-        onChange={(e) => onChange(e.target.value))}
+        onChange={(e) => onChange(e.target.value)}
         className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
         inputMode="decimal"
       />
