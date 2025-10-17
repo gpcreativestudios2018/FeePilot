@@ -1,233 +1,265 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { PLATFORMS, RULES, PlatformKey } from '@/data/fees';
 
-type PlatformKey = 'etsy' | 'stockx' | 'ebay' | 'poshmark' | 'depop' | 'mercari';
+type Num = number | string;
 
-const PLATFORMS: { key: PlatformKey; label: string }[] = [
-  { key: 'etsy', label: 'Etsy' },
-  { key: 'stockx', label: 'StockX' },
-  { key: 'ebay', label: 'eBay' },
-  { key: 'poshmark', label: 'Poshmark' },
-  { key: 'depop', label: 'Depop' },
-  { key: 'mercari', label: 'Mercari' },
-];
-
-// TEMP rules (placeholders). We’ll move these to fees.json later.
-const TEMP_RULES: Record<PlatformKey, { marketplacePct: number; paymentPct: number; paymentFixed: number; listingFixed?: number }> = {
-  etsy:    { marketplacePct: 0.065, paymentPct: 0.03, paymentFixed: 0.25, listingFixed: 0.2 },
-  stockx:  { marketplacePct: 0.10,  paymentPct: 0.03, paymentFixed: 0.00 },
-  ebay:    { marketplacePct: 0.13,  paymentPct: 0.00, paymentFixed: 0.00 },
-  poshmark:{ marketplacePct: 0.20,  paymentPct: 0.00, paymentFixed: 0.00 },
-  depop:   { marketplacePct: 0.10,  paymentPct: 0.029, paymentFixed: 0.30 },
-  mercari: { marketplacePct: 0.10,  paymentPct: 0.029, paymentFixed: 0.30 },
-};
+function toNum(v: Num) {
+  const n = typeof v === 'string' ? parseFloat(v) : v;
+  return Number.isFinite(n) ? n : 0;
+}
 
 export default function Page() {
+  // UI state
   const [platform, setPlatform] = useState<PlatformKey>('etsy');
+
   const [price, setPrice] = useState<number>(120);
-  const [shippingCharge, setShippingCharge] = useState<number>(0);
-  const [shippingCost, setShippingCost] = useState<number>(10);
-  const [cogs, setCogs] = useState<number>(40);
-  const [taxCollected, setTaxCollected] = useState<number>(0);
+  const [shippingCharge, setShippingCharge] = useState<number>(0); // charged to buyer
+  const [shippingCost, setShippingCost] = useState<number>(10); // your cost
+  const [cogs, setCogs] = useState<number>(40); // cost of goods
+  const [taxCollected, setTaxCollected] = useState<number>(0); // tax collected from buyer
   const [discountPct, setDiscountPct] = useState<number>(0);
   const [targetProfit, setTargetProfit] = useState<number>(50);
 
-  const {
-    subtotal,
-    marketplaceFee,
-    paymentFee,
-    listingFee,
-    totalFees,
-    netProceeds,
-    profit,
-    marginPct,
-    requiredPriceForTarget,
-  } = useMemo(() => {
-    const r = TEMP_RULES[platform];
-    const discounted = price * (1 - discountPct / 100);
-    const subtotal = discounted + shippingCharge + taxCollected;
+  const calc = useMemo(() => {
+    const r = RULES[platform];
+
+    const discount = price * (toNum(discountPct) / 100);
+    const subtotal =
+      toNum(price) - discount + toNum(taxCollected) + toNum(shippingCharge);
 
     const marketplaceFee = subtotal * r.marketplacePct;
     const paymentFee = subtotal * r.paymentPct + r.paymentFixed;
     const listingFee = r.listingFixed ?? 0;
 
-    const totalFees = marketplaceFee + paymentFee + listingFee;
-    const netProceeds = subtotal - totalFees - shippingCost;
-    const profit = netProceeds - cogs;
-    const marginPct = subtotal > 0 ? (profit / subtotal) * 100 : 0;
+    const fees = marketplaceFee + paymentFee + listingFee;
+    const totalFees = fees;
 
-    // Backsolve: price needed to hit targetProfit (rough, ignores taxes/discount toggle nuances for now)
-    const requiredPriceForTarget = (() => {
-      const t = targetProfit + cogs + shippingCost;
-      // subtotal = price*(1-d) + shippingCharge + taxCollected
-      // fees = subtotal*(m+p) + paymentFixed + listingFixed
-      const d = discountPct / 100;
-      const k = (1 - d) * (1 - (r.marketplacePct + r.paymentPct));
-      if (k <= 0.0001) return NaN;
-      const fixed = shippingCharge + taxCollected - (r.paymentFixed + (r.listingFixed ?? 0));
-      return (t - fixed) / k;
-    })();
+    const netProceeds =
+      subtotal - totalFees - toNum(shippingCost) - toNum(cogs);
+
+    const profit = netProceeds;
+    const margin = subtotal > 0 ? profit / subtotal : 0;
+
+    // Backsolve required *sale price* for a desired profit
+    // profit = subtotal*(1 - (marketplacePct+paymentPct)) - (paymentFixed+listingFixed) - shippingCost - cogs
+    // subtotal = price*(1-discountPct) + taxCollected + shippingCharge
+    const A = r.marketplacePct + r.paymentPct;
+    const fixed = r.paymentFixed + (r.listingFixed ?? 0);
+    const other = toNum(shippingCost) + toNum(cogs);
+    const denomSubtotal = 1 - A;
+    const requiredSubtotal =
+      denomSubtotal > 0 ? (toNum(targetProfit) + fixed + other) / denomSubtotal : Infinity;
+
+    const denomPrice = 1 - toNum(discountPct) / 100;
+    const requiredPrice =
+      denomPrice > 0
+        ? requiredSubtotal - toNum(taxCollected) - toNum(shippingCharge)
+        : Infinity;
+
+    const requiredPriceFinal = denomPrice > 0 ? requiredPrice / denomPrice : Infinity;
 
     return {
       subtotal,
       marketplaceFee,
       paymentFee,
       listingFee,
+      fees,
       totalFees,
       netProceeds,
       profit,
-      marginPct,
-      requiredPriceForTarget,
+      margin,
+      requiredPrice: isFinite(requiredPriceFinal) ? requiredPriceFinal : NaN,
     };
-  }, [platform, price, shippingCharge, shippingCost, cogs, taxCollected, discountPct, targetProfit]);
-
-  const currency = (n: number) =>
-    isFinite(n) ? n.toLocaleString(undefined, { style: 'currency', currency: 'USD' }) : '—';
+  }, [
+    platform,
+    price,
+    shippingCharge,
+    shippingCost,
+    cogs,
+    taxCollected,
+    discountPct,
+    targetProfit,
+  ]);
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-white/10 bg-black/70 backdrop-blur">
-        <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between">
-          <div className="text-xl font-semibold tracking-tight">
-            <span className="px-2 py-1 rounded-md bg-cyan-500/20 text-cyan-300">●</span>{' '}
-            FeePilot
+    <main className="min-h-screen bg-neutral-950 text-neutral-100">
+      <div className="mx-auto max-w-6xl p-6">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-4 w-4 rounded bg-emerald-500 shadow-[0_0_20px_3px_rgba(16,185,129,0.5)]" />
+            <h1 className="text-xl font-semibold tracking-tight">FeePilot</h1>
           </div>
-          <button className="rounded-lg border border-cyan-500/40 px-4 py-2 text-cyan-300 hover:bg-cyan-500/10">
+          <a
+            href="https://vercel.com"
+            className="rounded-full border border-neutral-800 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-900"
+          >
             Pro
-          </button>
+          </a>
         </div>
-      </header>
 
-      {/* Main split panel */}
-      <main className="mx-auto max-w-6xl px-4 py-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Left: Inputs */}
-        <section className="space-y-4">
-          <Card title="Platform">
-            <select
-              value={platform}
-              onChange={(e) => setPlatform(e.target.value as PlatformKey)}
-              className="w-full rounded-lg bg-white/5 px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-cyan-400"
-            >
-              {PLATFORMS.map((p) => (
-                <option key={p.key} value={p.key}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </Card>
-
-          <Card title="Inputs">
-            <div className="grid grid-cols-2 gap-3">
-              <NumberField label="Item price ($)" value={price} setValue={setPrice} />
-              <NumberField label="Shipping charged to buyer ($)" value={shippingCharge} setValue={setShippingCharge} />
-              <NumberField label="Your shipping cost ($)" value={shippingCost} setValue={setShippingCost} />
-              <NumberField label="Cost of goods ($)" value={cogs} setValue={setCogs} />
-              <NumberField label="Tax collected ($)" value={taxCollected} setValue={setTaxCollected} />
-              <NumberField label="Discount (%)" value={discountPct} setValue={setDiscountPct} />
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Left: Inputs */}
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5">
+              <label className="mb-2 block text-sm text-neutral-400">Platform</label>
+              <select
+                value={platform}
+                onChange={(e) => setPlatform(e.target.value as PlatformKey)}
+                className="w-full rounded-xl border border-neutral-800 bg-neutral-950/80 px-3 py-2 text-neutral-100 outline-none focus:border-emerald-500"
+              >
+                {PLATFORMS.map((p) => (
+                  <option key={p.key} value={p.key}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-neutral-500">
+                Rules last updated: <span className="text-neutral-300">{RULES[platform].lastUpdated}</span>
+              </p>
             </div>
-          </Card>
 
-          <Card title="Backsolve">
-            <div className="grid grid-cols-2 gap-3 items-end">
-              <NumberField label="Target profit ($)" value={targetProfit} setValue={setTargetProfit} />
-              <div className="text-sm text-white/70">Required price: <span className="font-semibold text-cyan-300">{currency(requiredPriceForTarget)}</span></div>
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field
+                  label="Item price ($)"
+                  value={price}
+                  onChange={(v) => setPrice(toNum(v))}
+                />
+                <Field
+                  label="Shipping charged to buyer ($)"
+                  value={shippingCharge}
+                  onChange={(v) => setShippingCharge(toNum(v))}
+                />
+                <Field
+                  label="Your shipping cost ($)"
+                  value={shippingCost}
+                  onChange={(v) => setShippingCost(toNum(v))}
+                />
+                <Field
+                  label="Cost of goods ($)"
+                  value={cogs}
+                  onChange={(v) => setCogs(toNum(v))}
+                />
+                <Field
+                  label="Tax collected ($)"
+                  value={taxCollected}
+                  onChange={(v) => setTaxCollected(toNum(v))}
+                />
+                <Field
+                  label="Discount (%)"
+                  value={discountPct}
+                  onChange={(v) => setDiscountPct(toNum(v))}
+                />
+              </div>
             </div>
-          </Card>
-        </section>
 
-        {/* Right: Results */}
-        <section className="space-y-4 md:sticky md:top-16 self-start">
-          <Card title="Overview" highlight>
-            <div className="flex items-baseline justify-between">
-              <div>
-                <div className="text-sm text-white/60">Profit</div>
-                <div className={`text-3xl font-semibold ${profit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                  {currency(profit)}
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5">
+              <h3 className="mb-3 text-sm font-medium text-neutral-300">Backsolve</h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field
+                  label="Target profit ($)"
+                  value={targetProfit}
+                  onChange={(v) => setTargetProfit(toNum(v))}
+                />
+                <div className="flex flex-col">
+                  <span className="mb-2 text-sm text-neutral-400">Required price:</span>
+                  <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100">
+                    {isFinite(calc.requiredPrice) ? `$${calc.requiredPrice.toFixed(2)}` : '—'}
+                  </div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-sm text-white/60">Margin</div>
-                <div className="text-2xl font-semibold">{isFinite(marginPct) ? `${marginPct.toFixed(1)}%` : '—'}</div>
+            </div>
+          </div>
+
+          {/* Right: Output */}
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-emerald-900/40 bg-neutral-900/50 p-5 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.15)]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-neutral-400">Overview</p>
+                  <p className="mt-2 text-3xl font-semibold text-emerald-400">
+                    ${calc.profit.toFixed(2)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-neutral-400">Margin</p>
+                  <p className="mt-2 text-2xl font-semibold text-neutral-200">
+                    {(calc.margin * 100).toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-neutral-800">
+                <div
+                  className="h-full bg-emerald-500"
+                  style={{ width: `${Math.max(0, Math.min(100, calc.margin * 100))}%` }}
+                />
               </div>
             </div>
-            <div className="mt-4 h-2 w-full rounded bg-white/10">
-              <div
-                className={`h-2 rounded ${profit >= 0 ? 'bg-emerald-400' : 'bg-rose-400'}`}
-                style={{ width: `${Math.min(100, Math.max(0, Math.abs(marginPct)))}%` }}
-              />
+
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5">
+              <h3 className="mb-3 text-sm font-medium text-neutral-300">Breakdown</h3>
+              <Line label="Subtotal (after discount + tax + ship to buyer)" value={calc.subtotal} />
+              <Line label="Marketplace fee" value={calc.marketplaceFee} />
+              <Line label="Payment fee" value={calc.paymentFee} />
+              {RULES[platform].listingFixed ? (
+                <Line label="Listing fee" value={calc.listingFee} />
+              ) : null}
+              <Line label="Shipping cost (your cost)" value={shippingCost} />
+              <Line label="COGS" value={cogs} />
+              <Divider />
+              <Line label="Total fees" value={calc.totalFees} bold />
+              <Line label="Net proceeds (after fees & ship cost)" value={calc.netProceeds} bold />
             </div>
-          </Card>
+          </div>
+        </div>
 
-          <Card title="Breakdown">
-            <ul className="space-y-2 text-sm">
-              <Row label="Subtotal (after discount + tax + ship to buyer)" value={currency(subtotal)} />
-              <Row label="Marketplace fee" value={currency(marketplaceFee)} />
-              <Row label="Payment fee" value={currency(paymentFee)} />
-              {listingFee > 0 && <Row label="Listing fee" value={currency(listingFee)} />}
-              <Row label="Shipping cost (your cost)" value={currency(shippingCost)} />
-              <Row label="COGS" value={currency(cogs)} />
-              <hr className="border-white/10 my-2" />
-              <Row label="Total fees" value={currency(totalFees)} />
-              <Row label="Net proceeds (after fees & ship cost)" value={currency(netProceeds)} />
-            </ul>
-          </Card>
-        </section>
-      </main>
-
-      <footer className="mx-auto max-w-6xl px-4 py-10 text-center text-xs text-white/50">
-        Made by <span className="text-cyan-300 font-medium">FeePilot</span>. Sporty Neon theme.
-      </footer>
-    </div>
+        <footer className="mx-auto mt-10 max-w-6xl text-center text-sm text-neutral-500">
+          Made by <span className="text-emerald-400">FeePilot</span>. Sporty Neon theme.
+        </footer>
+      </div>
+    </main>
   );
 }
 
-function Card({
-  title,
-  children,
-  highlight = false,
-}: {
-  title: string;
-  children: React.ReactNode;
-  highlight?: boolean;
-}) {
-  return (
-    <div className={`rounded-2xl border border-white/10 p-4 ${highlight ? 'bg-cyan-500/5' : 'bg-white/5'}`}>
-      <div className="mb-3 text-sm font-semibold tracking-wide text-white/80">{title}</div>
-      {children}
-    </div>
-  );
-}
+/* ---------- small UI helpers ---------- */
 
-function NumberField({
+function Field({
   label,
   value,
-  setValue,
+  onChange,
 }: {
   label: string;
-  value: number;
-  setValue: (n: number) => void;
+  value: Num;
+  onChange: (v: Num) => void;
 }) {
   return (
-    <label className="block text-sm">
-      <div className="mb-1 text-white/70">{label}</div>
+    <label className="flex flex-col gap-2">
+      <span className="text-sm text-neutral-400">{label}</span>
       <input
-        type="number"
-        step="0.01"
-        value={isNaN(value) ? '' : value}
-        onChange={(e) => setValue(Number(e.target.value))}
-        className="w-full rounded-lg bg-black/40 px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-cyan-400"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-emerald-500"
+        inputMode="decimal"
       />
     </label>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Line({ label, value, bold = false }: { label: string; value: number; bold?: boolean }) {
   return (
-    <li className="flex items-center justify-between">
-      <span className="text-white/70">{label}</span>
-      <span className="font-medium">{value}</span>
-    </li>
+    <div className="flex items-center justify-between py-1.5 text-sm">
+      <span className="text-neutral-400">{label}</span>
+      <span className={bold ? 'font-semibold text-neutral-100' : 'text-neutral-200'}>
+        ${value.toFixed(2)}
+      </span>
+    </div>
   );
+}
+
+function Divider() {
+  return <div className="my-2 h-px w-full bg-neutral-800" />;
 }
