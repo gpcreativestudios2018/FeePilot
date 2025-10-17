@@ -13,6 +13,12 @@ const toNum = (v: Num) => {
 
 const clamp = (n: number, lo = -1e12, hi = 1e12) => Math.min(hi, Math.max(lo, n));
 
+/** Currency with parentheses for negatives */
+function formatCurrency(n: number) {
+  const abs = Math.abs(n).toFixed(2);
+  return n < 0 ? `($${abs})` : `$${abs}`;
+}
+
 /** Read initial state from URL once (safe on client) */
 function readInitialFromUrl() {
   if (typeof window === 'undefined') {
@@ -80,7 +86,7 @@ export default function Page() {
   const [discountPct, setDiscountPct] = useState<number>(initial?.disc ?? 0);
   const [targetProfit, setTargetProfit] = useState<number>(initial?.target ?? 50);
 
-  // Debounce URL updates to avoid spamming replaceState
+  // Debounce URL updates
   const debounceRef = useRef<number | null>(null);
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -163,13 +169,17 @@ export default function Page() {
     targetProfit,
   ]);
 
+  const profitIsNeg = calc.profit < 0;
+  const marginIsNeg = calc.margin < 0;
+
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100">
       <div className="mx-auto max-w-6xl p-6">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-4 w-4 rounded bg-emerald-500 shadow-[0_0_20px_3px_rgba(16,185,129,0.5)]" />
+            {/* purple badge */}
+            <div className="h-4 w-4 rounded bg-purple-500 shadow-[0_0_20px_3px_rgba(168,85,247,0.45)]" />
             <h1 className="text-xl font-semibold tracking-tight">FeePilot</h1>
           </div>
 
@@ -206,7 +216,7 @@ export default function Page() {
               <select
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value as PlatformKey)}
-                className="w-full rounded-xl border border-neutral-800 bg-neutral-950/80 px-3 py-2 text-neutral-100 outline-none focus:border-emerald-500"
+                className="w-full rounded-xl border border-neutral-800 bg-neutral-950/80 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
               >
                 {PLATFORMS.map((p) => (
                   <option key={p.key} value={p.key}>
@@ -258,7 +268,7 @@ export default function Page() {
                 <div className="flex flex-col">
                   <span className="mb-2 text-sm text-neutral-400">Required price:</span>
                   <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100">
-                    {Number.isFinite(calc.requiredPrice) ? `$${calc.requiredPrice.toFixed(2)}` : '—'}
+                    {Number.isFinite(calc.requiredPrice) ? formatCurrency(calc.requiredPrice) : '—'}
                   </div>
                 </div>
               </div>
@@ -267,25 +277,35 @@ export default function Page() {
 
           {/* Right: Output */}
           <div className="space-y-4">
-            <div className="rounded-2xl border border-emerald-900/40 bg-neutral-900/50 p-5 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.15)]">
+            <div className="rounded-2xl border border-purple-900/40 bg-neutral-900/50 p-5 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.18)]">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-neutral-400">Overview</p>
-                  <p className="mt-2 text-3xl font-semibold text-emerald-400">
-                    ${calc.profit.toFixed(2)}
+                  <p
+                    className={
+                      'mt-2 text-3xl font-semibold ' +
+                      (profitIsNeg ? 'text-rose-400' : 'text-emerald-400')
+                    }
+                  >
+                    {formatCurrency(calc.profit)}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-neutral-400">Margin</p>
-                  <p className="mt-2 text-2xl font-semibold text-neutral-200">
+                  <p
+                    className={
+                      'mt-2 text-2xl font-semibold ' +
+                      (marginIsNeg ? 'text-rose-400' : 'text-neutral-200')
+                    }
+                  >
                     {(calc.margin * 100).toFixed(1)}%
                   </p>
                 </div>
               </div>
               <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-neutral-800">
                 <div
-                  className="h-full bg-emerald-500"
-                  style={{ width: `${Math.max(0, Math.min(100, calc.margin * 100))}%` }}
+                  className={profitIsNeg ? 'h-full bg-rose-500' : 'h-full bg-emerald-500'}
+                  style={{ width: `${Math.max(0, Math.min(100, Math.abs(calc.margin) * 100))}%` }}
                 />
               </div>
             </div>
@@ -308,7 +328,7 @@ export default function Page() {
         </div>
 
         <footer className="mx-auto mt-10 max-w-6xl text-center text-sm text-neutral-500">
-          Made by <span className="text-emerald-400">FeePilot</span>. Sporty Neon theme.
+          Made by <span className="text-purple-400">FeePilot</span>. Sporty Neon theme.
         </footer>
       </div>
     </main>
@@ -332,7 +352,7 @@ function Field({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-emerald-500"
+        className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
         inputMode="decimal"
       />
     </label>
@@ -344,7 +364,7 @@ function Line({ label, value, bold = false }: { label: string; value: number; bo
     <div className="flex items-center justify-between py-1.5 text-sm">
       <span className="text-neutral-400">{label}</span>
       <span className={bold ? 'font-semibold text-neutral-100' : 'text-neutral-200'}>
-        ${value.toFixed(2)}
+        {formatCurrency(value)}
       </span>
     </div>
   );
