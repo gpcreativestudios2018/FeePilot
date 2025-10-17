@@ -1,30 +1,120 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PLATFORMS, RULES, PlatformKey } from '@/data/fees';
 
+/* ----------------------- small helpers ----------------------- */
+
 type Num = number | string;
-function toNum(v: Num) {
+const toNum = (v: Num) => {
   const n = typeof v === 'string' ? parseFloat(v) : v;
   return Number.isFinite(n) ? n : 0;
+};
+
+const clamp = (n: number, lo = -1e12, hi = 1e12) => Math.min(hi, Math.max(lo, n));
+
+/** Read initial state from URL once (safe on client) */
+function readInitialFromUrl() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const q = new URLSearchParams(window.location.search);
+
+  const platform = (q.get('p') as PlatformKey) || 'etsy';
+  const price = parseFloat(q.get('pr') || '') || 120;
+  const shipCharge = parseFloat(q.get('sc') || '') || 0;
+  const shipCost = parseFloat(q.get('ss') || '') || 10;
+  const cogs = parseFloat(q.get('cg') || '') || 40;
+  const tax = parseFloat(q.get('tx') || '') || 0;
+  const disc = parseFloat(q.get('dc') || '') || 0;
+  const target = parseFloat(q.get('tp') || '') || 50;
+
+  return {
+    platform: (PLATFORMS.find((p) => p.key === platform)?.key ?? 'etsy') as PlatformKey,
+    price,
+    shipCharge,
+    shipCost,
+    cogs,
+    tax,
+    disc,
+    target,
+  };
 }
 
-export default function Page() {
-  // UI state
-  const [platform, setPlatform] = useState<PlatformKey>('etsy');
+/** Write state to URL (debounced by caller) */
+function writeToUrl(s: {
+  platform: PlatformKey;
+  price: number;
+  shipCharge: number;
+  shipCost: number;
+  cogs: number;
+  tax: number;
+  disc: number;
+  target: number;
+}) {
+  const q = new URLSearchParams();
+  q.set('p', s.platform);
+  q.set('pr', String(clamp(s.price)));
+  q.set('sc', String(clamp(s.shipCharge)));
+  q.set('ss', String(clamp(s.shipCost)));
+  q.set('cg', String(clamp(s.cogs)));
+  q.set('tx', String(clamp(s.tax)));
+  q.set('dc', String(clamp(s.disc)));
+  q.set('tp', String(clamp(s.target)));
+  const url = `${window.location.pathname}?${q.toString()}`;
+  window.history.replaceState(null, '', url);
+}
 
-  const [price, setPrice] = useState<number>(120);
-  const [shippingCharge, setShippingCharge] = useState<number>(0); // charged to buyer
-  const [shippingCost, setShippingCost] = useState<number>(10); // your cost
-  const [cogs, setCogs] = useState<number>(40); // cost of goods
-  const [taxCollected, setTaxCollected] = useState<number>(0); // tax collected from buyer
-  const [discountPct, setDiscountPct] = useState<number>(0);
-  const [targetProfit, setTargetProfit] = useState<number>(50);
+/* --------------------------- page --------------------------- */
+
+export default function Page() {
+  // Initialize state from URL (once), with safe fallbacks.
+  const initial = readInitialFromUrl();
+  const [platform, setPlatform] = useState<PlatformKey>(initial?.platform ?? 'etsy');
+
+  const [price, setPrice] = useState<number>(initial?.price ?? 120);
+  const [shippingCharge, setShippingCharge] = useState<number>(initial?.shipCharge ?? 0);
+  const [shippingCost, setShippingCost] = useState<number>(initial?.shipCost ?? 10);
+  const [cogs, setCogs] = useState<number>(initial?.cogs ?? 40);
+  const [taxCollected, setTaxCollected] = useState<number>(initial?.tax ?? 0);
+  const [discountPct, setDiscountPct] = useState<number>(initial?.disc ?? 0);
+  const [targetProfit, setTargetProfit] = useState<number>(initial?.target ?? 50);
+
+  // Debounce URL updates to avoid spamming replaceState
+  const debounceRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      writeToUrl({
+        platform,
+        price,
+        shipCharge: shippingCharge,
+        shipCost: shippingCost,
+        cogs,
+        tax: taxCollected,
+        disc: discountPct,
+        target: targetProfit,
+      });
+    }, 300);
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [
+    platform,
+    price,
+    shippingCharge,
+    shippingCost,
+    cogs,
+    taxCollected,
+    discountPct,
+    targetProfit,
+  ]);
 
   const calc = useMemo(() => {
     const r = RULES[platform];
 
-    const discount = price * (toNum(discountPct) / 100);
+    const discount = toNum(price) * (toNum(discountPct) / 100);
     const subtotal =
       toNum(price) - discount + toNum(taxCollected) + toNum(shippingCharge);
 
@@ -37,8 +127,7 @@ export default function Page() {
     const profit = netProceeds;
     const margin = subtotal > 0 ? profit / subtotal : 0;
 
-    // Backsolve required sale price for target profit
-    // profit = subtotal*(1 - (marketplacePct+paymentPct)) - (paymentFixed+listingFixed) - shippingCost - cogs
+    // Backsolve: required price for target profit
     const A = r.marketplacePct + r.paymentPct;
     const fixed = r.paymentFixed + (r.listingFixed ?? 0);
     const other = toNum(shippingCost) + toNum(cogs);
@@ -61,7 +150,7 @@ export default function Page() {
       netProceeds,
       profit,
       margin,
-      requiredPrice: isFinite(requiredPrice) ? requiredPrice : NaN,
+      requiredPrice: Number.isFinite(requiredPrice) ? requiredPrice : NaN,
     };
   }, [
     platform,
@@ -169,7 +258,7 @@ export default function Page() {
                 <div className="flex flex-col">
                   <span className="mb-2 text-sm text-neutral-400">Required price:</span>
                   <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100">
-                    {isFinite(calc.requiredPrice) ? `$${calc.requiredPrice.toFixed(2)}` : '—'}
+                    {Number.isFinite(calc.requiredPrice) ? `$${calc.requiredPrice.toFixed(2)}` : '—'}
                   </div>
                 </div>
               </div>
@@ -226,7 +315,7 @@ export default function Page() {
   );
 }
 
-/* ---------- small UI helpers ---------- */
+/* ---------------------- UI field helpers ---------------------- */
 
 function Field({
   label,
