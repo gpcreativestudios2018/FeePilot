@@ -10,7 +10,6 @@ const toNum = (v: Num) => {
   const n = typeof v === 'string' ? parseFloat(v) : v;
   return Number.isFinite(n) ? n : 0;
 };
-
 const clamp = (n: number, lo = -1e12, hi = 1e12) => Math.min(hi, Math.max(lo, n));
 
 /** Currency with parentheses for negatives */
@@ -19,13 +18,45 @@ function formatCurrency(n: number) {
   return n < 0 ? `($${abs})` : `$${abs}`;
 }
 
-/** Read initial state from URL once (safe on client) */
+/** Stable platform order => index mapping for compact URLs */
+const PLATFORM_ORDER = PLATFORMS.map((p) => p.key as PlatformKey);
+const keyToIndex = (k: PlatformKey) => Math.max(0, PLATFORM_ORDER.indexOf(k));
+const indexToKey = (i: number): PlatformKey =>
+  PLATFORM_ORDER[i] ?? PLATFORM_ORDER[0];
+
+/** Read initial state from URL once (supports compact ?v=... and legacy keys) */
 function readInitialFromUrl() {
-  if (typeof window === 'undefined') {
-    return null;
-  }
+  if (typeof window === 'undefined') return null;
   const q = new URLSearchParams(window.location.search);
 
+  // New compact format: v=<idx>.<pr>.<sc>.<ss>.<cg>.<tx>.<dc>.<tp>
+  const v = q.get('v');
+  if (v) {
+    const parts = v.split('.').map((s) => (s.trim() === '' ? NaN : Number(s)));
+    const [
+      idx,
+      pr,
+      sc,
+      ss,
+      cg,
+      tx,
+      dc,
+      tp,
+    ] = parts as number[];
+
+    return {
+      platform: indexToKey(Number.isFinite(idx) ? idx : 0),
+      price: Number.isFinite(pr) ? pr : 120,
+      shipCharge: Number.isFinite(sc) ? sc : 0,
+      shipCost: Number.isFinite(ss) ? ss : 10,
+      cogs: Number.isFinite(cg) ? cg : 40,
+      tax: Number.isFinite(tx) ? tx : 0,
+      disc: Number.isFinite(dc) ? dc : 0,
+      target: Number.isFinite(tp) ? tp : 50,
+    };
+  }
+
+  // Legacy format fallback: ?p=mercari&pr=...&sc=... (so old links still work)
   const platform = (q.get('p') as PlatformKey) || 'etsy';
   const price = parseFloat(q.get('pr') || '') || 120;
   const shipCharge = parseFloat(q.get('sc') || '') || 0;
@@ -47,7 +78,7 @@ function readInitialFromUrl() {
   };
 }
 
-/** Write state to URL (debounced by caller) */
+/** Write compact state to URL (debounced by caller) */
 function writeToUrl(s: {
   platform: PlatformKey;
   price: number;
@@ -58,15 +89,19 @@ function writeToUrl(s: {
   disc: number;
   target: number;
 }) {
+  const arr = [
+    keyToIndex(s.platform),
+    clamp(s.price),
+    clamp(s.shipCharge),
+    clamp(s.shipCost),
+    clamp(s.cogs),
+    clamp(s.tax),
+    clamp(s.disc),
+    clamp(s.target),
+  ];
+
   const q = new URLSearchParams();
-  q.set('p', s.platform);
-  q.set('pr', String(clamp(s.price)));
-  q.set('sc', String(clamp(s.shipCharge)));
-  q.set('ss', String(clamp(s.shipCost)));
-  q.set('cg', String(clamp(s.cogs)));
-  q.set('tx', String(clamp(s.tax)));
-  q.set('dc', String(clamp(s.disc)));
-  q.set('tp', String(clamp(s.target)));
+  q.set('v', arr.join('.'));
   const url = `${window.location.pathname}?${q.toString()}`;
   window.history.replaceState(null, '', url);
 }
@@ -74,10 +109,9 @@ function writeToUrl(s: {
 /* --------------------------- page --------------------------- */
 
 export default function Page() {
-  // Initialize state from URL (once), with safe fallbacks.
   const initial = readInitialFromUrl();
-  const [platform, setPlatform] = useState<PlatformKey>(initial?.platform ?? 'etsy');
 
+  const [platform, setPlatform] = useState<PlatformKey>(initial?.platform ?? 'etsy');
   const [price, setPrice] = useState<number>(initial?.price ?? 120);
   const [shippingCharge, setShippingCharge] = useState<number>(initial?.shipCharge ?? 0);
   const [shippingCost, setShippingCost] = useState<number>(initial?.shipCost ?? 10);
@@ -102,27 +136,17 @@ export default function Page() {
         disc: discountPct,
         target: targetProfit,
       });
-    }, 300);
+    }, 250);
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [
-    platform,
-    price,
-    shippingCharge,
-    shippingCost,
-    cogs,
-    taxCollected,
-    discountPct,
-    targetProfit,
-  ]);
+  }, [platform, price, shippingCharge, shippingCost, cogs, taxCollected, discountPct, targetProfit]);
 
   const calc = useMemo(() => {
     const r = RULES[platform];
 
     const discount = toNum(price) * (toNum(discountPct) / 100);
-    const subtotal =
-      toNum(price) - discount + toNum(taxCollected) + toNum(shippingCharge);
+    const subtotal = toNum(price) - discount + toNum(taxCollected) + toNum(shippingCharge);
 
     const marketplaceFee = subtotal * r.marketplacePct;
     const paymentFee = subtotal * r.paymentPct + r.paymentFixed;
@@ -133,7 +157,7 @@ export default function Page() {
     const profit = netProceeds;
     const margin = subtotal > 0 ? profit / subtotal : 0;
 
-    // Backsolve: required price for target profit
+    // Backsolve
     const A = r.marketplacePct + r.paymentPct;
     const fixed = r.paymentFixed + (r.listingFixed ?? 0);
     const other = toNum(shippingCost) + toNum(cogs);
@@ -158,16 +182,7 @@ export default function Page() {
       margin,
       requiredPrice: Number.isFinite(requiredPrice) ? requiredPrice : NaN,
     };
-  }, [
-    platform,
-    price,
-    shippingCharge,
-    shippingCost,
-    cogs,
-    taxCollected,
-    discountPct,
-    targetProfit,
-  ]);
+  }, [platform, price, shippingCharge, shippingCost, cogs, taxCollected, discountPct, targetProfit]);
 
   const profitIsNeg = calc.profit < 0;
   const marginIsNeg = calc.margin < 0;
@@ -284,7 +299,7 @@ export default function Page() {
                   <p
                     className={
                       'mt-2 text-3xl font-semibold ' +
-                      (profitIsNeg ? 'text-rose-400' : 'text-emerald-400')
+                      (calc.profit < 0 ? 'text-rose-400' : 'text-emerald-400')
                     }
                   >
                     {formatCurrency(calc.profit)}
@@ -295,7 +310,7 @@ export default function Page() {
                   <p
                     className={
                       'mt-2 text-2xl font-semibold ' +
-                      (marginIsNeg ? 'text-rose-400' : 'text-neutral-200')
+                      (calc.margin < 0 ? 'text-rose-400' : 'text-neutral-200')
                     }
                   >
                     {(calc.margin * 100).toFixed(1)}%
@@ -304,7 +319,7 @@ export default function Page() {
               </div>
               <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-neutral-800">
                 <div
-                  className={profitIsNeg ? 'h-full bg-rose-500' : 'h-full bg-emerald-500'}
+                  className={calc.profit < 0 ? 'h-full bg-rose-500' : 'h-full bg-emerald-500'}
                   style={{ width: `${Math.max(0, Math.min(100, Math.abs(calc.margin) * 100))}%` }}
                 />
               </div>
@@ -351,7 +366,7 @@ function Field({
       <span className="text-sm text-neutral-400">{label}</span>
       <input
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value))}
         className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
         inputMode="decimal"
       />
