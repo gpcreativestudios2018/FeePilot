@@ -266,16 +266,22 @@ export default function Page() {
     const url = getShareURL();
     await navigator.clipboard.writeText(url);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1200);
+    window.setTimeout(() => setCopied(false), 1200);
+  };
+
+  // Proper typing for Web Share API (no "any")
+  type WebShareNavigator = Navigator & {
+    share?: (data: ShareData) => Promise<void>;
   };
 
   const doShare = async () => {
     const url = getShareURL();
-    if ((navigator as any).share) {
+    const nav: WebShareNavigator = navigator as WebShareNavigator;
+    if (typeof nav.share === 'function') {
       try {
-        await (navigator as any).share({ url, title: 'FeePilot' });
+        await nav.share({ url, title: 'FeePilot' });
       } catch {
-        // ignore
+        // user canceled or unsupported — no-op
       }
     } else {
       await doCopy();
