@@ -16,10 +16,9 @@ function clamp(n: number, min = -1_000_000, max = 1_000_000) {
   return Math.max(min, Math.min(max, n));
 }
 
-function toNumberLike(v: string | number) {
-  // allow empty typing -> treat as 0 in state (keeps controlled input happy)
-  if (v === '' || v === null || v === undefined) return 0;
-  const n = typeof v === 'number' ? v : parseFloat((v || '0').toString());
+function parseLooseNumber(s: string): number {
+  if (s.trim() === '') return 0;
+  const n = Number(s.replace(/[^\d.-]/g, ''));
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -29,14 +28,11 @@ function fmtMoney(n: number) {
 function fmtMoneyWithParens(n: number) {
   return n < 0 ? `(${fmtMoney(Math.abs(n))})` : fmtMoney(n);
 }
-
-/** join classes */
 function cx(...list: (string | false | null | undefined)[]) {
   return list.filter(Boolean).join(' ');
 }
 
-/* -------- shared styles (purple frames) -------- */
-
+/* -------- purple frame -------- */
 const sectionFrame =
   'rounded-2xl border border-purple-500/40 bg-neutral-950/55 shadow-[0_0_0_1px_rgba(168,85,247,.3)_inset,0_0_26px_rgba(168,85,247,.08)]';
 
@@ -71,17 +67,13 @@ function computeForPlatform(platform: PlatformKey, inputs: Inputs): Row {
   const taxPct = clamp(inputs.tx) / 100;
   const discountPct = clamp(inputs.dc) / 100;
 
-  // Listing fee (fixed amount)
   const listingFee = rule.listingFee ?? 0;
 
-  // Marketplace base is AFTER discount + ship charged + tax on item
   const discountedPrice = price * (1 - discountPct);
   const marketplaceBase = discountedPrice + shipCharged + discountedPrice * taxPct;
 
-  // Percentage-based marketplace fee
   const marketplaceFee = marketplaceBase * (rule.marketplacePct ?? 0);
 
-  // Payment fee = % of discounted price + fixed if present
   const paymentFee =
     discountedPrice * (rule.paymentPct ?? 0) + (rule.paymentFixed ?? 0);
 
@@ -102,10 +94,63 @@ function computeForPlatform(platform: PlatformKey, inputs: Inputs): Row {
   };
 }
 
+/* ----------- NumberField with local text state ----------- */
+
+function NumberField({
+  label,
+  value,
+  onCommit,
+  suffix,
+}: {
+  label: string;
+  value: number;
+  onCommit: (n: number) => void; // commit on blur / Enter
+  suffix?: string;
+}) {
+  const [text, setText] = useState<string>(String(value));
+  const focusedRef = useRef(false);
+
+  // If parent value changes while we're NOT focused, mirror it into the input.
+  useEffect(() => {
+    if (!focusedRef.current) setText(String(value));
+  }, [value]);
+
+  const commit = () => {
+    const n = clamp(parseLooseNumber(text));
+    onCommit(n);
+    setText(String(n)); // normalize what you see after commit
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-sm text-neutral-300">{label}</span>
+      <input
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onFocus={() => (focusedRef.current = true)}
+        onBlur={() => {
+          focusedRef.current = false;
+          commit();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            (e.target as HTMLInputElement).blur(); // triggers commit onBlur
+          }
+        }}
+        className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
+        inputMode="decimal"
+      />
+      {suffix ? (
+        <span className="text-xs text-neutral-500 -mt-1">{suffix}</span>
+      ) : null}
+    </div>
+  );
+}
+
 /* ---------------- page ---------------- */
 
 export default function Page() {
-  // URL state (short keys)
   const [platform, setPlatform] = useState<PlatformKey>('etsy');
   const [inputs, setInputs] = useState<Inputs>({
     p: 120,
@@ -116,38 +161,55 @@ export default function Page() {
     dc: 0,
   });
 
-  // Track whether any input is focused (so we avoid URL sync while typing)
-  const typingCountRef = useRef(0); // number of active focused inputs
-  const isTyping = typingCountRef.current > 0;
+  // track active inputs to avoid URL sync while typing
+  const activeInputsRef = useRef(0);
+  const isTyping = activeInputsRef.current > 0;
 
-  // hydrate from URL once
+  // Hook into focus/blur of the document to count focused inputs
+  useEffect(() => {
+    const onFocus = (e: FocusEvent) => {
+      if (e.target instanceof HTMLInputElement) activeInputsRef.current += 1;
+    };
+    const onBlur = (e: FocusEvent) => {
+      if (e.target instanceof HTMLInputElement)
+        activeInputsRef.current = Math.max(0, activeInputsRef.current - 1);
+    };
+    window.addEventListener('focusin', onFocus);
+    window.addEventListener('focusout', onBlur);
+    return () => {
+      window.removeEventListener('focusin', onFocus);
+      window.removeEventListener('focusout', onBlur);
+    };
+  }, []);
+
+  // Hydrate from URL once
   useEffect(() => {
     const url = new URL(window.location.href);
     const q = url.searchParams;
+    const get = (key: string, def: number) =>
+      clamp(parseLooseNumber(q.get(key) ?? String(def)));
 
-    const p = toNumberLike(q.get('p') ?? inputs.p);
-    const sc = toNumberLike(q.get('sc') ?? inputs.sc);
-    const ss = toNumberLike(q.get('ss') ?? inputs.ss);
-    const cg = toNumberLike(q.get('cg') ?? inputs.cg);
-    const tx = toNumberLike(q.get('tx') ?? inputs.tx);
-    const dc = toNumberLike(q.get('dc') ?? inputs.dc);
+    const next: Inputs = {
+      p: get('p', inputs.p),
+      sc: get('sc', inputs.sc),
+      ss: get('ss', inputs.ss),
+      cg: get('cg', inputs.cg),
+      tx: get('tx', inputs.tx),
+      dc: get('dc', inputs.dc),
+    };
+    setInputs(next);
 
-    const pf =
-      (q.get('pf') as PlatformKey) ||
-      (q.get('p') as PlatformKey); // legacy accidental key support
+    const pf = q.get('pf') as PlatformKey | null;
     if (pf && RULES[pf]) setPlatform(pf);
-
-    setInputs({ p, sc, ss, cg, tx, dc });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Debounced URL sync – but only if NO input is currently focused.
+  // Debounced URL sync (only when NOT typing)
   useEffect(() => {
-    if (isTyping) return; // do not sync while typing
+    if (isTyping) return;
     const t = window.setTimeout(() => {
       const url = new URL(window.location.href);
       const q = url.searchParams;
-
       q.set('p', String(inputs.p));
       q.set('sc', String(inputs.sc));
       q.set('ss', String(inputs.ss));
@@ -155,11 +217,8 @@ export default function Page() {
       q.set('tx', String(inputs.tx));
       q.set('dc', String(inputs.dc));
       q.set('pf', platform);
-
-      // use history.replaceState directly (doesn't trigger Next navigation)
       window.history.replaceState({}, '', url.toString());
-    }, 600);
-
+    }, 500);
     return () => window.clearTimeout(t);
   }, [inputs, platform, isTyping]);
 
@@ -168,57 +227,10 @@ export default function Page() {
     [platform, inputs]
   );
 
-  const compareRows = useMemo(() => {
-    return PLATFORMS.map((p) => computeForPlatform(p.key, inputs));
-  }, [inputs]);
-
-  /* ---------- Input wrapper to manage focus/blur ---------- */
-
-  function NumberField({
-    label,
-    value,
-    onChange,
-    suffix,
-  }: {
-    label: string;
-    value: number;
-    onChange: (n: number) => void;
-    suffix?: string;
-  }) {
-    return (
-      <div className="flex flex-col gap-1">
-        <span className="text-sm text-neutral-300">{label}</span>
-        <input
-          // keep as text + inputMode=decimal to allow free typing
-          type="text"
-          value={String(value)}
-          onChange={(e) => onChange(toNumberLike(e.target.value))}
-          onFocus={() => {
-            typingCountRef.current += 1;
-          }}
-          onBlur={() => {
-            typingCountRef.current = Math.max(0, typingCountRef.current - 1);
-            // Sync immediately on blur (now safe)
-            const url = new URL(window.location.href);
-            const q = url.searchParams;
-            q.set('p', String(inputs.p));
-            q.set('sc', String(inputs.sc));
-            q.set('ss', String(inputs.ss));
-            q.set('cg', String(inputs.cg));
-            q.set('tx', String(inputs.tx));
-            q.set('dc', String(inputs.dc));
-            q.set('pf', platform);
-            window.history.replaceState({}, '', url.toString());
-          }}
-          className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
-          inputMode="decimal"
-        />
-        {suffix ? (
-          <span className="text-xs text-neutral-500 -mt-1">{suffix}</span>
-        ) : null}
-      </div>
-    );
-  }
+  const compareRows = useMemo(
+    () => PLATFORMS.map((p) => computeForPlatform(p.key, inputs)),
+    [inputs]
+  );
 
   /* ---------------- render ---------------- */
 
@@ -230,7 +242,7 @@ export default function Page() {
         <h1 className="text-2xl font-semibold">FeePilot</h1>
       </div>
 
-      {/* Platform + last updated */}
+      {/* Platform */}
       <section className={cx('mb-8 p-5', sectionFrame)}>
         <div className="mb-4 text-sm text-neutral-300">Platform</div>
         <select
@@ -256,34 +268,32 @@ export default function Page() {
           <NumberField
             label="Item price ($)"
             value={inputs.p}
-            onChange={(n) => setInputs((s) => ({ ...s, p: n }))}
+            onCommit={(n) => setInputs((s) => ({ ...s, p: n }))}
           />
           <NumberField
             label="Shipping charged to buyer ($)"
             value={inputs.sc}
-            onChange={(n) => setInputs((s) => ({ ...s, sc: n }))}
+            onCommit={(n) => setInputs((s) => ({ ...s, sc: n }))}
           />
           <NumberField
             label="Your shipping cost ($)"
             value={inputs.ss}
-            onChange={(n) => setInputs((s) => ({ ...s, ss: n }))}
+            onCommit={(n) => setInputs((s) => ({ ...s, ss: n }))}
           />
           <NumberField
             label="Cost of goods ($)"
             value={inputs.cg}
-            onChange={(n) => setInputs((s) => ({ ...s, cg: n }))}
+            onCommit={(n) => setInputs((s) => ({ ...s, cg: n }))}
           />
           <NumberField
             label="Tax collected (%)"
             value={inputs.tx}
-            onChange={(n) => setInputs((s) => ({ ...s, tx: n }))}
-            suffix="Rate applied to item price, not shipping"
+            onCommit={(n) => setInputs((s) => ({ ...s, tx: n }))}
           />
           <NumberField
             label="Discount (%)"
             value={inputs.dc}
-            onChange={(n) => setInputs((s) => ({ ...s, dc: n }))}
-            suffix="Platform or coupon discount on item price"
+            onCommit={(n) => setInputs((s) => ({ ...s, dc: n }))}
           />
         </div>
       </section>
@@ -348,7 +358,9 @@ export default function Page() {
           {/* COGS */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
             <div className="text-sm text-neutral-400">COGS</div>
-            <div className="mt-2 text-2xl tabular-nums">{fmtMoney(inputs.cg)}</div>
+            <div className="mt-2 text-2xl tabular-nums">
+              {fmtMoney(inputs.cg)}
+            </div>
           </div>
 
           {/* Total fees */}
@@ -415,8 +427,6 @@ export default function Page() {
                       {PLATFORMS.find((p) => p.key === row.key)?.label ?? row.key}
                     </span>
                   </td>
-
-                  {/* Profit with red negatives + parentheses, green positives */}
                   <td
                     className={cx(
                       'px-3 py-2 text-right tabular-nums',
@@ -425,7 +435,6 @@ export default function Page() {
                   >
                     {fmtMoneyWithParens(row.profit)}
                   </td>
-
                   <td className="px-3 py-2 text-right tabular-nums">
                     {row.margin.toFixed(1)}%
                   </td>
