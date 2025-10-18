@@ -9,19 +9,36 @@ import {
   FeeRule,
 } from '@/data/fees';
 
-/* ---------------- helpers ---------------- */
+/* ---------------- defaults + helpers ---------------- */
+
+const DEFAULT_PLATFORM: PlatformKey = 'etsy';
+const DEFAULTS = {
+  p: 120,
+  sc: 0,
+  ss: 10,
+  cg: 40,
+  tx: 0,
+  dc: 0,
+};
+
+type Inputs = {
+  p: number; // price
+  sc: number; // ship charge to buyer
+  ss: number; // ship cost (seller)
+  cg: number; // cogs
+  tx: number; // tax %
+  dc: number; // discount %
+};
 
 function clamp(n: number, min = -1_000_000, max = 1_000_000) {
   if (Number.isNaN(n) || !Number.isFinite(n)) return 0;
   return Math.max(min, Math.min(max, n));
 }
-
 function parseLooseNumber(s: string): number {
   if (s.trim() === '') return 0;
   const n = Number(s.replace(/[^\d.-]/g, ''));
   return Number.isFinite(n) ? n : 0;
 }
-
 function fmtMoney(n: number) {
   return `$${n.toFixed(2)}`;
 }
@@ -32,20 +49,11 @@ function cx(...list: (string | false | null | undefined)[]) {
   return list.filter(Boolean).join(' ');
 }
 
-/* -------- purple frame -------- */
+/* purple frame */
 const sectionFrame =
   'rounded-2xl border border-purple-500/40 bg-neutral-950/55 shadow-[0_0_0_1px_rgba(168,85,247,.3)_inset,0_0_26px_rgba(168,85,247,.08)]';
 
 /* ---------------- fee engine ---------------- */
-
-type Inputs = {
-  p: number; // price
-  sc: number; // ship charge to buyer
-  ss: number; // ship cost (seller)
-  cg: number; // cogs
-  tx: number; // tax %
-  dc: number; // discount %
-};
 
 type Row = {
   key: PlatformKey;
@@ -73,7 +81,6 @@ function computeForPlatform(platform: PlatformKey, inputs: Inputs): Row {
   const marketplaceBase = discountedPrice + shipCharged + discountedPrice * taxPct;
 
   const marketplaceFee = marketplaceBase * (rule.marketplacePct ?? 0);
-
   const paymentFee =
     discountedPrice * (rule.paymentPct ?? 0) + (rule.paymentFixed ?? 0);
 
@@ -94,7 +101,35 @@ function computeForPlatform(platform: PlatformKey, inputs: Inputs): Row {
   };
 }
 
-/* ----------- NumberField with local text state ----------- */
+/* -------------- URL build (short + omit defaults) -------------- */
+
+function buildShortURL(
+  baseHref: string,
+  platform: PlatformKey,
+  inputs: Inputs
+): string {
+  const url = new URL(baseHref);
+  const q = url.searchParams;
+  q.delete('pf');
+  q.delete('p');
+  q.delete('sc');
+  q.delete('ss');
+  q.delete('cg');
+  q.delete('tx');
+  q.delete('dc');
+
+  if (platform !== DEFAULT_PLATFORM) q.set('pf', platform);
+
+  (Object.keys(DEFAULTS) as (keyof Inputs)[]).forEach((key) => {
+    const def = DEFAULTS[key];
+    const v = inputs[key];
+    if (v !== def) q.set(key, String(v));
+  });
+
+  return url.toString();
+}
+
+/* -------------- NumberField: local text state -------------- */
 
 function NumberField({
   label,
@@ -104,13 +139,12 @@ function NumberField({
 }: {
   label: string;
   value: number;
-  onCommit: (n: number) => void; // commit on blur / Enter
+  onCommit: (n: number) => void;
   suffix?: string;
 }) {
   const [text, setText] = useState<string>(String(value));
   const focusedRef = useRef(false);
 
-  // If parent value changes while we're NOT focused, mirror it into the input.
   useEffect(() => {
     if (!focusedRef.current) setText(String(value));
   }, [value]);
@@ -118,7 +152,7 @@ function NumberField({
   const commit = () => {
     const n = clamp(parseLooseNumber(text));
     onCommit(n);
-    setText(String(n)); // normalize what you see after commit
+    setText(String(n));
   };
 
   return (
@@ -135,7 +169,7 @@ function NumberField({
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
-            (e.target as HTMLInputElement).blur(); // triggers commit onBlur
+            (e.target as HTMLInputElement).blur();
           }
         }}
         className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
@@ -151,21 +185,15 @@ function NumberField({
 /* ---------------- page ---------------- */
 
 export default function Page() {
-  const [platform, setPlatform] = useState<PlatformKey>('etsy');
-  const [inputs, setInputs] = useState<Inputs>({
-    p: 120,
-    sc: 0,
-    ss: 10,
-    cg: 40,
-    tx: 0,
-    dc: 0,
-  });
-
-  // track active inputs to avoid URL sync while typing
+  const [platform, setPlatform] = useState<PlatformKey>(DEFAULT_PLATFORM);
+  const [inputs, setInputs] = useState<Inputs>({ ...DEFAULTS });
   const activeInputsRef = useRef(0);
   const isTyping = activeInputsRef.current > 0;
 
-  // Hook into focus/blur of the document to count focused inputs
+  // Header feedback for copy/share
+  const [copied, setCopied] = useState(false);
+
+  // count focused inputs (avoid URL churn while typing)
   useEffect(() => {
     const onFocus = (e: FocusEvent) => {
       if (e.target instanceof HTMLInputElement) activeInputsRef.current += 1;
@@ -182,64 +210,119 @@ export default function Page() {
     };
   }, []);
 
-  // Hydrate from URL once
+  // Hydrate once from short URL
   useEffect(() => {
     const url = new URL(window.location.href);
     const q = url.searchParams;
-    const get = (key: string, def: number) =>
+    const get = (key: keyof Inputs, def: number) =>
       clamp(parseLooseNumber(q.get(key) ?? String(def)));
 
     const next: Inputs = {
-      p: get('p', inputs.p),
-      sc: get('sc', inputs.sc),
-      ss: get('ss', inputs.ss),
-      cg: get('cg', inputs.cg),
-      tx: get('tx', inputs.tx),
-      dc: get('dc', inputs.dc),
+      p: get('p', DEFAULTS.p),
+      sc: get('sc', DEFAULTS.sc),
+      ss: get('ss', DEFAULTS.ss),
+      cg: get('cg', DEFAULTS.cg),
+      tx: get('tx', DEFAULTS.tx),
+      dc: get('dc', DEFAULTS.dc),
     };
     setInputs(next);
 
-    const pf = q.get('pf') as PlatformKey | null;
-    if (pf && RULES[pf]) setPlatform(pf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const pf = (q.get('pf') as PlatformKey | null) || DEFAULT_PLATFORM;
+    if (RULES[pf]) setPlatform(pf);
   }, []);
 
-  // Debounced URL sync (only when NOT typing)
+  // Short URL sync (omit defaults)
   useEffect(() => {
     if (isTyping) return;
     const t = window.setTimeout(() => {
-      const url = new URL(window.location.href);
-      const q = url.searchParams;
-      q.set('p', String(inputs.p));
-      q.set('sc', String(inputs.sc));
-      q.set('ss', String(inputs.ss));
-      q.set('cg', String(inputs.cg));
-      q.set('tx', String(inputs.tx));
-      q.set('dc', String(inputs.dc));
-      q.set('pf', platform);
-      window.history.replaceState({}, '', url.toString());
-    }, 500);
+      const shortURL = buildShortURL(window.location.href, platform, inputs);
+      window.history.replaceState({}, '', shortURL);
+    }, 300);
     return () => window.clearTimeout(t);
   }, [inputs, platform, isTyping]);
 
+  // calculate
   const current = useMemo(
     () => computeForPlatform(platform, inputs),
     [platform, inputs]
   );
-
   const compareRows = useMemo(
     () => PLATFORMS.map((p) => computeForPlatform(p.key, inputs)),
     [inputs]
   );
+
+  // actions
+  const resetAll = () => {
+    setPlatform(DEFAULT_PLATFORM);
+    setInputs({ ...DEFAULTS });
+    const url = new URL(window.location.href);
+    url.search = '';
+    window.history.replaceState({}, '', url.toString());
+  };
+
+  const getShareURL = () => buildShortURL(window.location.href, platform, inputs);
+
+  const doCopy = async () => {
+    const url = getShareURL();
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  };
+
+  const doShare = async () => {
+    const url = getShareURL();
+    if ((navigator as any).share) {
+      try {
+        await (navigator as any).share({ url, title: 'FeePilot' });
+      } catch {
+        // ignore
+      }
+    } else {
+      await doCopy();
+      alert('Link copied to clipboard.');
+    }
+  };
 
   /* ---------------- render ---------------- */
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 text-neutral-100">
       {/* Header */}
-      <div className="mb-8 flex items-center gap-3">
-        <div className="h-3 w-3 rounded-full bg-purple-500" />
-        <h1 className="text-2xl font-semibold">FeePilot</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <button
+          onClick={resetAll}
+          className="group flex items-center gap-3"
+          title="Reset to defaults"
+        >
+          <div className="h-3 w-3 rounded-full bg-purple-500 group-hover:scale-110 transition-transform" />
+          <h1 className="text-2xl font-semibold group-hover:text-purple-300 transition-colors">
+            FeePilot
+          </h1>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={doShare}
+            className="rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-sm hover:border-purple-500"
+            title="Share"
+          >
+            Share
+          </button>
+          <button
+            onClick={doCopy}
+            className="rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-sm hover:border-purple-500"
+            title="Copy link"
+          >
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+          <a
+            href="/pro"
+            className="rounded-lg border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-sm hover:border-purple-500"
+            title="Pro"
+          >
+            Pro
+          </a>
+        </div>
       </div>
 
       {/* Platform */}
