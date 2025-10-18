@@ -9,537 +9,367 @@ import {
   FeeRule,
 } from '@/data/fees';
 
-// ---------- helpers ----------
+/* ---------------- helpers ---------------- */
+
 function clamp(n: number, min = -1_000_000, max = 1_000_000) {
-  if (Number.isNaN(n) || !Number.isFinite(n)) return 0;
-  return Math.min(max, Math.max(min, n));
+  if (Number.isNaN(n)) return 0;
+  return Math.min(Math.max(n, min), max);
 }
 
-function toNumber(v: string | number) {
-  const n = typeof v === 'number' ? v : parseFloat(v);
-  return Number.isFinite(n) ? n : 0;
+function num(v: unknown, d = 0) {
+  const n = typeof v === 'string' ? Number(v) : (v as number);
+  return clamp(Number.isFinite(n) ? n : d);
 }
 
 function fmtMoney(n: number) {
-  // Parentheses if negative, no minus sign
   const abs = Math.abs(n);
-  const base = abs.toLocaleString(undefined, {
+  const s = abs.toLocaleString(undefined, {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 2,
   });
-  return n < 0 ? `(${base})` : base;
+  return n < 0 ? `(${s})` : s;
 }
 
-// Short URL query keys
-const Q = {
-  p: 'p', // platform
-  pr: 'pr', // price
-  sc: 'sc', // shipping charged to buyer
-  ss: 'ss', // your shipping cost
-  cg: 'cg', // cost of goods
-  tx: 'tx', // tax collected
-  dc: 'dc', // discount pct
-  tp: 'tp', // target profit
-} as const;
+/** style class for a money value (red for negative) */
+function moneyClass(n: number) {
+  return n < 0 ? 'text-red-400' : 'text-green-400';
+}
+
+/* ---------- query <-> state (short keys) ---------- */
+/** short keys:
+ * p  = price
+ * sc = shipping charged to buyer
+ * ss = shipping cost (your cost)
+ * cg = cost of goods
+ * tx = tax collected
+ * dc = discount
+ * tp = target profit
+ */
 
 type Inputs = {
-  platform: PlatformKey;
-  price: number;
-  shippingCharge: number;
-  shippingCost: number;
-  cogs: number;
-  taxCollected: number;
-  discountPct: number; // 0-100
-  targetProfit: number;
+  p: number; // price
+  sc: number; // shipping charged to buyer
+  ss: number; // shipping cost (your cost)
+  cg: number; // cost of goods
+  tx: number; // tax collected
+  dc: number; // discount
+  tp: number; // target profit (for backsolve)
 };
 
-type Calc = {
-  subtotalAfterDiscountAndShipToBuyer: number;
-  marketplaceFee: number;
-  paymentFee: number;
-  listingFee: number;
-  totalFees: number;
-  netProceeds: number;
-  profit: number;
-  marginPct: number; // 0..100
+const DEFAULT_INPUTS: Inputs = {
+  p: 120,
+  sc: 0,
+  ss: 10,
+  cg: 40,
+  tx: 0,
+  dc: 0,
+  tp: 50,
 };
 
-function calcForPlatform(inputs: Inputs, rule: FeeRule): Calc {
-  // Revenue components
-  const gross = inputs.price + inputs.shippingCharge - inputs.taxCollected;
-  const discount = (inputs.discountPct / 100) * inputs.price;
-  const revenue = gross - discount;
+function readQuery(): { platform: PlatformKey; inputs: Inputs } {
+  const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const platform = (sp.get('pform') as PlatformKey) || 'etsy';
+  const inputs: Inputs = {
+    p: num(sp.get('p'), DEFAULT_INPUTS.p),
+    sc: num(sp.get('sc'), DEFAULT_INPUTS.sc),
+    ss: num(sp.get('ss'), DEFAULT_INPUTS.ss),
+    cg: num(sp.get('cg'), DEFAULT_INPUTS.cg),
+    tx: num(sp.get('tx'), DEFAULT_INPUTS.tx),
+    dc: num(sp.get('dc'), DEFAULT_INPUTS.dc),
+    tp: num(sp.get('tp'), DEFAULT_INPUTS.tp),
+  };
+  return { platform: (platform in RULES ? platform : 'etsy') as PlatformKey, inputs };
+}
 
-  // Marketplace fee
-  const marketplaceFee = revenue * rule.marketplacePct;
+function writeQuery(platform: PlatformKey, inputs: Inputs) {
+  if (typeof window === 'undefined') return;
+  const sp = new URLSearchParams();
+  sp.set('pform', platform);
+  sp.set('p', String(inputs.p));
+  sp.set('sc', String(inputs.sc));
+  sp.set('ss', String(inputs.ss));
+  sp.set('cg', String(inputs.cg));
+  sp.set('tx', String(inputs.tx));
+  sp.set('dc', String(inputs.dc));
+  sp.set('tp', String(inputs.tp));
+  const url = `${window.location.pathname}?${sp.toString()}`;
+  window.history.replaceState({}, '', url);
+}
 
-  // Payment fee
-  const paymentFee =
-    revenue * rule.paymentPct + (rule.paymentFixed ?? 0);
+/* ---------------- fee math ---------------- */
 
-  // Listing fee (fixed)
-  const listingFee = rule.listingFixed ?? 0;
+/**
+ * For a given platform fee rule + inputs, calculate fee components and profit.
+ * Model:
+ * - order subtotal used for marketplace fee = (price - discount + shipping charged to buyer)
+ * - payment fee base = (price + shipping charged to buyer + tax)
+ * - listing fee = fixed as rule.listingFee
+ * - total fees = marketplace + payment + listing
+ * - net proceeds = (price + shipping charged + tax) - total fees - shipping cost (your cost)
+ * - profit = net proceeds - COGS
+ */
+function calcForPlatform(rule: FeeRule, inputs: Inputs) {
+  const price = inputs.p;
+  const shipChargeToBuyer = inputs.sc;
+  const shipCost = inputs.ss;
+  const cogs = inputs.cg;
+  const taxCollected = inputs.tx;
+  const discount = inputs.dc;
 
+  // Subtotal for marketplace %
+  const marketplaceBase = Math.max(0, price - discount + shipChargeToBuyer);
+  let marketplaceFee = marketplaceBase * rule.marketplacePct;
+
+  // respect min/max caps if present
+  if (typeof rule.minFee === 'number') marketplaceFee = Math.max(marketplaceFee, rule.minFee);
+  if (typeof rule.maxFee === 'number') marketplaceFee = Math.min(marketplaceFee, rule.maxFee);
+
+  // Payment fee (percentage of price + buyer shipping + tax) + fixed
+  const paymentBase = Math.max(0, price + shipChargeToBuyer + taxCollected);
+  const paymentFee = paymentBase * rule.paymentPct + rule.paymentFixed;
+
+  // Listing fee
+  const listingFee = rule.listingFee ?? 0;
+
+  // Total fees
   const totalFees = marketplaceFee + paymentFee + listingFee;
 
-  const netProceeds = revenue - totalFees;
+  // Net proceeds (after fees & your shipping cost)
+  const grossCollected = price + shipChargeToBuyer + taxCollected;
+  const netProceeds = grossCollected - totalFees - shipCost;
 
-  // Costs
-  const cost = inputs.cogs + inputs.shippingCost;
+  // Profit after COGS
+  const profit = netProceeds - cogs;
 
-  const profit = netProceeds - cost;
-  const marginBase = revenue <= 0 ? 0.00001 : revenue;
-  const marginPct = (profit / marginBase) * 100;
+  // Profit margin against price (not revenue)
+  const margin = price > 0 ? (profit / price) * 100 : 0;
 
   return {
-    subtotalAfterDiscountAndShipToBuyer: revenue,
     marketplaceFee,
     paymentFee,
     listingFee,
     totalFees,
     netProceeds,
     profit,
-    marginPct,
+    margin,
   };
 }
 
 export default function Page() {
-  // -------- initial state from URL --------
-  const search =
-    typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search)
-      : new URLSearchParams();
-
-  const initial: Inputs = {
-    platform: (search.get(Q.p) as PlatformKey) || 'etsy',
-    price: toNumber(search.get(Q.pr) ?? 120),
-    shippingCharge: toNumber(search.get(Q.sc) ?? 0),
-    shippingCost: toNumber(search.get(Q.ss) ?? 10),
-    cogs: toNumber(search.get(Q.cg) ?? 40),
-    taxCollected: toNumber(search.get(Q.tx) ?? 0),
-    discountPct: toNumber(search.get(Q.dc) ?? 0),
-    targetProfit: toNumber(search.get(Q.tp) ?? 50),
-  };
-
+  const initial = useMemo(() => readQuery(), []);
   const [platform, setPlatform] = useState<PlatformKey>(initial.platform);
-  const [price, setPrice] = useState<number>(initial.price);
-  const [shippingCharge, setShippingCharge] = useState<number>(
-    initial.shippingCharge,
-  );
-  const [shippingCost, setShippingCost] = useState<number>(
-    initial.shippingCost,
-  );
-  const [cogs, setCogs] = useState<number>(initial.cogs);
-  const [taxCollected, setTaxCollected] = useState<number>(initial.taxCollected);
-  const [discountPct, setDiscountPct] = useState<number>(initial.discountPct);
-  const [targetProfit, setTargetProfit] = useState<number>(initial.targetProfit);
+  const [inputs, setInputs] = useState<Inputs>(initial.inputs);
 
-  // sync -> URL using short keys
+  // keep URL in sync
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams();
-    params.set(Q.p, platform);
-    params.set(Q.pr, String(price));
-    params.set(Q.sc, String(shippingCharge));
-    params.set(Q.ss, String(shippingCost));
-    params.set(Q.cg, String(cogs));
-    params.set(Q.tx, String(taxCollected));
-    params.set(Q.dc, String(discountPct));
-    params.set(Q.tp, String(targetProfit));
-
-    const qs = params.toString();
-    const url = qs ? `?${qs}` : '';
-    window.history.replaceState(null, '', url);
-  }, [
-    platform,
-    price,
-    shippingCharge,
-    shippingCost,
-    cogs,
-    taxCollected,
-    discountPct,
-    targetProfit,
-  ]);
-
-  const inputs: Inputs = {
-    platform,
-    price,
-    shippingCharge,
-    shippingCost,
-    cogs,
-    taxCollected,
-    discountPct,
-    targetProfit,
-  };
+    writeQuery(platform, inputs);
+  }, [platform, inputs]);
 
   const rule = RULES[platform];
-  const calc = useMemo(() => calcForPlatform(inputs, rule), [inputs, rule]);
 
-  const comparisonRows = useMemo(() => {
+  const result = useMemo(() => calcForPlatform(rule, inputs), [rule, inputs]);
+
+  // Backsolve (what price to hit target profit)
+  const backsolvePrice = useMemo(() => {
+    // Iterate simple search around current price to find a p that reaches target profit.
+    const target = inputs.tp;
+    let best = inputs.p;
+    let low = 0;
+    let high = Math.max(10, inputs.p * 3);
+
+    for (let i = 0; i < 24; i++) {
+      const mid = (low + high) / 2;
+      const r = calcForPlatform(rule, { ...inputs, p: mid });
+      if (r.profit < target) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+      best = mid;
+    }
+    return best;
+  }, [inputs, rule]);
+
+  // Compare across platforms table
+  const comparison = useMemo(() => {
     return PLATFORMS.map((p) => {
-      const r = RULES[p.key];
-      const c = calcForPlatform({ ...inputs, platform: p.key }, r);
+      const r = calcForPlatform(RULES[p.key], inputs);
       return {
         key: p.key,
         label: p.label,
-        profit: c.profit,
-        margin: c.marginPct,
-        totalFees: c.totalFees,
-        marketplaceFee: c.marketplaceFee,
-        paymentFee: c.paymentFee,
-        listingFee: c.listingFee,
+        ...r,
       };
-    }).sort((a, b) => b.profit - a.profit);
+    });
   }, [inputs]);
 
-  // backsolve required price for a target profit
-  const requiredPrice = useMemo(() => {
-    // simple numeric solve by searching (safe + robust for now)
-    const tryPrice = (p: number) =>
-      calcForPlatform(
-        { ...inputs, price: p },
-        RULES[inputs.platform],
-      ).profit;
-
-    let low = 0;
-    let high = 100000;
-    for (let i = 0; i < 40; i++) {
-      const mid = (low + high) / 2;
-      const prof = tryPrice(mid);
-      if (prof < targetProfit) low = mid;
-      else high = mid;
-    }
-    return high;
-  }, [inputs, targetProfit]);
-
-  // ---------- UI ----------
+  // UI helpers
+  const inputBox = (label: string, value: number, onChange: (n: number) => void, rightLabel?: string) => (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm text-neutral-400">{label}</label>
+      <input
+        value={value}
+        onChange={(e) => onChange(num(e.target.value))}
+        className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
+        inputMode="decimal"
+      />
+      {rightLabel ? <div className="text-xs text-neutral-500">{rightLabel}</div> : null}
+    </div>
+  );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-8 text-neutral-100">
       {/* Header */}
       <header className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="h-3 w-3 rounded-full bg-purple-500" />
-          <h1 className="text-xl font-semibold tracking-tight text-neutral-100">
-            FeePilot
-          </h1>
+          <span className="inline-block h-3 w-3 rounded-full bg-purple-500" />
+          <h1 className="text-2xl font-semibold">FeePilot</h1>
         </div>
-
         <div className="flex items-center gap-2">
           <a
-            href="https://github.com/"
+            href="https://vercel.com/new"
             target="_blank"
-            className="rounded-lg border border-neutral-800 bg-neutral-900/50 px-3 py-1.5 text-sm text-neutral-300 hover:border-neutral-700"
+            rel="noreferrer"
+            className="rounded-lg border border-neutral-800 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-900"
           >
             Pro
           </a>
         </div>
       </header>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Left: Inputs */}
-        <section className="rounded-xl border border-neutral-800 bg-neutral-950/40 p-4">
-          <div className="mb-3 text-sm font-medium text-neutral-300">
-            Platform
+      {/* Platform / updated */}
+      <section className="mb-6 rounded-2xl border border-neutral-800 bg-neutral-950/40 p-4">
+        <div className="mb-3 text-neutral-300">Platform</div>
+        <select
+          value={platform}
+          onChange={(e) => setPlatform(e.target.value as PlatformKey)}
+          className="w-full rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
+        >
+          {PLATFORMS.map((p) => (
+            <option key={p.key} value={p.key}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+        <div className="mt-3 text-sm text-neutral-500">
+          Rules last updated: <span className="text-neutral-300">{RULES_UPDATED_AT}</span>
+        </div>
+      </section>
+
+      {/* Overview + inputs */}
+      <section className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+        {/* Inputs */}
+        <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-4">
+          <div className="mb-4 text-neutral-300">Inputs</div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {inputBox('Item price ($)', inputs.p, (n) => setInputs({ ...inputs, p: n }))}
+            {inputBox('Shipping charged to buyer ($)', inputs.sc, (n) => setInputs({ ...inputs, sc: n }))}
+            {inputBox('Your shipping cost ($)', inputs.ss, (n) => setInputs({ ...inputs, ss: n }))}
+            {inputBox('Cost of goods ($)', inputs.cg, (n) => setInputs({ ...inputs, cg: n }))}
+            {inputBox('Tax collected ($)', inputs.tx, (n) => setInputs({ ...inputs, tx: n }))}
+            {inputBox('Discount ($)', inputs.dc, (n) => setInputs({ ...inputs, dc: n }))}
           </div>
-
-          <select
-            value={platform}
-            onChange={(e) => setPlatform(e.target.value as PlatformKey)}
-            className="mb-2 w-full rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
-          >
-            {PLATFORMS.map((p) => (
-              <option key={p.key} value={p.key}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-
-          <div className="mb-6 text-xs text-neutral-500">
-            Rules last updated:{' '}
-            <span className="font-medium text-neutral-300">
-              {RULES_UPDATED_AT}
-            </span>
-          </div>
-
-          {/* Inputs grid */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field
-              label="Item price ($)"
-              value={price}
-              onChange={(v) => setPrice(clamp(toNumber(v), 0))}
-            />
-            <Field
-              label="Shipping charged to buyer ($)"
-              value={shippingCharge}
-              onChange={(v) => setShippingCharge(clamp(toNumber(v), 0))}
-            />
-            <Field
-              label="Your shipping cost ($)"
-              value={shippingCost}
-              onChange={(v) => setShippingCost(clamp(toNumber(v), 0))}
-            />
-            <Field
-              label="Cost of goods ($)"
-              value={cogs}
-              onChange={(v) => setCogs(clamp(toNumber(v), 0))}
-            />
-            <Field
-              label="Tax collected ($)"
-              value={taxCollected}
-              onChange={(v) => setTaxCollected(clamp(toNumber(v), 0))}
-            />
-            <Field
-              label="Discount (%)"
-              value={discountPct}
-              onChange={(v) =>
-                setDiscountPct(clamp(toNumber(v), 0, 100))
-              }
-            />
-          </div>
-
-          {/* Backsolve */}
-          <div className="mt-6 rounded-xl border border-neutral-800 bg-neutral-950/40 p-3">
-            <div className="mb-2 text-sm font-medium text-neutral-300">
-              Backsolve
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field
-                label="Target profit ($)"
-                value={targetProfit}
-                onChange={(v) => setTargetProfit(clamp(toNumber(v)))}
-              />
-              <div className="flex flex-col text-sm">
-                <span className="mb-1 text-neutral-400">
-                  Required price:
-                </span>
-                <span className="rounded-lg border border-neutral-800 bg-neutral-900/40 px-3 py-2 font-medium text-neutral-100">
-                  {fmtMoney(requiredPrice)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Right: Overview / Breakdown */}
-        <section className="space-y-4">
-          {/* Overview */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/40 p-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium text-neutral-300">
-                Overview
-              </div>
-              <div className="text-sm text-neutral-400">Margin</div>
-            </div>
-
-            <div className="mt-2 flex items-end justify-between">
-              <div
-                className={
-                  'text-4xl font-semibold ' +
-                  (calc.profit < 0 ? 'text-red-300' : 'text-emerald-300')
-                }
-                aria-live="polite"
-              >
-                {fmtMoney(calc.profit)}
-              </div>
-              <div className="text-2xl font-semibold text-neutral-200">
-                {calc.marginPct.toFixed(1)}%
-              </div>
-            </div>
-
-            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-neutral-900/60">
-              <div
-                className={
-                  'h-2 rounded-full transition-all ' +
-                  (calc.profit < 0 ? 'bg-red-500/70' : 'bg-emerald-500/70')
-                }
-                style={{
-                  width: `${Math.max(
-                    0,
-                    Math.min(100, calc.marginPct),
-                  )}%`,
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Breakdown */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/40 p-4">
-            <div className="mb-2 text-sm font-medium text-neutral-300">
-              Breakdown
-            </div>
-            <ul className="space-y-2 text-sm text-neutral-200">
-              <Row
-                label="Subtotal (after discount + tax + ship to buyer)"
-                value={fmtMoney(
-                  calc.subtotalAfterDiscountAndShipToBuyer,
-                )}
-              />
-              <Row label="Marketplace fee" value={fmtMoney(calc.marketplaceFee)} />
-              <Row label="Payment fee" value={fmtMoney(calc.paymentFee)} />
-              <Row label="Listing fee" value={fmtMoney(calc.listingFee)} />
-              <Row label="Shipping cost (your cost)" value={fmtMoney(shippingCost)} />
-              <Row label="COGS" value={fmtMoney(cogs)} />
-              <Row label="Total fees" value={fmtMoney(calc.totalFees)} />
-              <Row
-                label="Net proceeds (after fees & ship cost)"
-                value={fmtMoney(calc.netProceeds)}
-              />
-            </ul>
-          </div>
-        </section>
-      </div>
-
-      {/* ====================== Compare (All Platforms) ====================== */}
-      <section className="mt-10">
-        <div className="mb-3 text-sm text-neutral-400">
-          Comparing with current inputs (
-          <span className="font-medium text-neutral-200">
-            {fmtMoney(price)}
-          </span>{' '}
-          price,
-          <span className="font-medium text-neutral-200">
-            {' '}
-            {fmtMoney(shippingCharge)}
-          </span>{' '}
-          ship charge,
-          <span className="font-medium text-neutral-200">
-            {' '}
-            {fmtMoney(shippingCost)}
-          </span>{' '}
-          ship cost,
-          <span className="font-medium text-neutral-200">
-            {' '}
-            {fmtMoney(cogs)}
-          </span>{' '}
-          COGS,
-          <span className="font-medium text-neutral-200">
-            {' '}
-            {discountPct}%
-          </span>{' '}
-          discount,
-          <span className="font-medium text-neutral-200">
-            {' '}
-            {fmtMoney(taxCollected)}
-          </span>{' '}
-          tax).
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-neutral-800 bg-neutral-950/40">
-          <table className="min-w-[760px] w-full text-sm">
-            <thead>
-              <tr className="bg-neutral-900/40 text-neutral-300">
-                <th className="px-3 py-2 text-left font-medium">Platform</th>
-                <th className="px-3 py-2 text-right font-medium">Profit</th>
-                <th className="px-3 py-2 text-right font-medium">Margin</th>
-                <th className="px-3 py-2 text-right font-medium">Total fees</th>
-                <th className="px-3 py-2 text-right font-medium">Marketplace fee</th>
-                <th className="px-3 py-2 text-right font-medium">Payment fee</th>
-                <th className="px-3 py-2 text-right font-medium">Listing fee</th>
+        {/* Overview */}
+        <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="text-neutral-300">Overview</div>
+            <div className="text-neutral-400">Margin</div>
+          </div>
+          <div className="mb-1 flex items-baseline justify-between">
+            <div className={`text-4xl font-semibold ${moneyClass(result.profit)}`}>{fmtMoney(result.profit)}</div>
+            <div className="text-3xl text-neutral-200">{result.margin.toFixed(1)}%</div>
+          </div>
+          <div className="mt-4 space-y-2 text-sm text-neutral-300">
+            <div className="flex justify-between">
+              <span>Total fees</span>
+              <span>{fmtMoney(result.totalFees)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Marketplace fee</span>
+              <span>{fmtMoney(result.marketplaceFee)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Payment fee</span>
+              <span>{fmtMoney(result.paymentFee)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Listing fee</span>
+              <span>{fmtMoney(result.listingFee)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Net proceeds (after fees & ship cost)</span>
+              <span>{fmtMoney(result.netProceeds)}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Backsolve */}
+      <section className="mb-8 rounded-2xl border border-neutral-800 bg-neutral-950/40 p-4">
+        <div className="mb-4 text-neutral-300">Backsolve</div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {inputBox('Target profit ($)', inputs.tp, (n) => setInputs({ ...inputs, tp: n }))}
+          <div className="flex flex-col gap-1">
+            <label className="text-sm text-neutral-400">Required price</label>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100">
+              {fmtMoney(backsolvePrice)}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Comparison */}
+      <section className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-4">
+        <div className="mb-4 text-neutral-300">
+          Comparing with current inputs (
+          <span className="text-neutral-100">
+            {fmtMoney(inputs.p)}
+          </span>{' '}
+          price,{' '}
+          <span className="text-neutral-100">{fmtMoney(inputs.sc)}</span> ship charge,{' '}
+          <span className="text-neutral-100">{fmtMoney(inputs.ss)}</span> ship cost,{' '}
+          <span className="text-neutral-100">{fmtMoney(inputs.cg)}</span> COGS,{' '}
+          <span className="text-neutral-100">{((inputs.dc / Math.max(1, inputs.p)) * 100).toFixed(0)}%</span> discount,{' '}
+          <span className="text-neutral-100">{fmtMoney(inputs.tx)}</span> tax).
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead className="text-neutral-400">
+              <tr className="border-b border-neutral-800">
+                <th className="px-3 py-2 text-left">Platform</th>
+                <th className="px-3 py-2 text-right">Profit</th>
+                <th className="px-3 py-2 text-right">Margin</th>
+                <th className="px-3 py-2 text-right">Total fees</th>
+                <th className="px-3 py-2 text-right">Marketplace fee</th>
+                <th className="px-3 py-2 text-right">Payment fee</th>
+                <th className="px-3 py-2 text-right">Listing fee</th>
               </tr>
             </thead>
-
-            <tbody className="divide-y divide-neutral-800 text-neutral-200">
-              {comparisonRows.map((row) => (
-                <tr key={row.key} className="hover:bg-neutral-900/40">
-                  {/* Platform name */}
+            <tbody>
+              {comparison.map((row) => (
+                <tr key={row.key} className="border-b border-neutral-900">
                   <td className="px-3 py-2">
-                    <span className="inline-flex items-center rounded-lg border border-neutral-800 bg-neutral-900/60 px-2 py-1">
+                    <span className="rounded-md border border-neutral-800 px-2 py-1 text-neutral-200">
                       {row.label}
                     </span>
                   </td>
-
-                  {/* Profit */}
+                  <td className={`px-3 py-2 text-right ${moneyClass(row.profit)}`}>{fmtMoney(row.profit)}</td>
                   <td className="px-3 py-2 text-right">
-                    {fmtMoney(row.profit)}
+                    <div className="text-neutral-200">{row.margin.toFixed(1)}%</div>
                   </td>
-
-                  {/* Margin */}
-                  <td className="px-3 py-2 text-right">
-                    <span
-                      className={
-                        'inline-block rounded-lg px-2 py-1 ' +
-                        (row.profit < 0
-                          ? 'bg-red-950/50 text-red-300'
-                          : 'bg-green-950/40 text-green-300')
-                      }
-                    >
-                      {row.margin.toFixed(1)}%
-                    </span>
-                  </td>
-
-                  {/* Total fees */}
-                  <td className="px-3 py-2 text-right">
-                    {fmtMoney(row.totalFees)}
-                  </td>
-
-                  {/* Marketplace fee */}
-                  <td className="px-3 py-2 text-right">
-                    {fmtMoney(row.marketplaceFee)}
-                  </td>
-
-                  {/* Payment fee */}
-                  <td className="px-3 py-2 text-right">
-                    {fmtMoney(row.paymentFee)}
-                  </td>
-
-                  {/* Listing fee */}
-                  <td className="px-3 py-2 text-right">
-                    {fmtMoney(row.listingFee)}
-                  </td>
+                  <td className="px-3 py-2 text-right">{fmtMoney(row.totalFees)}</td>
+                  <td className="px-3 py-2 text-right">{fmtMoney(row.marketplaceFee)}</td>
+                  <td className="px-3 py-2 text-right">{fmtMoney(row.paymentFee)}</td>
+                  <td className="px-3 py-2 text-right">{fmtMoney(row.listingFee)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </section>
-      {/* ==================== End Compare (All Platforms) ==================== */}
-
-      {/* Footer */}
-      <footer className="mx-auto mt-10 max-w-5xl text-center text-sm text-neutral-500">
-        Made by{' '}
-        <a
-          className="text-neutral-300 underline decoration-neutral-700 underline-offset-4 hover:text-neutral-100"
-          href="#"
-        >
-          FeePilot
-        </a>
-        . Sporty Neon theme.
-      </footer>
     </div>
-  );
-}
-
-// ---------- small presentational components ----------
-function Field({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number | string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="flex flex-col text-sm">
-      <span className="mb-1 text-neutral-400">{label}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
-        inputMode="decimal"
-      />
-    </label>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <li className="flex items-center justify-between">
-      <span className="text-neutral-400">{label}</span>
-      <span className="font-medium">{value}</span>
-    </li>
   );
 }
