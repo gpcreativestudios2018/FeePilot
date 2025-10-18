@@ -132,7 +132,7 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // write URL on changes (debounced-ish)
+  // write URL on changes
   useEffect(() => {
     const url = new URL(window.location.href);
     const q = url.searchParams;
