@@ -28,7 +28,7 @@ function fmtMoney(n: number) {
   const neg = n < 0;
   const abs = Math.abs(n);
   const s = `$${abs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  return neg ? `(${s.slice(1)})` : s; // parentheses when negative
+  return neg ? `(${s.slice(1)})` : s; // parentheses for negative
 }
 
 // URL keys (short)
@@ -116,7 +116,7 @@ function compute(platform: PlatformKey, inputs: Inputs): Calc {
   const discountedPrice = price * (1 - discountPct);
 
   // Listing fee (fixed)
-  const listingFee = rule.listingFixed ?? 0;
+  const listingFee = rule.listingFee ?? 0;
 
   // Marketplace fee is % of (item price + shipping charged + tax) AFTER discount
   const marketplaceBase = discountedPrice + shipCharged + tax;
@@ -131,7 +131,7 @@ function compute(platform: PlatformKey, inputs: Inputs): Calc {
   const net = discountedPrice + shipCharged + tax - totalFees - shippingCost;
 
   const profit = net - cogs;
-  const revenueBasis = discountedPrice + shipCharged; // don't count tax toward "revenue" margin baseline
+  const revenueBasis = discountedPrice + shipCharged; // don't count tax toward margin baseline
   const margin = revenueBasis > 0 ? (profit / revenueBasis) * 100 : 0;
 
   return {
@@ -196,7 +196,7 @@ export default function Page() {
 
   const calc = useMemo(() => compute(platform, inputs), [platform, inputs]);
 
-  // Compare across platforms (keep total fees column at the end)
+  // Compare across platforms (Total fees column at the end)
   const compareRows = useMemo(() => {
     return (Object.keys(RULES) as PlatformKey[]).map((pf) => {
       const c = compute(pf, inputs);
