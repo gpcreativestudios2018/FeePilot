@@ -11,93 +11,132 @@ import {
 
 // ---------- helpers ----------
 function clamp(n: number, min = -1_000_000, max = 1_000_000) {
-  if (Number.isNaN(n)) return 0;
-  return Math.min(max, Math.max(min, n));
+  if (Number.isNaN(n) || !Number.isFinite(n)) return 0;
+  return Math.min(Math.max(n, min), max);
 }
 
-function toNum(v: string | number) {
-  const n = typeof v === 'number' ? v : parseFloat(v || '0');
-  return clamp(n);
+function parseNum(v: string | number | null | undefined, fallback = 0) {
+  if (typeof v === 'number') return clamp(v);
+  if (typeof v === 'string') {
+    const n = Number(v);
+    return clamp(Number.isFinite(n) ? n : fallback);
+  }
+  return fallback;
 }
 
 function fmtMoney(n: number) {
+  const neg = n < 0;
   const abs = Math.abs(n);
-  const s = abs.toLocaleString(undefined, {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return n < 0 ? `(${s})` : s;
+  const s = `$${abs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return neg ? `(${s.slice(1)})` : s; // parentheses when negative
 }
 
-// shorter query keys
-type QueryKeys = 'p' | 'sc' | 'ss' | 'cg' | 'tx' | 'dc' | 'tp' | 'plat';
-
-function readQuery(): Record<QueryKeys, string> {
-  const sp =
-    typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search)
-      : new URLSearchParams();
-  return {
-    plat: sp.get('plat') || '',
-    p: sp.get('p') || '',
-    sc: sp.get('sc') || '',
-    ss: sp.get('ss') || '',
-    cg: sp.get('cg') || '',
-    tx: sp.get('tx') || '',
-    dc: sp.get('dc') || '',
-    tp: sp.get('tp') || '',
-  } as Record<QueryKeys, string>;
-}
-
-function writeQuery(q: Partial<Record<QueryKeys, string>>) {
-  if (typeof window === 'undefined') return;
-  const sp = new URLSearchParams(window.location.search);
-  Object.entries(q).forEach(([k, v]) => {
-    if (!v || v === '0') sp.delete(k);
-    else sp.set(k, v);
-  });
-  const url = `${window.location.pathname}?${sp.toString()}`;
-  window.history.replaceState({}, '', url);
-}
+// URL keys (short)
+const QK = {
+  p: 'p',   // price
+  sc: 'sc', // ship charged to buyer
+  ss: 'ss', // shipping cost (seller)
+  cg: 'cg', // COGS
+  tx: 'tx', // tax
+  dc: 'dc', // discount pct (0-100)
+  tp: 'tp', // target profit (backsolve)
+  pf: 'pf', // platform
+} as const;
 
 type Inputs = {
-  p: number; // price
-  sc: number; // shipping charged to buyer
-  ss: number; // your shipping cost
-  cg: number; // cost of goods
-  tx: number; // tax collected
-  dc: number; // discount pct (0-100)
-  tp: number; // target profit (for backsolve)
+  p: number;
+  sc: number;
+  ss: number;
+  cg: number;
+  tx: number;
+  dc: number;
+  tp: number;
 };
 
-function calc(rule: FeeRule, platform: PlatformKey, inputs: Inputs) {
-  // effective sale (after discount + buyer-paid ship + tax)
-  const discount = inputs.p * (inputs.dc / 100);
-  const subtotal = inputs.p - discount + inputs.sc + inputs.tx;
+const DEFAULT_INPUTS: Inputs = {
+  p: 120,
+  sc: 0,
+  ss: 10,
+  cg: 40,
+  tx: 0,
+  dc: 0,
+  tp: 50,
+};
 
-  const marketplaceFee = subtotal * rule.marketplacePct;
+function readInputsFromURL(): { platform: PlatformKey; inputs: Inputs } {
+  const url = new URL(window.location.href);
+  const platform = (url.searchParams.get(QK.pf) as PlatformKey) || 'etsy';
+  const inputs: Inputs = {
+    p: parseNum(url.searchParams.get(QK.p) || DEFAULT_INPUTS.p, DEFAULT_INPUTS.p),
+    sc: parseNum(url.searchParams.get(QK.sc) || DEFAULT_INPUTS.sc, DEFAULT_INPUTS.sc),
+    ss: parseNum(url.searchParams.get(QK.ss) || DEFAULT_INPUTS.ss, DEFAULT_INPUTS.ss),
+    cg: parseNum(url.searchParams.get(QK.cg) || DEFAULT_INPUTS.cg, DEFAULT_INPUTS.cg),
+    tx: parseNum(url.searchParams.get(QK.tx) || DEFAULT_INPUTS.tx, DEFAULT_INPUTS.tx),
+    dc: parseNum(url.searchParams.get(QK.dc) || DEFAULT_INPUTS.dc, DEFAULT_INPUTS.dc),
+    tp: parseNum(url.searchParams.get(QK.tp) || DEFAULT_INPUTS.tp, DEFAULT_INPUTS.tp),
+  };
+  return { platform, inputs };
+}
 
-  // payment fee = pct * subtotal + fixed
-  const paymentFee = subtotal * rule.paymentPct + (rule.paymentFixed ?? 0);
+function writeInputsToURL(platform: PlatformKey, inputs: Inputs) {
+  const url = new URL(window.location.href);
+  url.searchParams.set(QK.pf, platform);
+  url.searchParams.set(QK.p, String(inputs.p));
+  url.searchParams.set(QK.sc, String(inputs.sc));
+  url.searchParams.set(QK.ss, String(inputs.ss));
+  url.searchParams.set(QK.cg, String(inputs.cg));
+  url.searchParams.set(QK.tx, String(inputs.tx));
+  url.searchParams.set(QK.dc, String(inputs.dc));
+  url.searchParams.set(QK.tp, String(inputs.tp));
+  history.replaceState(null, '', url.toString());
+}
 
-  // listing fee (fixed) – correct field name: listingFee
-  const listingFee = rule.listingFee ?? 0;
+type Calc = {
+  profit: number;
+  margin: number;
+  marketplaceFee: number;
+  paymentFee: number;
+  listingFee: number;
+  shippingCost: number; // your cost
+  cogs: number;
+  totalFees: number;
+  net: number;
+};
 
-  // your shipping cost (you pay this)
-  const shippingCost = inputs.ss;
+function compute(platform: PlatformKey, inputs: Inputs): Calc {
+  const rule: FeeRule = RULES[platform];
+  const price = clamp(inputs.p);
+  const shipCharged = clamp(inputs.sc);
+  const shippingCost = clamp(inputs.ss);
+  const cogs = clamp(inputs.cg);
+  const tax = clamp(inputs.tx);
+  const discountPct = Math.max(0, Math.min(100, inputs.dc)) / 100;
 
-  const cogs = inputs.cg;
+  // Discount reduces price charged to buyer
+  const discountedPrice = price * (1 - discountPct);
 
-  const totalFees = marketplaceFee + paymentFee + listingFee + shippingCost + cogs;
-  const net = subtotal - totalFees;
-  const margin = subtotal !== 0 ? (net / subtotal) * 100 : 0;
+  // Listing fee (fixed)
+  const listingFee = rule.listingFixed ?? 0;
+
+  // Marketplace fee is % of (item price + shipping charged + tax) AFTER discount
+  const marketplaceBase = discountedPrice + shipCharged + tax;
+  const marketplaceFee = marketplaceBase * (rule.marketplacePct ?? 0);
+
+  // Payment fee = % of marketplaceBase + fixed
+  const paymentFee =
+    marketplaceBase * (rule.paymentPct ?? 0) + (rule.paymentFixed ?? 0);
+
+  const totalFees = listingFee + marketplaceFee + paymentFee;
+  // Net received from buyer (item + shipping charged + tax) minus fees and your ship cost
+  const net = discountedPrice + shipCharged + tax - totalFees - shippingCost;
+
+  const profit = net - cogs;
+  const revenueBasis = discountedPrice + shipCharged; // don't count tax toward "revenue" margin baseline
+  const margin = revenueBasis > 0 ? (profit / revenueBasis) * 100 : 0;
 
   return {
-    platform,
-    subtotal,
-    discount,
+    profit,
+    margin,
     marketplaceFee,
     paymentFee,
     listingFee,
@@ -105,83 +144,97 @@ function calc(rule: FeeRule, platform: PlatformKey, inputs: Inputs) {
     cogs,
     totalFees,
     net,
-    margin,
   };
 }
 
-export default function Page() {
-  // initial from URL (if present)
-  const q = readQuery();
-
-  const [platform, setPlatform] = useState<PlatformKey>(
-    (PLATFORMS.find((p) => p.key === q.plat)?.key as PlatformKey) || 'etsy'
+// Reusable input control
+function MoneyInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="text-sm text-neutral-300">{label}</div>
+      <input
+        value={String(value)}
+        onChange={(e) => onChange(parseNum(e.target.value))}
+        inputMode="decimal"
+        className="rounded-xl border border-neutral-800 bg-neutral-950/70 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
+      />
+    </div>
   );
+}
 
-  const [inputs, setInputs] = useState<Inputs>({
-    p: q.p ? toNum(q.p) : 200,
-    sc: q.sc ? toNum(q.sc) : 0,
-    ss: q.ss ? toNum(q.ss) : 10,
-    cg: q.cg ? toNum(q.cg) : 40,
-    tx: q.tx ? toNum(q.tx) : 0,
-    dc: q.dc ? toNum(q.dc) : 0,
-    tp: q.tp ? toNum(q.tp) : 50,
-  });
+// Purple panel wrapper (pops more)
+function Panel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border-2 border-purple-500/70 ring-2 ring-purple-400/40 shadow-[0_0_0_6px_rgba(168,85,247,0.15)] bg-neutral-950/60">
+      {children}
+    </div>
+  );
+}
 
-  // keep URL in sync (short keys)
+export default function Page() {
+  const initial = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return { platform: 'etsy' as PlatformKey, inputs: DEFAULT_INPUTS };
+    }
+    return readInputsFromURL();
+  }, []);
+
+  const [platform, setPlatform] = useState<PlatformKey>(initial.platform);
+  const [inputs, setInputs] = useState<Inputs>(initial.inputs);
+
   useEffect(() => {
-    writeQuery({
-      plat: platform,
-      p: String(inputs.p),
-      sc: String(inputs.sc),
-      ss: String(inputs.ss),
-      cg: String(inputs.cg),
-      tx: String(inputs.tx),
-      dc: String(inputs.dc),
-      tp: String(inputs.tp),
-    });
+    if (typeof window !== 'undefined') writeInputsToURL(platform, inputs);
   }, [platform, inputs]);
 
-  const rule = RULES[platform];
-  const result = useMemo(() => calc(rule, platform, inputs), [rule, platform, inputs]);
+  const calc = useMemo(() => compute(platform, inputs), [platform, inputs]);
 
-  // comparison rows for all platforms
+  // Compare across platforms (keep total fees column at the end)
   const compareRows = useMemo(() => {
-    return PLATFORMS.map((p) => {
-      const r = calc(RULES[p.key], p.key, inputs);
+    return (Object.keys(RULES) as PlatformKey[]).map((pf) => {
+      const c = compute(pf, inputs);
       return {
-        key: p.key,
-        label: p.label,
-        profit: r.net,
-        margin: r.margin,
-        marketplaceFee: r.marketplaceFee,
-        paymentFee: r.paymentFee,
-        listingFee: r.listingFee,
-        totalFees: r.totalFees,
+        pf,
+        profit: c.profit,
+        margin: c.margin,
+        marketplaceFee: c.marketplaceFee,
+        paymentFee: c.paymentFee,
+        listingFee: c.listingFee,
+        totalFees: c.totalFees,
       };
     });
   }, [inputs]);
 
-  const sectionBox =
-    'rounded-2xl border border-purple-500/30 shadow-[0_0_0_1px_rgba(168,85,247,0.25)_inset] bg-neutral-950/40 backdrop-blur';
-
   return (
-    <main className="min-h-dvh bg-neutral-950 text-neutral-100">
-      <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
-        {/* header */}
-        <div className="flex items-center gap-3">
-          <span className="inline-block h-3 w-3 rounded-full bg-purple-500" />
-          <h1 className="text-2xl font-semibold">FeePilot</h1>
+    <main className="min-h-screen bg-neutral-950 text-neutral-100">
+      <div className="mx-auto max-w-6xl p-6 space-y-10">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="h-3 w-3 rounded-full bg-purple-500" />
+            <h1 className="text-2xl font-semibold">FeePilot</h1>
+          </div>
+          <div className="text-sm text-neutral-400">
+            Rules last updated: {RULES_UPDATED_AT}
+          </div>
         </div>
 
-        {/* Platform + updated */}
-        <section className={sectionBox}>
-          <div className="space-y-4 p-5 md:p-6">
-            <h2 className="text-lg font-medium">Platform</h2>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {/* Platform + Inputs */}
+        <Panel>
+          <div className="p-5 space-y-6">
+            <div className="space-y-2">
+              <div className="text-sm text-neutral-300">Platform</div>
               <select
-                className="max-w-xs rounded-xl border border-neutral-800 bg-neutral-900/70 px-3 py-2 outline-none focus:border-purple-500"
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value as PlatformKey)}
+                className="w-full rounded-xl border border-neutral-800 bg-neutral-950/70 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
               >
                 {PLATFORMS.map((p) => (
                   <option key={p.key} value={p.key}>
@@ -189,205 +242,163 @@ export default function Page() {
                   </option>
                 ))}
               </select>
-              <p className="text-sm text-neutral-400">
-                Rules last updated: <span className="font-medium">{RULES_UPDATED_AT}</span>
-              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <MoneyInput
+                label="Item price ($)"
+                value={inputs.p}
+                onChange={(v) => setInputs((s) => ({ ...s, p: v }))}
+              />
+              <MoneyInput
+                label="Shipping charged to buyer ($)"
+                value={inputs.sc}
+                onChange={(v) => setInputs((s) => ({ ...s, sc: v }))}
+              />
+              <MoneyInput
+                label="Your shipping cost ($)"
+                value={inputs.ss}
+                onChange={(v) => setInputs((s) => ({ ...s, ss: v }))}
+              />
+              <MoneyInput
+                label="COGS ($)"
+                value={inputs.cg}
+                onChange={(v) => setInputs((s) => ({ ...s, cg: v }))}
+              />
+              <MoneyInput
+                label="Tax collected ($)"
+                value={inputs.tx}
+                onChange={(v) => setInputs((s) => ({ ...s, tx: v }))}
+              />
+              <MoneyInput
+                label="Discount (%)"
+                value={inputs.dc}
+                onChange={(v) =>
+                  setInputs((s) => ({ ...s, dc: clamp(v, 0, 100) }))
+                }
+              />
             </div>
           </div>
-        </section>
+        </Panel>
 
-        {/* Inputs + Overview */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Inputs */}
-          <section className={sectionBox}>
-            <div className="p-5 md:p-6">
-              <h2 className="mb-4 text-lg font-medium">Inputs</h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field
-                  label="Item price ($)"
-                  value={inputs.p}
-                  onChange={(n) => setInputs((s) => ({ ...s, p: n }))}
-                />
-                <Field
-                  label="Shipping charged to buyer ($)"
-                  value={inputs.sc}
-                  onChange={(n) => setInputs((s) => ({ ...s, sc: n }))}
-                />
-                <Field
-                  label="Your shipping cost ($)"
-                  value={inputs.ss}
-                  onChange={(n) => setInputs((s) => ({ ...s, ss: n }))}
-                />
-                <Field
-                  label="Cost of goods ($)"
-                  value={inputs.cg}
-                  onChange={(n) => setInputs((s) => ({ ...s, cg: n }))}
-                />
-                <Field
-                  label="Tax collected ($)"
-                  value={inputs.tx}
-                  onChange={(n) => setInputs((s) => ({ ...s, tx: n }))}
-                />
-                <Field
-                  label="Discount (%)"
-                  value={inputs.dc}
-                  onChange={(n) => setInputs((s) => ({ ...s, dc: n }))}
-                />
-                <Field
-                  label="Target profit ($) — backsolve"
-                  value={inputs.tp}
-                  onChange={(n) => setInputs((s) => ({ ...s, tp: n }))}
-                />
+        {/* Overview */}
+        <Panel>
+          <div className="p-5">
+            <h2 className="mb-4 text-xl font-semibold">Overview</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Profit */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
+                <div className="text-neutral-300">Profit</div>
+                <div
+                  className={
+                    'mt-2 text-3xl font-bold ' +
+                    (calc.profit < 0 ? 'text-red-400' : 'text-emerald-400')
+                  }
+                >
+                  {fmtMoney(calc.profit)}
+                </div>
+              </div>
+
+              {/* Margin */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
+                <div className="text-neutral-300">Margin</div>
+                <div className="mt-2 text-3xl font-bold">
+                  {calc.margin.toFixed(1)}%
+                </div>
+              </div>
+
+              {/* Marketplace fee */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
+                <div className="text-neutral-300">Marketplace fee</div>
+                <div className="mt-2 text-2xl">{fmtMoney(calc.marketplaceFee)}</div>
+              </div>
+
+              {/* Payment fee */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
+                <div className="text-neutral-300">Payment fee</div>
+                <div className="mt-2 text-2xl">{fmtMoney(calc.paymentFee)}</div>
+              </div>
+
+              {/* Listing fee */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
+                <div className="text-neutral-300">Listing fee</div>
+                <div className="mt-2 text-2xl">{fmtMoney(calc.listingFee)}</div>
+              </div>
+
+              {/* Shipping cost (your cost) */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
+                <div className="text-neutral-300">Shipping cost (your cost)</div>
+                <div className="mt-2 text-2xl">{fmtMoney(calc.shippingCost)}</div>
+              </div>
+
+              {/* COGS */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
+                <div className="text-neutral-300">COGS</div>
+                <div className="mt-2 text-2xl">{fmtMoney(calc.cogs)}</div>
+              </div>
+
+              {/* Total fees */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
+                <div className="text-neutral-300">Total fees</div>
+                <div className="mt-2 text-2xl">{fmtMoney(calc.totalFees)}</div>
               </div>
             </div>
-          </section>
-
-            {/* Overview */}
-          <section className={sectionBox}>
-            <div className="p-5 md:p-6">
-              <h2 className="mb-4 text-lg font-medium">Overview</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <Stat label="Profit" value={result.net} big negativeRed />
-                <Stat label="Margin" value={`${result.margin.toFixed(1)}%`} />
-                <Stat label="Marketplace fee" value={result.marketplaceFee} />
-                <Stat label="Payment fee" value={result.paymentFee} />
-                <Stat label="Listing fee" value={result.listingFee} />
-                <Stat label="Shipping cost (your cost)" value={result.shippingCost} />
-                <Stat label="COGS" value={result.cogs} />
-                <Stat label="Total fees" value={result.totalFees} />
-              </div>
-            </div>
-          </section>
-        </div>
+          </div>
+        </Panel>
 
         {/* Comparison */}
-        <section className={sectionBox}>
-          <div className="p-5 md:p-6">
-            <h2 className="mb-4 text-lg font-medium">Compare across platforms</h2>
-            <p className="mb-3 text-sm text-neutral-400">
+        <Panel>
+          <div className="p-5">
+            <div className="mb-4 text-neutral-300">
               Comparing with current inputs (
-              <span className="font-medium">{fmtMoney(inputs.p)}</span> price,{' '}
-              <span className="font-medium">{fmtMoney(inputs.sc)}</span> ship charge,{' '}
-              <span className="font-medium">{fmtMoney(inputs.ss)}</span> ship cost,{' '}
-              <span className="font-medium">{fmtMoney(inputs.cg)}</span> COGS,{' '}
-              <span className="font-medium">{inputs.dc}%</span> discount,{' '}
-              <span className="font-medium">{fmtMoney(inputs.tx)}</span> tax).
-            </p>
+              <b>{fmtMoney(inputs.p)}</b> price, <b>{fmtMoney(inputs.sc)}</b> ship
+              charge, <b>{fmtMoney(inputs.ss)}</b> ship cost,{' '}
+              <b>{fmtMoney(inputs.cg)}</b> COGS, {inputs.dc}% discount,{' '}
+              {fmtMoney(inputs.tx)} tax).
+            </div>
 
-            <div className="overflow-x-auto rounded-xl border border-neutral-800">
-              <table className="min-w-full divide-y divide-neutral-800 text-sm">
-                <thead className="bg-neutral-900/60 text-neutral-300">
+            <div className="overflow-x-auto">
+              <table className="w-full border-separate border-spacing-y-2">
+                <thead className="text-left text-sm text-neutral-400">
                   <tr>
-                    <Th>Platform</Th>
-                    <Th className="text-right">Profit</Th>
-                    <Th className="text-right">Margin</Th>
-                    <Th className="text-right">Marketplace fee</Th>
-                    <Th className="text-right">Payment fee</Th>
-                    <Th className="text-right">Listing fee</Th>
-                    {/* moved to the end */}
-                    <Th className="text-right">Total fees</Th>
+                    <th className="px-3 py-2">Platform</th>
+                    <th className="px-3 py-2">Profit</th>
+                    <th className="px-3 py-2">Margin</th>
+                    <th className="px-3 py-2">Marketplace fee</th>
+                    <th className="px-3 py-2">Payment fee</th>
+                    <th className="px-3 py-2">Listing fee</th>
+                    <th className="px-3 py-2">Total fees</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-900/70">
+                <tbody>
                   {compareRows.map((row) => (
-                    <tr key={row.key} className="hover:bg-neutral-900/30">
+                    <tr key={row.pf} className="rounded-xl bg-neutral-950/60">
                       <td className="px-3 py-2">
-                        <span className="rounded-full bg-neutral-800/70 px-2.5 py-1 text-xs">
-                          {PLATFORMS.find((p) => p.key === row.key)?.label ?? row.key}
+                        <span className="inline-flex items-center rounded-lg bg-neutral-900/70 px-3 py-1">
+                          {PLATFORMS.find((p) => p.key === row.pf)?.label ?? row.pf}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-right">
-                        <span
-                          className={
-                            row.profit < 0 ? 'text-red-400 font-medium' : 'text-emerald-400 font-medium'
-                          }
-                        >
-                          {fmtMoney(row.profit)}
-                        </span>
+                      <td className="px-3 py-2 text-emerald-400">
+                        {fmtMoney(row.profit)}
                       </td>
-                      <td className="px-3 py-2 text-right">
-                        {row.margin.toFixed(1)}%
-                      </td>
-                      <td className="px-3 py-2 text-right">{fmtMoney(row.marketplaceFee)}</td>
-                      <td className="px-3 py-2 text-right">{fmtMoney(row.paymentFee)}</td>
-                      <td className="px-3 py-2 text-right">{fmtMoney(row.listingFee)}</td>
-                      {/* total fees at the end */}
-                      <td className="px-3 py-2 text-right">{fmtMoney(row.totalFees)}</td>
+                      <td className="px-3 py-2">{row.margin.toFixed(1)}%</td>
+                      <td className="px-3 py-2">{fmtMoney(row.marketplaceFee)}</td>
+                      <td className="px-3 py-2">{fmtMoney(row.paymentFee)}</td>
+                      <td className="px-3 py-2">{fmtMoney(row.listingFee)}</td>
+                      <td className="px-3 py-2">{fmtMoney(row.totalFees)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
-        </section>
+        </Panel>
+
+        {/* Footer */}
+        <div className="pb-10 text-center text-sm text-neutral-500">
+          Made by <span className="text-purple-400">FeePilot</span>.
+        </div>
       </div>
     </main>
-  );
-}
-
-// ---------- small components ----------
-
-function Field({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (n: number) => void;
-}) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-sm text-neutral-400">{label}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange(toNum(e.target.value))}
-        className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
-        inputMode="decimal"
-      />
-    </label>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  big = false,
-  negativeRed = false,
-}: {
-  label: string;
-  value: number | string;
-  big?: boolean;
-  negativeRed?: boolean;
-}) {
-  const isNum = typeof value === 'number';
-  const display = isNum ? fmtMoney(value as number) : (value as string);
-  const neg = isNum && (value as number) < 0;
-
-  return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-3">
-      <div className="text-sm text-neutral-400">{label}</div>
-      <div
-        className={
-          'mt-1 font-semibold ' +
-          (big ? 'text-3xl' : 'text-xl') +
-          (negativeRed && neg ? ' text-red-400' : '')
-        }
-      >
-        {display}
-      </div>
-    </div>
-  );
-}
-
-function Th({
-  children,
-  className = '',
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <th className={`px-3 py-2 text-left font-medium ${className}`}>{children}</th>
   );
 }
