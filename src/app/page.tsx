@@ -82,8 +82,8 @@ function calc(rule: FeeRule, platform: PlatformKey, inputs: Inputs) {
   // payment fee = pct * subtotal + fixed
   const paymentFee = subtotal * rule.paymentPct + (rule.paymentFixed ?? 0);
 
-  // listing fee is usually fixed per listing
-  const listingFee = rule.listingFixed ?? 0;
+  // listing fee (fixed) – correct field name: listingFee
+  const listingFee = rule.listingFee ?? 0;
 
   // your shipping cost (you pay this)
   const shippingCost = inputs.ss;
@@ -164,10 +164,6 @@ export default function Page() {
   const sectionBox =
     'rounded-2xl border border-purple-500/30 shadow-[0_0_0_1px_rgba(168,85,247,0.25)_inset] bg-neutral-950/40 backdrop-blur';
 
-  const inputCls =
-    'rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500';
-  const labelCls = 'text-sm text-neutral-400';
-
   return (
     <main className="min-h-dvh bg-neutral-950 text-neutral-100">
       <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
@@ -246,17 +242,12 @@ export default function Page() {
             </div>
           </section>
 
-          {/* Overview */}
+            {/* Overview */}
           <section className={sectionBox}>
             <div className="p-5 md:p-6">
               <h2 className="mb-4 text-lg font-medium">Overview</h2>
               <div className="grid grid-cols-2 gap-4">
-                <Stat
-                  label="Profit"
-                  value={result.net}
-                  big
-                  negativeRed
-                />
+                <Stat label="Profit" value={result.net} big negativeRed />
                 <Stat label="Margin" value={`${result.margin.toFixed(1)}%`} />
                 <Stat label="Marketplace fee" value={result.marketplaceFee} />
                 <Stat label="Payment fee" value={result.paymentFee} />
