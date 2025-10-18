@@ -28,7 +28,7 @@ function fmtMoneyWithParens(n: number) {
   return n < 0 ? `(${fmtMoney(Math.abs(n))})` : fmtMoney(n);
 }
 
-/** little helper to join tailwind classes */
+/** join classes */
 function cx(...list: (string | false | null | undefined)[]) {
   return list.filter(Boolean).join(' ');
 }
@@ -76,9 +76,10 @@ function computeForPlatform(platform: PlatformKey, inputs: Inputs): Row {
   const discountedPrice = price * (1 - discountPct);
   const marketplaceBase = discountedPrice + shipCharged + discountedPrice * taxPct;
 
-  const marketplaceFee =
-    marketplaceBase * (rule.marketplacePct ?? 0) + (rule.marketplaceFixed ?? 0);
+  // NOTE: Your FeeRule does NOT have marketplaceFixed, so we only use percentage.
+  const marketplaceFee = marketplaceBase * (rule.marketplacePct ?? 0);
 
+  // Payment fee: many platforms have a fixed component; keep paymentFixed if present
   const paymentFee =
     discountedPrice * (rule.paymentPct ?? 0) + (rule.paymentFixed ?? 0);
 
@@ -125,7 +126,7 @@ export default function Page() {
     const tx = toNumberLike(q.get('tx') ?? inputs.tx);
     const dc = toNumberLike(q.get('dc') ?? inputs.dc);
 
-    const pf = (q.get('pf') as PlatformKey) || (q.get('p') as PlatformKey); // tolerate older key
+    const pf = (q.get('pf') as PlatformKey) || (q.get('p') as PlatformKey);
     if (pf && RULES[pf]) setPlatform(pf);
 
     setInputs({ p, sc, ss, cg, tx, dc });
@@ -377,16 +378,12 @@ export default function Page() {
                   className="border-t border-neutral-800/70 hover:bg-neutral-900/30"
                 >
                   <td className="px-3 py-3">
-                    <span
-                      className={cx(
-                        'rounded-md bg-neutral-900/70 px-3 py-1 text-neutral-200'
-                      )}
-                    >
+                    <span className="rounded-md bg-neutral-900/70 px-3 py-1 text-neutral-200">
                       {PLATFORMS.find((p) => p.key === row.key)?.label ?? row.key}
                     </span>
                   </td>
 
-                  {/* Profit with red negatives + parentheses */}
+                  {/* Profit with red negatives + parentheses, green positives */}
                   <td
                     className={cx(
                       'px-3 py-2 text-right tabular-nums',
@@ -396,27 +393,18 @@ export default function Page() {
                     {fmtMoneyWithParens(row.profit)}
                   </td>
 
-                  {/* Margin */}
                   <td className="px-3 py-2 text-right tabular-nums">
                     {row.margin.toFixed(1)}%
                   </td>
-
-                  {/* Marketplace fee */}
                   <td className="px-3 py-2 text-right tabular-nums">
                     {fmtMoney(row.marketplaceFee)}
                   </td>
-
-                  {/* Payment fee */}
                   <td className="px-3 py-2 text-right tabular-nums">
                     {fmtMoney(row.paymentFee)}
                   </td>
-
-                  {/* Listing fee */}
                   <td className="px-3 py-2 text-right tabular-nums">
                     {fmtMoney(row.listingFee)}
                   </td>
-
-                  {/* Total fees */}
                   <td className="px-3 py-2 text-right tabular-nums">
                     {fmtMoney(row.totalFees)}
                   </td>
@@ -427,7 +415,6 @@ export default function Page() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="pb-10 text-center text-sm text-neutral-500">
         Made by <span className="text-purple-400">FeePilot</span>. Sporty Neon theme.
       </footer>
