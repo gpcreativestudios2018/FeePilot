@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PLATFORMS,
   RULES,
@@ -17,6 +17,8 @@ function clamp(n: number, min = -1_000_000, max = 1_000_000) {
 }
 
 function toNumberLike(v: string | number) {
+  // allow empty typing -> treat as 0 in state (keeps controlled input happy)
+  if (v === '' || v === null || v === undefined) return 0;
   const n = typeof v === 'number' ? v : parseFloat((v || '0').toString());
   return Number.isFinite(n) ? n : 0;
 }
@@ -36,7 +38,7 @@ function cx(...list: (string | false | null | undefined)[]) {
 /* -------- shared styles (purple frames) -------- */
 
 const sectionFrame =
-  'rounded-2xl border border-purple-500/30 bg-neutral-950/50 shadow-[0_0_0_1px_rgba(168,85,247,.25)_inset,0_0_24px_rgba(168,85,247,.06)]';
+  'rounded-2xl border border-purple-500/40 bg-neutral-950/55 shadow-[0_0_0_1px_rgba(168,85,247,.3)_inset,0_0_26px_rgba(168,85,247,.08)]';
 
 /* ---------------- fee engine ---------------- */
 
@@ -76,7 +78,7 @@ function computeForPlatform(platform: PlatformKey, inputs: Inputs): Row {
   const discountedPrice = price * (1 - discountPct);
   const marketplaceBase = discountedPrice + shipCharged + discountedPrice * taxPct;
 
-  // Only percentage (no marketplaceFixed in your FeeRule)
+  // Percentage-based marketplace fee
   const marketplaceFee = marketplaceBase * (rule.marketplacePct ?? 0);
 
   // Payment fee = % of discounted price + fixed if present
@@ -114,6 +116,10 @@ export default function Page() {
     dc: 0,
   });
 
+  // Track whether any input is focused (so we avoid URL sync while typing)
+  const typingCountRef = useRef(0); // number of active focused inputs
+  const isTyping = typingCountRef.current > 0;
+
   // hydrate from URL once
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -126,15 +132,18 @@ export default function Page() {
     const tx = toNumberLike(q.get('tx') ?? inputs.tx);
     const dc = toNumberLike(q.get('dc') ?? inputs.dc);
 
-    const pf = (q.get('pf') as PlatformKey) || (q.get('p') as PlatformKey);
+    const pf =
+      (q.get('pf') as PlatformKey) ||
+      (q.get('p') as PlatformKey); // legacy accidental key support
     if (pf && RULES[pf]) setPlatform(pf);
 
     setInputs({ p, sc, ss, cg, tx, dc });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 🔁 Debounced URL sync (prevents input blur while typing)
+  // Debounced URL sync – but only if NO input is currently focused.
   useEffect(() => {
+    if (isTyping) return; // do not sync while typing
     const t = window.setTimeout(() => {
       const url = new URL(window.location.href);
       const q = url.searchParams;
@@ -147,11 +156,12 @@ export default function Page() {
       q.set('dc', String(inputs.dc));
       q.set('pf', platform);
 
+      // use history.replaceState directly (doesn't trigger Next navigation)
       window.history.replaceState({}, '', url.toString());
-    }, 500); // wait for user to pause typing
+    }, 600);
 
     return () => window.clearTimeout(t);
-  }, [inputs, platform]);
+  }, [inputs, platform, isTyping]);
 
   const current = useMemo(
     () => computeForPlatform(platform, inputs),
@@ -162,7 +172,7 @@ export default function Page() {
     return PLATFORMS.map((p) => computeForPlatform(p.key, inputs));
   }, [inputs]);
 
-  /* ---------- UI field component ---------- */
+  /* ---------- Input wrapper to manage focus/blur ---------- */
 
   function NumberField({
     label,
@@ -183,6 +193,23 @@ export default function Page() {
           type="text"
           value={String(value)}
           onChange={(e) => onChange(toNumberLike(e.target.value))}
+          onFocus={() => {
+            typingCountRef.current += 1;
+          }}
+          onBlur={() => {
+            typingCountRef.current = Math.max(0, typingCountRef.current - 1);
+            // Sync immediately on blur (now safe)
+            const url = new URL(window.location.href);
+            const q = url.searchParams;
+            q.set('p', String(inputs.p));
+            q.set('sc', String(inputs.sc));
+            q.set('ss', String(inputs.ss));
+            q.set('cg', String(inputs.cg));
+            q.set('tx', String(inputs.tx));
+            q.set('dc', String(inputs.dc));
+            q.set('pf', platform);
+            window.history.replaceState({}, '', url.toString());
+          }}
           className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
           inputMode="decimal"
         />
@@ -218,7 +245,8 @@ export default function Page() {
           ))}
         </select>
         <div className="mt-3 text-sm text-neutral-400">
-          Rules last updated: <span className="tabular-nums">{RULES_UPDATED_AT}</span>
+          Rules last updated:{' '}
+          <span className="tabular-nums">{RULES_UPDATED_AT}</span>
         </div>
       </section>
 
