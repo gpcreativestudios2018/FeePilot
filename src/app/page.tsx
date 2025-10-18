@@ -76,10 +76,10 @@ function computeForPlatform(platform: PlatformKey, inputs: Inputs): Row {
   const discountedPrice = price * (1 - discountPct);
   const marketplaceBase = discountedPrice + shipCharged + discountedPrice * taxPct;
 
-  // NOTE: Your FeeRule does NOT have marketplaceFixed, so we only use percentage.
+  // Only percentage (no marketplaceFixed in your FeeRule)
   const marketplaceFee = marketplaceBase * (rule.marketplacePct ?? 0);
 
-  // Payment fee: many platforms have a fixed component; keep paymentFixed if present
+  // Payment fee = % of discounted price + fixed if present
   const paymentFee =
     discountedPrice * (rule.paymentPct ?? 0) + (rule.paymentFixed ?? 0);
 
@@ -133,21 +133,24 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // write URL on changes
+  // 🔁 Debounced URL sync (prevents input blur while typing)
   useEffect(() => {
-    const url = new URL(window.location.href);
-    const q = url.searchParams;
+    const t = window.setTimeout(() => {
+      const url = new URL(window.location.href);
+      const q = url.searchParams;
 
-    q.set('p', String(inputs.p));
-    q.set('sc', String(inputs.sc));
-    q.set('ss', String(inputs.ss));
-    q.set('cg', String(inputs.cg));
-    q.set('tx', String(inputs.tx));
-    q.set('dc', String(inputs.dc));
-    q.set('pf', platform);
+      q.set('p', String(inputs.p));
+      q.set('sc', String(inputs.sc));
+      q.set('ss', String(inputs.ss));
+      q.set('cg', String(inputs.cg));
+      q.set('tx', String(inputs.tx));
+      q.set('dc', String(inputs.dc));
+      q.set('pf', platform);
 
-    const next = url.toString();
-    window.history.replaceState({}, '', next);
+      window.history.replaceState({}, '', url.toString());
+    }, 500); // wait for user to pause typing
+
+    return () => window.clearTimeout(t);
   }, [inputs, platform]);
 
   const current = useMemo(
@@ -176,6 +179,8 @@ export default function Page() {
       <div className="flex flex-col gap-1">
         <span className="text-sm text-neutral-300">{label}</span>
         <input
+          // keep as text + inputMode=decimal to allow free typing
+          type="text"
           value={String(value)}
           onChange={(e) => onChange(toNumberLike(e.target.value))}
           className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
