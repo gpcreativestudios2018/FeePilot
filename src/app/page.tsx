@@ -21,8 +21,19 @@ function formatCurrency(n: number) {
 /** Stable platform order => index mapping for compact URLs */
 const PLATFORM_ORDER = PLATFORMS.map((p) => p.key as PlatformKey);
 const keyToIndex = (k: PlatformKey) => Math.max(0, PLATFORM_ORDER.indexOf(k));
-const indexToKey = (i: number): PlatformKey =>
-  PLATFORM_ORDER[i] ?? PLATFORM_ORDER[0];
+const indexToKey = (i: number): PlatformKey => PLATFORM_ORDER[i] ?? PLATFORM_ORDER[0];
+
+/** Defaults */
+const DEFAULTS = {
+  platform: 'etsy' as PlatformKey,
+  price: 120,
+  shipCharge: 0,
+  shipCost: 10,
+  cogs: 40,
+  tax: 0,
+  disc: 0,
+  target: 50,
+};
 
 /** Read initial state from URL once (supports compact ?v=... and legacy keys) */
 function readInitialFromUrl() {
@@ -34,31 +45,30 @@ function readInitialFromUrl() {
   if (v) {
     const parts = v.split('.').map((s) => (s.trim() === '' ? NaN : Number(s)));
     const [idx, pr, sc, ss, cg, tx, dc, tp] = parts as number[];
-
     return {
       platform: indexToKey(Number.isFinite(idx) ? idx : 0),
-      price: Number.isFinite(pr) ? pr : 120,
-      shipCharge: Number.isFinite(sc) ? sc : 0,
-      shipCost: Number.isFinite(ss) ? ss : 10,
-      cogs: Number.isFinite(cg) ? cg : 40,
-      tax: Number.isFinite(tx) ? tx : 0,
-      disc: Number.isFinite(dc) ? dc : 0,
-      target: Number.isFinite(tp) ? tp : 50,
+      price: Number.isFinite(pr) ? pr : DEFAULTS.price,
+      shipCharge: Number.isFinite(sc) ? sc : DEFAULTS.shipCharge,
+      shipCost: Number.isFinite(ss) ? ss : DEFAULTS.shipCost,
+      cogs: Number.isFinite(cg) ? cg : DEFAULTS.cogs,
+      tax: Number.isFinite(tx) ? tx : DEFAULTS.tax,
+      disc: Number.isFinite(dc) ? dc : DEFAULTS.disc,
+      target: Number.isFinite(tp) ? tp : DEFAULTS.target,
     };
   }
 
   // Legacy format fallback: ?p=mercari&pr=... (keeps old links working)
-  const platform = (q.get('p') as PlatformKey) || 'etsy';
-  const price = parseFloat(q.get('pr') || '') || 120;
-  const shipCharge = parseFloat(q.get('sc') || '') || 0;
-  const shipCost = parseFloat(q.get('ss') || '') || 10;
-  const cogs = parseFloat(q.get('cg') || '') || 40;
-  const tax = parseFloat(q.get('tx') || '') || 0;
-  const disc = parseFloat(q.get('dc') || '') || 0;
-  const target = parseFloat(q.get('tp') || '') || 50;
+  const platform = (q.get('p') as PlatformKey) || DEFAULTS.platform;
+  const price = parseFloat(q.get('pr') || '') || DEFAULTS.price;
+  const shipCharge = parseFloat(q.get('sc') || '') || DEFAULTS.shipCharge;
+  const shipCost = parseFloat(q.get('ss') || '') || DEFAULTS.shipCost;
+  const cogs = parseFloat(q.get('cg') || '') || DEFAULTS.cogs;
+  const tax = parseFloat(q.get('tx') || '') || DEFAULTS.tax;
+  const disc = parseFloat(q.get('dc') || '') || DEFAULTS.disc;
+  const target = parseFloat(q.get('tp') || '') || DEFAULTS.target;
 
   return {
-    platform: (PLATFORMS.find((p) => p.key === platform)?.key ?? 'etsy') as PlatformKey,
+    platform: (PLATFORMS.find((p) => p.key === platform)?.key ?? DEFAULTS.platform) as PlatformKey,
     price,
     shipCharge,
     shipCost,
@@ -90,7 +100,6 @@ function writeToUrl(s: {
     clamp(s.disc),
     clamp(s.target),
   ];
-
   const q = new URLSearchParams();
   q.set('v', arr.join('.'));
   const url = `${window.location.pathname}?${q.toString()}`;
@@ -102,14 +111,14 @@ function writeToUrl(s: {
 export default function Page() {
   const initial = readInitialFromUrl();
 
-  const [platform, setPlatform] = useState<PlatformKey>(initial?.platform ?? 'etsy');
-  const [price, setPrice] = useState<number>(initial?.price ?? 120);
-  const [shippingCharge, setShippingCharge] = useState<number>(initial?.shipCharge ?? 0);
-  const [shippingCost, setShippingCost] = useState<number>(initial?.shipCost ?? 10);
-  const [cogs, setCogs] = useState<number>(initial?.cogs ?? 40);
-  const [taxCollected, setTaxCollected] = useState<number>(initial?.tax ?? 0);
-  const [discountPct, setDiscountPct] = useState<number>(initial?.disc ?? 0);
-  const [targetProfit, setTargetProfit] = useState<number>(initial?.target ?? 50);
+  const [platform, setPlatform] = useState<PlatformKey>(initial?.platform ?? DEFAULTS.platform);
+  const [price, setPrice] = useState<number>(initial?.price ?? DEFAULTS.price);
+  const [shippingCharge, setShippingCharge] = useState<number>(initial?.shipCharge ?? DEFAULTS.shipCharge);
+  const [shippingCost, setShippingCost] = useState<number>(initial?.shipCost ?? DEFAULTS.shipCost);
+  const [cogs, setCogs] = useState<number>(initial?.cogs ?? DEFAULTS.cogs);
+  const [taxCollected, setTaxCollected] = useState<number>(initial?.tax ?? DEFAULTS.tax);
+  const [discountPct, setDiscountPct] = useState<number>(initial?.disc ?? DEFAULTS.disc);
+  const [targetProfit, setTargetProfit] = useState<number>(initial?.target ?? DEFAULTS.target);
 
   // Debounce URL updates
   const debounceRef = useRef<number | null>(null);
@@ -175,6 +184,42 @@ export default function Page() {
     };
   }, [platform, price, shippingCharge, shippingCost, cogs, taxCollected, discountPct, targetProfit]);
 
+  const copySummary = async () => {
+    const lines = [
+      `FeePilot Summary`,
+      `Platform: ${PLATFORMS.find(p => p.key === platform)?.label ?? platform}`,
+      `Price: ${formatCurrency(price)} | Discount: ${discountPct}%`,
+      `Ship charge: ${formatCurrency(shippingCharge)} | Ship cost: ${formatCurrency(shippingCost)}`,
+      `COGS: ${formatCurrency(cogs)} | Tax: ${formatCurrency(taxCollected)}`,
+      `—`,
+      `Subtotal: ${formatCurrency(calc.subtotal)}`,
+      `Marketplace fee: ${formatCurrency(calc.marketplaceFee)}`,
+      `Payment fee: ${formatCurrency(calc.paymentFee)}${RULES[platform].listingFixed ? ` | Listing fee: ${formatCurrency(calc.listingFee)}` : ''}`,
+      `Total fees: ${formatCurrency(calc.totalFees)}`,
+      `Net proceeds: ${formatCurrency(calc.netProceeds)}`,
+      `Profit: ${formatCurrency(calc.profit)} | Margin: ${(calc.margin * 100).toFixed(1)}%`,
+      `Required price for target (${formatCurrency(targetProfit)}): ${Number.isFinite(calc.requiredPrice) ? formatCurrency(calc.requiredPrice) : '—'}`,
+      `Link: ${typeof window !== 'undefined' ? window.location.href : ''}`,
+    ].join('\n');
+    try {
+      await navigator.clipboard.writeText(lines);
+      alert('Summary copied!');
+    } catch {
+      alert('Copy failed—select and copy manually.');
+    }
+  };
+
+  const resetAll = () => {
+    setPlatform(DEFAULTS.platform);
+    setPrice(DEFAULTS.price);
+    setShippingCharge(DEFAULTS.shipCharge);
+    setShippingCost(DEFAULTS.shipCost);
+    setCogs(DEFAULTS.cogs);
+    setTaxCollected(DEFAULTS.tax);
+    setDiscountPct(DEFAULTS.disc);
+    setTargetProfit(DEFAULTS.target);
+  };
+
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100">
       <div className="mx-auto max-w-6xl p-6">
@@ -200,6 +245,22 @@ export default function Page() {
               title="Copy current page link"
             >
               Share
+            </button>
+
+            <button
+              onClick={copySummary}
+              className="rounded-full border border-neutral-800 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-900"
+              title="Copy a summary of inputs/results"
+            >
+              Copy Summary
+            </button>
+
+            <button
+              onClick={resetAll}
+              className="rounded-full border border-neutral-800 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-900"
+              title="Reset all fields to defaults"
+            >
+              Reset
             </button>
 
             <a
