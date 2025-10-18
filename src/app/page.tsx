@@ -1,7 +1,8 @@
+// src/app/page.tsx
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { PLATFORMS, RULES, PlatformKey } from '@/data/fees';
+import { PLATFORMS, RULES, PlatformKey, calcFees } from '@/data/fees';
 
 /* ----------------------- small helpers ----------------------- */
 
@@ -150,36 +151,39 @@ export default function Page() {
 
     const discount = toNum(price) * (toNum(discountPct) / 100);
     const subtotal = toNum(price) - discount + toNum(taxCollected) + toNum(shippingCharge);
+    const priceOnly = toNum(price) - discount; // for rules that want price-only base
 
-    const marketplaceFee = subtotal * r.marketplacePct;
-    const paymentFee = subtotal * r.paymentPct + r.paymentFixed;
-    const listingFee = r.listingFixed ?? 0;
+    const parts = calcFees(r, { subtotal, priceOnly });
 
-    const totalFees = marketplaceFee + paymentFee + listingFee;
-    const netProceeds = subtotal - totalFees - toNum(shippingCost) - toNum(cogs);
+    const netProceeds = subtotal - parts.totalFees - toNum(shippingCost) - toNum(cogs);
     const profit = netProceeds;
     const margin = subtotal > 0 ? profit / subtotal : 0;
 
-    // Backsolve
-    const A = r.marketplacePct + r.paymentPct;
-    const fixed = r.paymentFixed + (r.listingFixed ?? 0);
-    const other = toNum(shippingCost) + toNum(cogs);
-    const denomSubtotal = 1 - A;
-    const requiredSubtotal =
-      denomSubtotal > 0 ? (toNum(targetProfit) + fixed + other) / denomSubtotal : Infinity;
+    // Backsolve for required price to hit targetProfit
+    const findRequired = () => {
+      // simple numeric solve since fees are tiered/nonlinear
+      // binary search between $0 and $50k
+      let lo = 0, hi = 50000;
+      for (let i = 0; i < 36; i++) {
+        const mid = (lo + hi) / 2;
 
-    const denomPrice = 1 - toNum(discountPct) / 100;
-    const requiredPriceBeforeDiscount =
-      requiredSubtotal - toNum(taxCollected) - toNum(shippingCharge);
-    const requiredPrice =
-      denomPrice > 0 ? requiredPriceBeforeDiscount / denomPrice : Infinity;
+        const discMid = mid * (toNum(discountPct) / 100);
+        const subtotalMid = mid - discMid + toNum(taxCollected) + toNum(shippingCharge);
+        const priceOnlyMid = mid - discMid;
+
+        const fMid = calcFees(r, { subtotal: subtotalMid, priceOnly: priceOnlyMid });
+        const profitMid = subtotalMid - fMid.totalFees - toNum(shippingCost) - toNum(cogs);
+
+        if (profitMid < toNum(targetProfit)) lo = mid; else hi = mid;
+      }
+      return hi;
+    };
+
+    const requiredPrice = Number.isFinite(targetProfit) ? findRequired() : NaN;
 
     return {
       subtotal,
-      marketplaceFee,
-      paymentFee,
-      listingFee,
-      totalFees,
+      ...parts,
       netProceeds,
       profit,
       margin,
@@ -189,15 +193,14 @@ export default function Page() {
 
   // Compare view: compute results across all platforms with current inputs
   const compareRows = useMemo(() => {
+    const discount = toNum(price) * (toNum(discountPct) / 100);
+    const subtotal = toNum(price) - discount + toNum(taxCollected) + toNum(shippingCharge);
+    const priceOnly = toNum(price) - discount;
+
     return PLATFORMS.map(({ key, label }) => {
       const r = RULES[key as PlatformKey];
-      const discount = toNum(price) * (toNum(discountPct) / 100);
-      const subtotal = toNum(price) - discount + toNum(taxCollected) + toNum(shippingCharge);
-      const marketplaceFee = subtotal * r.marketplacePct;
-      const paymentFee = subtotal * r.paymentPct + r.paymentFixed;
-      const listingFee = r.listingFixed ?? 0;
-      const totalFees = marketplaceFee + paymentFee + listingFee;
-      const netProceeds = subtotal - totalFees - toNum(shippingCost) - toNum(cogs);
+      const parts = calcFees(r, { subtotal, priceOnly });
+      const netProceeds = subtotal - parts.totalFees - toNum(shippingCost) - toNum(cogs);
       const profit = netProceeds;
       const margin = subtotal > 0 ? profit / subtotal : 0;
       return {
@@ -205,11 +208,10 @@ export default function Page() {
         label,
         profit,
         margin,
-        totalFees,
-        subtotal,
-        marketplaceFee,
-        paymentFee,
-        listingFee,
+        totalFees: parts.totalFees,
+        marketplaceFee: parts.marketplaceFee,
+        paymentFee: parts.paymentFee,
+        listingFee: parts.listingFee,
       };
     }).sort((a, b) => b.profit - a.profit);
   }, [price, discountPct, taxCollected, shippingCharge, shippingCost, cogs]);
@@ -224,7 +226,7 @@ export default function Page() {
       `—`,
       `Subtotal: ${formatCurrency(calc.subtotal)}`,
       `Marketplace fee: ${formatCurrency(calc.marketplaceFee)}`,
-      `Payment fee: ${formatCurrency(calc.paymentFee)}${RULES[platform].listingFixed ? ` | Listing fee: ${formatCurrency(calc.listingFee)}` : ''}`,
+      `Payment fee: ${formatCurrency(calc.paymentFee)}${calc.listingFee ? ` | Listing fee: ${formatCurrency(calc.listingFee)}` : ''}`,
       `Total fees: ${formatCurrency(calc.totalFees)}`,
       `Net proceeds: ${formatCurrency(calc.netProceeds)}`,
       `Profit: ${formatCurrency(calc.profit)} | Margin: ${(calc.margin * 100).toFixed(1)}%`,
@@ -434,11 +436,9 @@ export default function Page() {
                 <Line label="Subtotal (after discount + tax + ship to buyer)" value={calc.subtotal} />
                 <Line label="Marketplace fee" value={calc.marketplaceFee} />
                 <Line label="Payment fee" value={calc.paymentFee} />
-                {RULES[platform].listingFixed ? (
-                  <Line label="Listing fee" value={calc.listingFee} />
-                ) : null}
-                <Line label="Shipping cost (your cost)" value={shippingCost} />
-                <Line label="COGS" value={cogs} />
+                {calc.listingFee ? <Line label="Listing fee" value={calc.listingFee} /> : null}
+                <Line label="Shipping cost (your cost)" value={toNum(shippingCost)} />
+                <Line label="COGS" value={toNum(cogs)} />
                 <Divider />
                 <Line label="Total fees" value={calc.totalFees} bold />
                 <Line label="Net proceeds (after fees & ship cost)" value={calc.netProceeds} bold />
@@ -465,9 +465,9 @@ export default function Page() {
                     <th className="py-2 px-3 text-right">Profit</th>
                     <th className="py-2 px-3 text-right">Margin</th>
                     <th className="py-2 px-3 text-right">Total fees</th>
-                    <th className="py-2 px-3 text-right">Marketplace</th>
-                    <th className="py-2 px-3 text-right">Payment</th>
-                    <th className="py-2 px-3 text-right">Listing</th>
+                    <th className="py-2 px-3 text-right">Marketplace fee</th>
+                    <th className="py-2 px-3 text-right">Payment fee</th>
+                    <th className="py-2 px-3 text-right">Listing fee</th>
                   </tr>
                 </thead>
                 <tbody>
