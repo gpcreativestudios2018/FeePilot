@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react';
 import HeaderActions from './components/HeaderActions';
 import Footer from './components/Footer';
 
-// ✅ Correct path (page.tsx is in src/app, data is in src/data)
 import {
   PLATFORMS,
   RULES,
@@ -29,7 +28,6 @@ function fmtMoney(n: number) {
 
 function ProfitLabel({ value }: { value: number }) {
   if (value < 0) {
-    // red + parentheses
     return <span className="text-rose-400">({fmtMoney(Math.abs(value))})</span>;
   }
   return <span className="text-emerald-400">{fmtMoney(value)}</span>;
@@ -38,6 +36,19 @@ function ProfitLabel({ value }: { value: number }) {
 function pct(n: number) {
   return `${n.toFixed(1)}%`;
 }
+
+/* ----- normalize PLATFORMS (strings or {key,label}) ----- */
+
+type PlatformOption = { key: PlatformKey; label: string };
+
+// Turn whatever PLATFORMS is into consistent arrays we can use.
+const PLATFORM_OPTIONS: PlatformOption[] = (PLATFORMS as any[]).map((p) =>
+  typeof p === 'string'
+    ? ({ key: p, label: p[0].toUpperCase() + p.slice(1) } as PlatformOption)
+    : ({ key: (p as any).key, label: (p as any).label } as PlatformOption)
+);
+
+const PLATFORM_KEYS: PlatformKey[] = PLATFORM_OPTIONS.map((p) => p.key);
 
 /* -------- URL + localStorage (short keys) -------- */
 
@@ -79,11 +90,9 @@ function readNumber(sp: URLSearchParams, key: string, fallback: number) {
 
 /* ---------------- fee engine ---------------- */
 
-/** Safely read optional numeric property that may not exist on FeeRule's TS type. */
 function readOptionalNumber(rule: FeeRule, key: string): number {
   const anyRule = rule as any;
-  const v = anyRule?.[key];
-  const n = Number(v);
+  const n = Number(anyRule?.[key]);
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -98,25 +107,20 @@ function computeForPlatform(rule: FeeRule, inputs: Inputs) {
   const discountedPrice = price * (1 - discountPct / 100);
   const taxAmount = discountedPrice * (taxPct / 100);
 
-  // Optional fixed pieces guarded via readOptionalNumber()
   const marketplaceFixed = readOptionalNumber(rule, 'marketplaceFixed');
   const paymentFixed = readOptionalNumber(rule, 'paymentFixed');
   const listingFee = readOptionalNumber(rule, 'listingFee');
 
-  // marketplace fee is % of (item price + shipping charged + tax) + optional fixed
   const marketplaceBase = discountedPrice + shipCharged + taxAmount;
   const marketplaceFee =
     (marketplaceBase * (rule.marketplacePct ?? 0)) / 100 + marketplaceFixed;
 
-  // payment fee is % of discounted item price + optional fixed
   const paymentFee =
     (discountedPrice * (rule.paymentPct ?? 0)) / 100 + paymentFixed;
 
   const totalFees = marketplaceFee + paymentFee + listingFee;
 
-  const profit =
-    discountedPrice + shipCharged - totalFees - shipCost - cogs;
-
+  const profit = discountedPrice + shipCharged - totalFees - shipCost - cogs;
   const revenueBase = discountedPrice + shipCharged;
   const margin = revenueBase > 0 ? (profit / revenueBase) * 100 : 0;
 
@@ -133,14 +137,14 @@ function computeForPlatform(rule: FeeRule, inputs: Inputs) {
 /* ---------------- page ---------------- */
 
 export default function Page() {
-  const [platform, setPlatform] = useState<PlatformKey>('mercari');
+  const [platform, setPlatform] = useState<PlatformKey>(PLATFORM_KEYS[0] ?? 'mercari');
   const [inputs, setInputs] = useState<Inputs>(DEFAULTS);
   const [copiedAt, setCopiedAt] = useState<number>(0);
 
   // hydrate from URL or LS once
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
-    const p = (sp.get(Q.platform) as PlatformKey) || 'mercari';
+    const pCandidate = sp.get(Q.platform) as PlatformKey | null;
 
     const merged: Inputs = {
       pr: readNumber(sp, Q.price, DEFAULTS.pr),
@@ -151,16 +155,21 @@ export default function Page() {
       tx: readNumber(sp, Q.tax, DEFAULTS.tx),
     };
 
-    // fall back to LS if no URL found
     const lsRaw = localStorage.getItem(LS_KEY);
-    if (![Q.price, Q.shipCharged, Q.shipCost, Q.cogs, Q.discount, Q.tax].some(k => sp.has(k)) && lsRaw) {
+    if (
+      ![Q.price, Q.shipCharged, Q.shipCost, Q.cogs, Q.discount, Q.tax].some((k) => sp.has(k)) &&
+      lsRaw
+    ) {
       try {
         const ls = JSON.parse(lsRaw) as Inputs;
         Object.assign(merged, ls);
       } catch {}
     }
 
-    setPlatform(PLATFORMS.includes(p) ? p : 'mercari');
+    const picked =
+      pCandidate && PLATFORM_KEYS.includes(pCandidate) ? pCandidate : (PLATFORM_KEYS[0] ?? 'mercari');
+
+    setPlatform(picked);
     setInputs(merged);
   }, []);
 
@@ -186,7 +195,7 @@ export default function Page() {
   function setNum<K extends keyof Inputs>(key: K) {
     return (v: string) => {
       const n = Number(v);
-      setInputs(s => ({ ...s, [key]: Number.isFinite(n) ? n : (s[key] as number) }));
+      setInputs((s) => ({ ...s, [key]: Number.isFinite(n) ? n : (s[key] as number) }));
     };
   }
 
@@ -207,28 +216,26 @@ export default function Page() {
   }
 
   function resetAll() {
-    setPlatform('mercari');
+    setPlatform(PLATFORM_KEYS[0] ?? 'mercari');
     setInputs(DEFAULTS);
     localStorage.removeItem(LS_KEY);
   }
 
-  // comparison rows for all platforms
   const compareRows = useMemo(() => {
-    return PLATFORMS.map((p) => {
+    return PLATFORM_KEYS.map((p) => {
       const r = RULES[p];
       const c = computeForPlatform(r, inputs);
       return { p, ...c };
     });
   }, [inputs]);
 
-  const borderGlow = 'rounded-3xl border border-violet-600/60 shadow-[0_0_0_2px_rgba(139,92,246,0.35)] bg-neutral-950/60';
+  const borderGlow =
+    'rounded-3xl border border-violet-600/60 shadow-[0_0_0_2px_rgba(139,92,246,0.35)] bg-neutral-950/60';
 
   return (
     <main className="min-h-screen bg-black text-neutral-200">
-      {/* top border accent */}
       <div className="h-1 w-full bg-gradient-to-r from-violet-500/80 via-fuchsia-500/80 to-violet-500/80" />
 
-      {/* header */}
       <header className="mx-auto max-w-6xl px-4 pt-6 pb-4 flex items-center justify-between">
         <button onClick={resetAll} className="group flex items-center gap-3">
           <span className="h-3 w-3 rounded-sm bg-violet-500 group-hover:bg-violet-400 transition-colors" />
@@ -237,7 +244,6 @@ export default function Page() {
         <HeaderActions onShare={shareLink} onCopy={copyLink} />
       </header>
 
-      {/* tiny copied toast */}
       {copiedAt !== 0 && (
         <div className="fixed right-4 top-4 z-50 rounded-lg bg-neutral-900/95 px-3 py-2 text-sm text-neutral-100 border border-violet-600/50">
           copied!
@@ -256,9 +262,9 @@ export default function Page() {
                 onChange={(e) => setPlatform(e.target.value as PlatformKey)}
                 className="w-full rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-violet-500"
               >
-                {PLATFORMS.map((p) => (
-                  <option key={p} value={p}>
-                    {p[0].toUpperCase() + p.slice(1)}
+                {PLATFORM_OPTIONS.map((opt) => (
+                  <option key={opt.key} value={opt.key}>
+                    {opt.label}
                   </option>
                 ))}
               </select>
@@ -291,7 +297,6 @@ export default function Page() {
                 </div>
               </div>
 
-              {/* fees breakdown */}
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-3">
                   <div className="text-neutral-400 text-sm">Marketplace fee</div>
@@ -315,16 +320,8 @@ export default function Page() {
           <div className="p-6">
             <div className="text-neutral-400 text-sm mb-4">Inputs</div>
             <div className="grid gap-4 sm:grid-cols-3">
-              <Field
-                label="Item price"
-                value={String(inputs.pr)}
-                onChange={setNum('pr')}
-              />
-              <Field
-                label="Shipping charged"
-                value={String(inputs.sc)}
-                onChange={setNum('sc')}
-              />
+              <Field label="Item price" value={String(inputs.pr)} onChange={setNum('pr')} />
+              <Field label="Shipping charged" value={String(inputs.sc)} onChange={setNum('sc')} />
               <Field
                 label="Shipping cost (your cost)"
                 value={String(inputs.ss)}
@@ -377,7 +374,10 @@ export default function Page() {
                   <tr key={row.p} className="border-b border-neutral-900/60">
                     <td className="px-3 py-3">
                       <span className="inline-flex items-center rounded-md bg-neutral-900/70 px-3 py-1 text-neutral-200">
-                        {row.p[0].toUpperCase() + row.p.slice(1)}
+                        {
+                          PLATFORM_OPTIONS.find((o) => o.key === row.p)?.label ??
+                          row.p[0].toUpperCase() + row.p.slice(1)
+                        }
                       </span>
                     </td>
                     <td className="px-3 py-3 text-left">
