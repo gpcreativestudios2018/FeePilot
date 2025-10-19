@@ -7,6 +7,16 @@ function getUrl() {
   return window.location.href;
 }
 
+// Minimal typing for Web Share API without using `any`
+type ShareData = {
+  title?: string;
+  text?: string;
+  url?: string;
+};
+type NavigatorWithShare = Navigator & {
+  share?: (data: ShareData) => Promise<void>;
+};
+
 export default function HeaderActions() {
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
@@ -19,7 +29,9 @@ export default function HeaderActions() {
         setShared(false);
       }, 1500);
     }
-    return () => t && clearTimeout(t);
+    return () => {
+      if (t) clearTimeout(t);
+    };
   }, [copied, shared]);
 
   const doCopy = async () => {
@@ -33,13 +45,17 @@ export default function HeaderActions() {
 
   const doShare = async () => {
     const url = getUrl();
-    if ((navigator as any).share) {
+    const nav = (typeof navigator !== 'undefined'
+      ? (navigator as NavigatorWithShare)
+      : undefined);
+
+    if (nav?.share) {
       try {
-        await (navigator as any).share({ title: 'FeePilot', url });
+        await nav.share({ title: 'FeePilot', url });
         setShared(true);
         return;
       } catch {
-        // fall through to copy if user cancels or share fails
+        // If user cancels or share fails, we fall back to copy
       }
     }
     await doCopy();
