@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Footer from './components/Footer';
+
 import {
   PLATFORMS,
   RULES,
@@ -11,45 +12,50 @@ import {
   FeeRule,
 } from '@/data/fees';
 
-/* ---------- helpers ---------- */
+/* ---------------- helpers ---------------- */
+
 function clamp(n: number, min = -1_000_000, max = 1_000_000) {
   if (Number.isNaN(n)) return 0;
   return Math.min(max, Math.max(min, n));
 }
 
 function fmtMoney(n: number) {
-  const isNeg = n < 0;
   const abs = Math.abs(n);
-  const s = abs.toLocaleString(undefined, {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 2,
-  });
-  return isNeg ? `(${s})` : s;
+  const s = abs.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+  return n < 0 ? `(${s})` : s;
 }
 
 function moneyClass(n: number) {
   return n < 0 ? 'text-red-400' : 'text-emerald-400';
 }
 
-/* =========================================
-   NUMBER INPUT UX
-   - Keep a string the user is typing (so "100" works)
-   - Parse on every change for live math
-   ========================================= */
+function fmtPct(n: number) {
+  return `${n.toFixed(1)}%`;
+}
+
+/** compact query keys */
+const Q = {
+  platform: 'p',
+  price: 'pr',
+  shipCharged: 'sc',
+  shipCost: 'ss',
+  cogs: 'cg',
+  tax: 'tx',
+  discountPct: 'dc',
+  targetProfit: 'tp',
+} as const;
+
 type Inputs = {
-  p: PlatformKey; // platform
-  pr: number;     // price
-  sc: number;     // ship charge to buyer
-  ss: number;     // your ship cost
-  cg: number;     // COGS
-  tx: number;     // tax collected
-  dc: number;     // discount %
-  tp: number;     // target profit
+  pr: number;   // item price
+  sc: number;   // shipping charged to buyer
+  ss: number;   // your shipping cost
+  cg: number;   // cost of goods
+  tx: number;   // tax collected
+  dc: number;   // discount percent 0..100
+  tp: number;   // desired profit (backsolve)
 };
 
-const DEFAULTS: Inputs = {
-  p: 'etsy',
+const DEFAULT_INPUTS: Inputs = {
   pr: 120,
   sc: 0,
   ss: 10,
@@ -59,368 +65,362 @@ const DEFAULTS: Inputs = {
   tp: 50,
 };
 
-// Abbreviated keys used in the URL
-const URL_KEYS: (keyof Inputs)[] = ['p', 'pr', 'sc', 'ss', 'cg', 'tx', 'dc', 'tp'];
+/**
+ * A number field that keeps a local string while typing,
+ * then parses/clamps on blur. This avoids the “only 1 digit” issue.
+ */
+function NumberField(props: {
+  label: string;
+  value: number;
+  onCommit: (n: number) => void;
+  step?: number | 'any';
+  hint?: string;
+}) {
+  const { label, value, onCommit, step = 'any', hint } = props;
+  const [text, setText] = useState<string>(String(value));
 
-/* Parse URL params on first load */
-function readFromURL(): Partial<Inputs> {
-  if (typeof window === 'undefined') return {};
-  const sp = new URLSearchParams(window.location.search);
-  const out: Partial<Inputs> = {};
-  const p = sp.get('p') as PlatformKey | null;
-  if (p && PLATFORMS.some((x) => x.key === p)) out.p = p;
-
-  function num(k: keyof Inputs) {
-    const v = sp.get(k as string);
-    if (v == null) return undefined;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : undefined;
-  }
-
-  (['pr', 'sc', 'ss', 'cg', 'tx', 'dc', 'tp'] as const).forEach((k) => {
-    const v = num(k);
-    if (typeof v === 'number') (out as any)[k] = v;
-  });
-
-  return out;
-}
-
-/* Write URL params (no navigation) */
-function writeToURL(inputs: Inputs) {
-  if (typeof window === 'undefined') return;
-  const sp = new URLSearchParams();
-  URL_KEYS.forEach((k) => {
-    sp.set(k, k === 'p' ? inputs[k] : String(inputs[k]));
-  });
-  const url = `${window.location.pathname}?${sp.toString()}`;
-  window.history.replaceState({}, '', url);
-}
-
-/* ---------- fee math ---------- */
-function computeForPlatform(rule: FeeRule, inputs: Inputs) {
-  // discount is % off item price
-  const discountPct = clamp(inputs.dc, 0, 100) / 100;
-  const discountedPrice = clamp(inputs.pr) * (1 - discountPct);
-
-  // marketplace fee: % of (item + shipping charged + tax) AFTER discount + optional fixed
-  const marketplaceBase = discountedPrice + clamp(inputs.sc) + clamp(inputs.tx);
-  const marketplaceFee =
-    marketplaceBase * (rule.marketplacePct ?? 0) + (rule.marketplaceFixed ?? 0);
-
-  // payment fee: % of discounted item price + optional fixed
-  const paymentFee =
-    discountedPrice * (rule.paymentPct ?? 0) + (rule.paymentFixed ?? 0);
-
-  // listing fee (usually fixed)
-  const listingFee = rule.listingFee ?? 0;
-
-  const shippingCost = clamp(inputs.ss);
-  const cogs = clamp(inputs.cg);
-  const totalFees = marketplaceFee + paymentFee + listingFee;
-  const net = discountedPrice + clamp(inputs.sc) - totalFees - shippingCost - cogs;
-  const marginPct =
-    discountedPrice > 0 ? (net / discountedPrice) * 100 : net < 0 ? -100 : 0;
-
-  return {
-    marketplaceFee,
-    paymentFee,
-    listingFee,
-    totalFees,
-    net,
-    marginPct,
-  };
-}
-
-/* =========================================
-   PAGE
-   ========================================= */
-export default function Page() {
-  // concrete numeric state used for math + URL
-  const [inputs, setInputs] = useState<Inputs>(() => ({
-    ...DEFAULTS,
-    ...readFromURL(),
-  }));
-
-  // local strings users type into inputs (for good UX)
-  const [typed, setTyped] = useState<Record<keyof Inputs, string>>({
-    p: inputs.p,
-    pr: String(inputs.pr),
-    sc: String(inputs.sc),
-    ss: String(inputs.ss),
-    cg: String(inputs.cg),
-    tx: String(inputs.tx),
-    dc: String(inputs.dc),
-    tp: String(inputs.tp),
-  } as any);
-
-  // keep URL in sync
   useEffect(() => {
-    writeToURL(inputs);
-  }, [inputs]);
+    // keep in sync when parent changes programmatically
+    setText(String(value));
+  }, [value]);
 
-  // selected rule
-  const rule = useMemo(() => RULES[inputs.p], [inputs.p]);
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-sm text-neutral-300">{label}</label>
+      <input
+        value={text}
+        inputMode="decimal"
+        step={step as any}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => {
+          const n = Number(text.replace(/[, ]+/g, ''));
+          onCommit(Number.isFinite(n) ? n : 0);
+          setText(String(Number.isFinite(n) ? n : 0));
+        }}
+        className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
+      />
+      {hint ? <div className="text-xs text-neutral-500">{hint}</div> : null}
+    </div>
+  );
+}
 
-  const calc = useMemo(() => computeForPlatform(rule, inputs), [rule, inputs]);
+/* ---------------- main page ---------------- */
 
-  // compare across all platforms
-  const compare = useMemo(() => {
-    return PLATFORMS.map((p) => {
-      const r = RULES[p.key];
-      const c = computeForPlatform(r, inputs);
+export default function Page() {
+  // platform
+  const [platform, setPlatform] = useState<PlatformKey>('etsy');
+
+  // numeric model state
+  const [inputs, setInputs] = useState<Inputs>(DEFAULT_INPUTS);
+
+  // read from URL once
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const p = (url.searchParams.get(Q.platform) as PlatformKey) ?? platform;
+
+    const readNum = (k: string, fallback: number) => {
+      const raw = url.searchParams.get(k);
+      if (raw == null) return fallback;
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : fallback;
+    };
+
+    setPlatform((PLATFORMS as any).some((x: any) => x.key === p) ? p : 'etsy');
+
+    setInputs({
+      pr: readNum(Q.price, DEFAULT_INPUTS.pr),
+      sc: readNum(Q.shipCharged, DEFAULT_INPUTS.sc),
+      ss: readNum(Q.shipCost, DEFAULT_INPUTS.ss),
+      cg: readNum(Q.cogs, DEFAULT_INPUTS.cg),
+      tx: readNum(Q.tax, DEFAULT_INPUTS.tx),
+      dc: readNum(Q.discountPct, DEFAULT_INPUTS.dc),
+      tp: readNum(Q.targetProfit, DEFAULT_INPUTS.tp),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // write to URL on change (debounced-ish)
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set(Q.platform, platform);
+    url.searchParams.set(Q.price, String(inputs.pr));
+    url.searchParams.set(Q.shipCharged, String(inputs.sc));
+    url.searchParams.set(Q.shipCost, String(inputs.ss));
+    url.searchParams.set(Q.cogs, String(inputs.cg));
+    url.searchParams.set(Q.tax, String(inputs.tx));
+    url.searchParams.set(Q.discountPct, String(inputs.dc));
+    url.searchParams.set(Q.targetProfit, String(inputs.tp));
+    window.history.replaceState(null, '', url.toString());
+  }, [platform, inputs]);
+
+  // active rule
+  const rule: FeeRule = RULES[platform];
+
+  // core calcs
+  const calc = useMemo(() => {
+    const price = clamp(inputs.pr);
+    const shipCharged = clamp(inputs.sc);
+    const shipCost = clamp(inputs.ss);
+    const cogs = clamp(inputs.cg);
+    const tax = clamp(inputs.tx);
+    const discountPct = Math.max(0, Math.min(100, inputs.dc)) / 100;
+
+    const discountedPrice = price * (1 - discountPct);
+
+    // Marketplace fee: % of discounted item price + ship charged + tax (AFTER discount)
+    const marketplaceBase = discountedPrice + shipCharged + tax;
+    const marketplaceFee = marketplaceBase * (rule.marketplacePct ?? 0);
+
+    // Payment fee: pct of discounted price + optional fixed (if present)
+    const paymentFee =
+      (rule.paymentPct ?? 0) * discountedPrice + (rule.paymentFixed ?? 0);
+
+    // Listing fee (fixed)
+    const listingFee = rule.listingFee ?? 0;
+
+    const totalFees = marketplaceFee + paymentFee + listingFee;
+
+    const netProceeds =
+      discountedPrice + shipCharged - totalFees - shipCost - cogs;
+
+    const marginPct = (netProceeds / Math.max(1, discountedPrice)) * 100;
+
+    return {
+      discountedPrice,
+      marketplaceFee,
+      paymentFee,
+      listingFee,
+      totalFees,
+      netProceeds,
+      marginPct,
+    };
+  }, [inputs, rule]);
+
+  // compare all platforms with current inputs
+  const compareRows = useMemo(() => {
+    const price = clamp(inputs.pr);
+    const shipCharged = clamp(inputs.sc);
+    const shipCost = clamp(inputs.ss);
+    const cogs = clamp(inputs.cg);
+    const tax = clamp(inputs.tx);
+    const discountPct = Math.max(0, Math.min(100, inputs.dc)) / 100;
+
+    const discountedPrice = price * (1 - discountPct);
+
+    return PLATFORMS.map(({ key, label }) => {
+      const r = RULES[key];
+      const marketplaceBase = discountedPrice + shipCharged + tax;
+      const marketplaceFee = marketplaceBase * (r.marketplacePct ?? 0);
+      const paymentFee =
+        (r.paymentPct ?? 0) * discountedPrice + (r.paymentFixed ?? 0);
+      const listingFee = r.listingFee ?? 0;
+      const totalFees = marketplaceFee + paymentFee + listingFee;
+      const net = discountedPrice + shipCharged - totalFees - shipCost - cogs;
+      const margin = (net / Math.max(1, discountedPrice)) * 100;
+
       return {
-        key: p.key,
-        label: p.label,
-        profit: c.net,
-        margin: c.marginPct,
-        marketplaceFee: c.marketplaceFee,
-        paymentFee: c.paymentFee,
-        listingFee: c.listingFee,
-        totalFees: c.totalFees,
+        key,
+        label,
+        profit: net,
+        margin,
+        marketplaceFee,
+        paymentFee,
+        listingFee,
+        totalFees,
       };
     });
   }, [inputs]);
 
-  // update helpers
-  function setPlatform(k: PlatformKey) {
-    setInputs((prev) => ({ ...prev, p: k }));
-    setTyped((prev) => ({ ...prev, p: k }));
-  }
+  /* ---------------- UI ---------------- */
 
-  function setNumber<K extends keyof Inputs>(key: K, raw: string) {
-    // allow user to type any string (including empty and partial)
-    setTyped((prev) => ({ ...prev, [key]: raw }));
-    const n = Number(raw);
-    if (Number.isFinite(n)) {
-      setInputs((prev) => ({ ...prev, [key]: clamp(n) }));
-    }
-  }
-
-  /* ---------- UI elements ---------- */
-  const sectionBorder = 'rounded-2xl border border-purple-500/60 bg-neutral-950/40';
-  const labelCls = 'text-sm text-neutral-300';
-  const inputCls =
-    'rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500';
-
-  const updatedStr = new Date(RULES_UPDATED_AT).toISOString().slice(0, 10);
+  const Section: React.FC<{ title: string; children: any }> = ({
+    title,
+    children,
+  }) => (
+    <section className="rounded-2xl border-2 border-purple-500/40 ring-1 ring-inset ring-purple-500/30 bg-black/40 p-6">
+      <h2 className="mb-4 text-lg font-semibold text-neutral-200">{title}</h2>
+      {children}
+    </section>
+  );
 
   return (
-    <main className="mx-auto max-w-5xl px-5 py-8">
-      {/* Header */}
-      <div className="mb-8 flex items-center gap-3">
-        <div className="h-3 w-3 rounded-full bg-purple-500 shadow-[0_0_18px_2px_rgba(168,85,247,0.8)]" />
-        <h1
-          className="cursor-pointer text-xl font-semibold text-neutral-100"
+    <main className="min-h-screen bg-neutral-950 text-neutral-100">
+      {/* header */}
+      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+        <div
+          className="flex cursor-pointer items-center gap-3"
           onClick={() => {
             // reset to defaults
-            setInputs({ ...DEFAULTS });
-            setTyped({
-              p: DEFAULTS.p,
-              pr: String(DEFAULTS.pr),
-              sc: String(DEFAULTS.sc),
-              ss: String(DEFAULTS.ss),
-              cg: String(DEFAULTS.cg),
-              tx: String(DEFAULTS.tx),
-              dc: String(DEFAULTS.dc),
-              tp: String(DEFAULTS.tp),
-            } as any);
+            setPlatform('etsy');
+            setInputs(DEFAULT_INPUTS);
+            const url = new URL(window.location.href);
+            url.search = '';
+            window.history.replaceState(null, '', url.toString());
           }}
-          title="Reset to defaults"
+          title="Reset FeePilot to defaults"
         >
-          FeePilot
-        </h1>
-      </div>
-
-      {/* Platform + Updated */}
-      <section className={`${sectionBorder} p-4 mb-6`}>
-        <div className="mb-3">
-          <label className={labelCls}>Platform</label>
-          <select
-            className={`${inputCls} mt-1 w-full`}
-            value={inputs.p}
-            onChange={(e) => setPlatform(e.target.value as PlatformKey)}
-          >
-            {PLATFORMS.map((p) => (
-              <option key={p.key} value={p.key}>
-                {p.label}
-              </option>
-            ))}
-          </select>
+          <span className="h-3 w-3 rounded-full bg-purple-500 shadow-[0_0_12px_2px_rgba(168,85,247,0.7)]" />
+          <h1 className="text-xl font-semibold">FeePilot</h1>
         </div>
-        <p className="text-xs text-neutral-400">
-          Rules last updated: <span className="font-medium text-neutral-300">{updatedStr}</span>
-        </p>
-      </section>
+      </header>
 
-      {/* Inputs */}
-      <section className={`${sectionBorder} p-4 mb-6`}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {/* price */}
-          <div>
-            <label className={labelCls}>Item price ($)</label>
-            <input
-              inputMode="decimal"
-              className={`${inputCls} mt-1 w-full`}
-              value={typed.pr}
-              onChange={(e) => setNumber('pr', e.target.value)}
-            />
-          </div>
-          {/* shipping charged */}
-          <div>
-            <label className={labelCls}>Shipping charged to buyer ($)</label>
-            <input
-              inputMode="decimal"
-              className={`${inputCls} mt-1 w-full`}
-              value={typed.sc}
-              onChange={(e) => setNumber('sc', e.target.value)}
-            />
-          </div>
-          {/* your ship cost */}
-          <div>
-            <label className={labelCls}>Shipping cost (your cost) ($)</label>
-            <input
-              inputMode="decimal"
-              className={`${inputCls} mt-1 w-full`}
-              value={typed.ss}
-              onChange={(e) => setNumber('ss', e.target.value)}
-            />
-          </div>
-          {/* cogs */}
-          <div>
-            <label className={labelCls}>COGS ($)</label>
-            <input
-              inputMode="decimal"
-              className={`${inputCls} mt-1 w-full`}
-              value={typed.cg}
-              onChange={(e) => setNumber('cg', e.target.value)}
-            />
-          </div>
-          {/* tax */}
-          <div>
-            <label className={labelCls}>Tax collected ($)</label>
-            <input
-              inputMode="decimal"
-              className={`${inputCls} mt-1 w-full`}
-              value={typed.tx}
-              onChange={(e) => setNumber('tx', e.target.value)}
-            />
-          </div>
-          {/* discount */}
-          <div>
-            <label className={labelCls}>Discount (%)</label>
-            <input
-              inputMode="decimal"
-              className={`${inputCls} mt-1 w-full`}
-              value={typed.dc}
-              onChange={(e) => setNumber('dc', e.target.value)}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Overview */}
-      <section className={`${sectionBorder} p-4 mb-6`}>
-        <h2 className="mb-4 text-lg font-semibold text-neutral-100">Overview</h2>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
-            <div className="text-sm text-neutral-300">Profit</div>
-            <div className={`mt-2 text-3xl font-semibold ${moneyClass(calc.net)}`}>
-              {fmtMoney(calc.net)}
-            </div>
-          </div>
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
-            <div className="text-sm text-neutral-300">Margin</div>
-            <div className="mt-2 text-3xl font-semibold text-neutral-100">
-              {calc.marginPct.toFixed(1)}%
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
-            <div className="text-sm text-neutral-300">Marketplace fee</div>
-            <div className="mt-2 text-2xl font-semibold text-neutral-100">
-              {fmtMoney(calc.marketplaceFee)}
-            </div>
-          </div>
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
-            <div className="text-sm text-neutral-300">Payment fee</div>
-            <div className="mt-2 text-2xl font-semibold text-neutral-100">
-              {fmtMoney(calc.paymentFee)}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
-            <div className="text-sm text-neutral-300">Listing fee</div>
-            <div className="mt-2 text-2xl font-semibold text-neutral-100">
-              {fmtMoney(calc.listingFee)}
-            </div>
-          </div>
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
-            <div className="text-sm text-neutral-300">Shipping cost (your cost)</div>
-            <div className="mt-2 text-2xl font-semibold text-neutral-100">
-              {fmtMoney(inputs.ss)}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
-            <div className="text-sm text-neutral-300">COGS</div>
-            <div className="mt-2 text-2xl font-semibold text-neutral-100">
-              {fmtMoney(inputs.cg)}
-            </div>
-          </div>
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
-            <div className="text-sm text-neutral-300">Total fees</div>
-            <div className="mt-2 text-2xl font-semibold text-neutral-100">
-              {fmtMoney(calc.totalFees)}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Compare table */}
-      <section className={`${sectionBorder} p-4`}>
-        <h2 className="mb-4 text-lg font-semibold text-neutral-100">Comparing with current inputs</h2>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse">
-            <thead>
-              <tr className="text-left text-neutral-300">
-                <th className="px-3 py-2">Platform</th>
-                <th className="px-3 py-2">Profit</th>
-                <th className="px-3 py-2">Margin</th>
-                <th className="px-3 py-2">Marketplace fee</th>
-                <th className="px-3 py-2">Payment fee</th>
-                <th className="px-3 py-2">Listing fee</th>
-                <th className="px-3 py-2">Total fees</th>
-              </tr>
-            </thead>
-            <tbody>
-              {compare.map((row) => (
-                <tr key={row.key} className="border-t border-neutral-800">
-                  <td className="px-3 py-2">
-                    <span className="inline-block rounded-lg border border-neutral-800 bg-neutral-950/60 px-2 py-1 text-neutral-100">
-                      {row.label}
-                    </span>
-                  </td>
-                  <td className={`px-3 py-2 font-medium ${moneyClass(row.profit)}`}>
-                    {fmtMoney(row.profit)}
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="px-3 py-2 text-right">{row.margin.toFixed(1)}%</div>
-                  </td>
-                  <td className="px-3 py-2">{fmtMoney(row.marketplaceFee)}</td>
-                  <td className="px-3 py-2">{fmtMoney(row.paymentFee)}</td>
-                  <td className="px-3 py-2">{fmtMoney(row.listingFee)}</td>
-                  <td className="px-3 py-2">{fmtMoney(row.totalFees)}</td>
-                </tr>
+      <div className="mx-auto grid max-w-6xl gap-6 px-6 pb-20">
+        {/* Platform + timestamp */}
+        <Section title="Platform">
+          <div className="flex flex-col gap-2">
+            <select
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value as PlatformKey)}
+              className="w-full rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
+            >
+              {PLATFORMS.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.label}
+                </option>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+            </select>
+            <div className="text-sm text-neutral-400">
+              Rules last updated: {RULES_UPDATED_AT}
+            </div>
+          </div>
+        </Section>
 
-      {/* Footer */}
-      <div className="mt-6">
+        {/* Inputs */}
+        <Section title="Inputs">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <NumberField
+              label="Item price ($)"
+              value={inputs.pr}
+              onCommit={(n) => setInputs((s) => ({ ...s, pr: clamp(n, 0) }))}
+            />
+            <NumberField
+              label="Shipping charged to buyer ($)"
+              value={inputs.sc}
+              onCommit={(n) => setInputs((s) => ({ ...s, sc: clamp(n, 0) }))}
+            />
+            <NumberField
+              label="Your shipping cost ($)"
+              value={inputs.ss}
+              onCommit={(n) => setInputs((s) => ({ ...s, ss: clamp(n, 0) }))}
+            />
+            <NumberField
+              label="Cost of goods ($)"
+              value={inputs.cg}
+              onCommit={(n) => setInputs((s) => ({ ...s, cg: clamp(n, 0) }))}
+            />
+            <NumberField
+              label="Tax collected ($)"
+              value={inputs.tx}
+              onCommit={(n) => setInputs((s) => ({ ...s, tx: clamp(n, 0) }))}
+            />
+            <NumberField
+              label="Discount (%)"
+              value={inputs.dc}
+              onCommit={(n) =>
+                setInputs((s) => ({ ...s, dc: clamp(n, 0, 100) }))
+              }
+              step={1}
+              hint="Percent off item price (applies before fees)"
+            />
+          </div>
+        </Section>
+
+        {/* Overview */}
+        <Section title="Overview">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
+              <div className="text-sm text-neutral-400">Profit</div>
+              <div className={`mt-1 text-3xl font-semibold ${moneyClass(calc.netProceeds)}`}>
+                {fmtMoney(calc.netProceeds)}
+              </div>
+            </div>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
+              <div className="text-sm text-neutral-400">Margin</div>
+              <div className={`mt-1 text-3xl font-semibold ${calc.netProceeds < 0 ? 'text-red-400' : 'text-neutral-100'}`}>
+                {fmtPct(calc.marginPct)}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
+              <div className="text-sm text-neutral-400">Marketplace fee</div>
+              <div className="mt-1 text-2xl">{fmtMoney(calc.marketplaceFee)}</div>
+            </div>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
+              <div className="text-sm text-neutral-400">Payment fee</div>
+              <div className="mt-1 text-2xl">{fmtMoney(calc.paymentFee)}</div>
+            </div>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
+              <div className="text-sm text-neutral-400">Listing fee</div>
+              <div className="mt-1 text-2xl">{fmtMoney(calc.listingFee)}</div>
+            </div>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
+              <div className="text-sm text-neutral-400">COGS</div>
+              <div className="mt-1 text-2xl">{fmtMoney(inputs.cg)}</div>
+            </div>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
+              <div className="text-sm text-neutral-400">Shipping cost (your cost)</div>
+              <div className="mt-1 text-2xl">{fmtMoney(inputs.ss)}</div>
+            </div>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
+              <div className="text-sm text-neutral-400">Total fees</div>
+              <div className="mt-1 text-2xl">{fmtMoney(calc.totalFees)}</div>
+            </div>
+          </div>
+        </Section>
+
+        {/* Compare table */}
+        <Section
+          title={`Comparing with current inputs (${fmtMoney(inputs.pr)} price, ${fmtMoney(
+            inputs.sc,
+          )} ship charge, ${fmtMoney(inputs.ss)} ship cost, ${fmtMoney(
+            inputs.cg,
+          )} COGS, ${inputs.dc}% discount, ${fmtMoney(inputs.tx)} tax).`}
+        >
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-separate border-spacing-y-2">
+              <thead className="text-sm text-neutral-300">
+                <tr>
+                  <th className="px-3 py-2 text-left">Platform</th>
+                  <th className="px-3 py-2 text-left">Profit</th>
+                  <th className="px-3 py-2 text-left">Margin</th>
+                  <th className="px-3 py-2 text-left">Marketplace fee</th>
+                  <th className="px-3 py-2 text-left">Payment fee</th>
+                  <th className="px-3 py-2 text-left">Listing fee</th>
+                  <th className="px-3 py-2 text-left">Total fees</th>
+                </tr>
+              </thead>
+              <tbody>
+                {compareRows.map((row) => (
+                  <tr
+                    key={row.key}
+                    className={`rounded-xl bg-neutral-950/60 ${
+                      row.key === platform ? 'outline outline-1 outline-purple-500/40' : ''
+                    }`}
+                  >
+                    <td className="px-3 py-3">
+                      <button
+                        onClick={() => setPlatform(row.key as PlatformKey)}
+                        className="rounded-lg bg-neutral-900 px-3 py-1 text-sm hover:bg-neutral-800"
+                      >
+                        {row.label}
+                      </button>
+                    </td>
+                    <td className={`px-3 py-3 font-medium ${moneyClass(row.profit)}`}>
+                      {fmtMoney(row.profit)}
+                    </td>
+                    <td className="px-3 py-3">{fmtPct(row.margin)}</td>
+                    <td className="px-3 py-3">{fmtMoney(row.marketplaceFee)}</td>
+                    <td className="px-3 py-3">{fmtMoney(row.paymentFee)}</td>
+                    <td className="px-3 py-3">{fmtMoney(row.listingFee)}</td>
+                    <td className="px-3 py-3">{fmtMoney(row.totalFees)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+
+        {/* Footer (component file you created) */}
         <Footer />
       </div>
     </main>
