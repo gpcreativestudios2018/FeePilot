@@ -79,6 +79,14 @@ function readNumber(sp: URLSearchParams, key: string, fallback: number) {
 
 /* ---------------- fee engine ---------------- */
 
+/** Safely read optional numeric property that may not exist on FeeRule's TS type. */
+function readOptionalNumber(rule: FeeRule, key: string): number {
+  const anyRule = rule as any;
+  const v = anyRule?.[key];
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function computeForPlatform(rule: FeeRule, inputs: Inputs) {
   const price = clamp(inputs.pr, 0);
   const shipCharged = clamp(inputs.sc, 0);
@@ -90,20 +98,19 @@ function computeForPlatform(rule: FeeRule, inputs: Inputs) {
   const discountedPrice = price * (1 - discountPct / 100);
   const taxAmount = discountedPrice * (taxPct / 100);
 
+  // Optional fixed pieces guarded via readOptionalNumber()
+  const marketplaceFixed = readOptionalNumber(rule, 'marketplaceFixed');
+  const paymentFixed = readOptionalNumber(rule, 'paymentFixed');
+  const listingFee = readOptionalNumber(rule, 'listingFee');
+
   // marketplace fee is % of (item price + shipping charged + tax) + optional fixed
-  const marketplaceBase =
-    discountedPrice + shipCharged + taxAmount;
+  const marketplaceBase = discountedPrice + shipCharged + taxAmount;
   const marketplaceFee =
-    (marketplaceBase * (rule.marketplacePct ?? 0)) / 100 +
-    (rule.marketplaceFixed ?? 0);
+    (marketplaceBase * (rule.marketplacePct ?? 0)) / 100 + marketplaceFixed;
 
   // payment fee is % of discounted item price + optional fixed
   const paymentFee =
-    (discountedPrice * (rule.paymentPct ?? 0)) / 100 +
-    (rule.paymentFixed ?? 0);
-
-  // listing fee (flat)
-  const listingFee = rule.listingFee ?? 0;
+    (discountedPrice * (rule.paymentPct ?? 0)) / 100 + paymentFixed;
 
   const totalFees = marketplaceFee + paymentFee + listingFee;
 
