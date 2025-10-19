@@ -134,10 +134,8 @@ export default function Page() {
 
   /* ---------- core calculations ---------- */
 
-  // discounted price after % discount
   const discountedPrice = useMemo(() => clamp(inputs.pr * (1 - clamp(inputs.dc, 0, 1))), [inputs.pr, inputs.dc]);
 
-  // marketplace fee base: discounted price + shipping charged + tax
   const marketplaceBase = useMemo(
     () => clamp(discountedPrice + clamp(inputs.sc) + clamp(inputs.tx)),
     [discountedPrice, inputs.sc, inputs.tx]
@@ -148,28 +146,23 @@ export default function Page() {
     [marketplaceBase, rule]
   );
 
-  // payment fee: % of discounted price + fixed
   const paymentFee = useMemo(
     () => clamp(discountedPrice * (rule.paymentPct ?? 0) + (rule.paymentFixed ?? 0)),
     [discountedPrice, rule]
   );
 
-  // listing fee: usually fixed per listing
   const listingFee = clamp(rule.listingFee ?? 0);
 
-  // fees (platform fees only)
   const totalPlatformFees = useMemo(
     () => clamp(marketplaceFee + paymentFee + listingFee),
     [marketplaceFee, paymentFee, listingFee]
   );
 
-  // buyer subtotal used for margin/profit baseline (what buyer pays that we collect)
   const buyerSubtotal = useMemo(
     () => clamp(discountedPrice + clamp(inputs.sc) + clamp(inputs.tx)),
     [discountedPrice, inputs.sc, inputs.tx]
   );
 
-  // profit = buyer subtotal - platform fees - shipping cost (your cost) - cogs
   const profit = useMemo(
     () => clamp(buyerSubtotal - totalPlatformFees - clamp(inputs.ss) - clamp(inputs.cg)),
     [buyerSubtotal, totalPlatformFees, inputs.ss, inputs.cg]
@@ -180,7 +173,6 @@ export default function Page() {
     return clamp(profit / base, -10, 10);
   }, [profit, buyerSubtotal]);
 
-  // compare table rows (same inputs across platforms)
   const compareRows = useMemo(() => {
     return PLATFORMS.map(({ key, label }) => {
       const r = RULES[key];
@@ -206,10 +198,12 @@ export default function Page() {
     });
   }, [inputs]);
 
-  // header reset
   const resetAll = () => setInputs(DEFAULTS);
 
   /* ----------------- UI ------------------- */
+
+  const purpleBox =
+    'rounded-3xl border border-purple-500/60 ring-1 ring-purple-500/40 bg-neutral-950/40 p-4';
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
@@ -225,14 +219,13 @@ export default function Page() {
             <span className="font-semibold">FeePilot</span>
           </button>
 
-          {/* actions (Share / Copy / Pro) */}
           <HeaderActions />
         </div>
       </header>
 
       <main className="mx-auto max-w-5xl px-4 pb-24">
         {/* Platform card */}
-        <section className="mt-6 rounded-3xl border border-purple-500/30 bg-neutral-950/40 p-4">
+        <section className={`mt-6 ${purpleBox}`}>
           <div className="text-neutral-400 text-sm mb-2">Platform</div>
           <select
             value={inputs.p}
@@ -253,7 +246,7 @@ export default function Page() {
         </section>
 
         {/* Inputs */}
-        <section className="mt-6 grid gap-4 rounded-3xl border border-purple-500/30 bg-neutral-950/40 p-4 md:grid-cols-2">
+        <section className={`mt-6 grid gap-4 ${purpleBox} md:grid-cols-2`}>
           <div>
             <Label>Item price ($)</Label>
             <NumberInput value={inputs.pr} onChange={(n) => setInputs((s) => ({ ...s, pr: n }))} />
@@ -289,7 +282,7 @@ export default function Page() {
         </section>
 
         {/* Overview */}
-        <section className="mt-6 grid gap-4 rounded-3xl border border-purple-500/30 bg-neutral-950/40 p-4 md:grid-cols-2">
+        <section className={`mt-6 grid gap-4 ${purpleBox} md:grid-cols-2`}>
           <Card title="Profit" value={fmtMoney(profit)} danger={profit < 0} />
           <Card title="Margin" value={pct(margin)} danger={margin < 0} />
 
@@ -302,7 +295,7 @@ export default function Page() {
         </section>
 
         {/* Compare table */}
-        <section className="mt-6 rounded-3xl border border-purple-500/30 bg-neutral-950/40 p-4">
+        <section className={`mt-6 ${purpleBox}`}>
           <div className="mb-3 text-neutral-300">
             Comparing with current inputs (
             <span className="font-semibold">{fmtMoney(inputs.pr)}</span> price,{' '}

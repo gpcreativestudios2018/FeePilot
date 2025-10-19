@@ -2,69 +2,72 @@
 
 import { useEffect, useState } from 'react';
 
+function getUrl() {
+  if (typeof window === 'undefined') return '';
+  return window.location.href;
+}
+
 export default function HeaderActions() {
   const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
 
-  // Copy current URL to clipboard
-  const copyUrl = async () => {
+  useEffect(() => {
+    let t: NodeJS.Timeout | undefined;
+    if (copied || shared) {
+      t = setTimeout(() => {
+        setCopied(false);
+        setShared(false);
+      }, 1500);
+    }
+    return () => t && clearTimeout(t);
+  }, [copied, shared]);
+
+  const doCopy = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(getUrl());
       setCopied(true);
-      setTimeout(() => setCopied(false), 1400);
     } catch {
-      /* no-op */
+      setCopied(true);
     }
   };
 
-  // Use the Web Share API when available; fall back to copy
-  const shareUrl = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'FeePilot',
-          text: 'Check out this FeePilot calculation',
-          url: window.location.href,
-        });
-      } else {
-        await copyUrl();
+  const doShare = async () => {
+    const url = getUrl();
+    if ((navigator as any).share) {
+      try {
+        await (navigator as any).share({ title: 'FeePilot', url });
+        setShared(true);
+        return;
+      } catch {
+        // fall through to copy if user cancels or share fails
       }
-    } catch {
-      /* user canceled or unsupported */
     }
+    await doCopy();
   };
 
-  // Slight hover/press feedback for accessibility
-  const btn =
-    'rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-purple-500/60 active:scale-[.98] transition';
-
-  // Prevent SSR hydration mismatch – only render on client
-  const [ready, setReady] = useState(false);
-  useEffect(() => setReady(true), []);
-  if (!ready) return null;
+  const pill =
+    'rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-800 transition active:scale-[0.98]';
 
   return (
-    <div className="relative flex items-center gap-2">
-      <button type="button" className={btn} onClick={shareUrl}>
-        Share
+    <div className="flex items-center gap-2">
+      <button type="button" onClick={doShare} className={pill} title="Share this page">
+        {shared ? 'Shared!' : 'Share'}
       </button>
-      <button type="button" className={btn} onClick={copyUrl}>
-        Copy
-      </button>
-      <a
-        href="https://github.com/gpcreativestudios2018/FeePilot#pro"
-        target="_blank"
-        rel="noopener noreferrer"
-        className={btn}
-      >
-        Pro
-      </a>
 
-      {/* tiny toast for “email/url copied” style feedback */}
-      {copied && (
-        <div className="pointer-events-none absolute -bottom-9 right-0 rounded-md border border-purple-500/30 bg-neutral-950/90 px-2 py-1 text-xs text-purple-300 shadow-lg">
-          Link copied
-        </div>
-      )}
+      <button type="button" onClick={doCopy} className={pill} title="Copy link">
+        {copied ? 'Copied!' : 'Copy'}
+      </button>
+
+      {/* Pro — disabled, coming soon (no navigation) */}
+      <button
+        type="button"
+        disabled
+        title="Pro features are coming soon"
+        className={`${pill} cursor-not-allowed opacity-60`}
+        onClick={(e) => e.preventDefault()}
+      >
+        Pro <span className="ml-1 text-xs text-neutral-400">(coming soon)</span>
+      </button>
     </div>
   );
 }
