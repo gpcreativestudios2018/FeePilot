@@ -38,8 +38,6 @@ const pct = (n: number) => n / 100;
 
 /** Safely read a possibly-missing fixed listing fee without tripping TS. */
 const getListingFixed = (rule: FeeRule): number => {
-  // Some platforms (e.g., Etsy) may define a flat listing fee.
-  // It's optional in our data, so access defensively.
   const anyRule = rule as unknown as { listingFixed?: number };
   return anyRule.listingFixed ?? 0;
 };
@@ -59,7 +57,6 @@ function calcFor(
   marginPct: number;
 } {
   const discounted = clamp(inputs.price * (1 - pct(inputs.discountPct)));
-
   const base = discounted + inputs.shipCharge;
 
   const marketplaceFee =
@@ -96,7 +93,7 @@ function calcFor(
 }
 
 /* ----------------------------- share/copy helpers -------------------------- */
-/*  NOTE: These now return Promise<void> to satisfy HeaderActions props.       */
+/*  NOTE: These return Promise<void> to satisfy HeaderActions props.           */
 
 const shareLink = async (): Promise<void> => {
   const url = window.location.href;
@@ -147,7 +144,6 @@ export default function Page() {
       <header className="mx-auto max-w-6xl px-4 py-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-semibold tracking-tight">FeePilot</h1>
-
           <HeaderActions onShare={shareLink} onCopy={copyLink} />
         </div>
 
@@ -161,9 +157,7 @@ export default function Page() {
         <section className="rounded-2xl border border-purple-600/40 p-4 sm:p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className="mb-2 block text-sm text-gray-300">
-                Platform
-              </label>
+              <label className="mb-2 block text-sm text-gray-300">Platform</label>
               <select
                 className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
                 value={inputs.platform}
@@ -175,11 +169,7 @@ export default function Page() {
                 }
               >
                 {PLATFORMS.map((p) => (
-                  <option
-                    key={p}
-                    value={p}
-                    className="bg-black text-white"
-                  >
+                  <option key={p} value={p} className="bg-black text-white">
                     {p[0].toUpperCase() + p.slice(1)}
                   </option>
                 ))}
@@ -187,9 +177,7 @@ export default function Page() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm text-gray-300">
-                Item price ($)
-              </label>
+              <label className="mb-2 block text-sm text-gray-300">Item price ($)</label>
               <input
                 className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
                 inputMode="decimal"
@@ -201,9 +189,7 @@ export default function Page() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm text-gray-300">
-                Discount (%)
-              </label>
+              <label className="mb-2 block text-sm text-gray-300">Discount (%)</label>
               <input
                 className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
                 inputMode="decimal"
@@ -226,7 +212,10 @@ export default function Page() {
                 inputMode="decimal"
                 value={inputs.shipCharge}
                 onChange={(e) =>
-                  setInputs((s) => ({ ...s, shipCharge: clamp(parseNum(e.target.value), 0) }))
+                  setInputs((s) => ({
+                    ...s,
+                    shipCharge: clamp(parseNum(e.target.value), 0),
+                  }))
                 }
               />
             </div>
@@ -377,7 +366,10 @@ export default function Page() {
           </div>
         </section>
 
-        <Footer className="mt-10" />
+        {/* Footer – wrap to apply margin since Footer doesn't accept props */}
+        <div className="mt-10">
+          <Footer />
+        </div>
       </main>
     </div>
   );
