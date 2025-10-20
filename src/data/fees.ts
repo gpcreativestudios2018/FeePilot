@@ -90,3 +90,10 @@ export const RULES: Record<PlatformKey, FeeRule> = {
     notes: '2.00 flat under $15; 20% otherwise (approximated).',
   },
 };
+import {
+  PLATFORMS,
+  RULES,
+  RULES_UPDATED_AT,  // ← add this
+  PlatformKey,
+  FeeRule
+} from '@/data/fees';

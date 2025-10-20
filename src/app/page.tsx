@@ -6,11 +6,10 @@ import { useEffect, useMemo, useState } from 'react';
 import HeaderActions from './components/HeaderActions';
 import Footer from './components/Footer';
 
-// NOTE: page.tsx lives in src/app/, while fees.ts lives in src/data/.
-// So the correct relative import is ../data/fees (NOT ./data/fees).
+// NOTE: page.tsx is in src/app/, data file is in src/data/
 import {
-  PLATFORMS,
-  RULES,
+  PLATFORMS,           // -> Array<{ key: PlatformKey; label: string }>
+  RULES,               // -> Record<PlatformKey, FeeRule>
   RULES_UPDATED_AT,
   type PlatformKey,
   type FeeRule,
@@ -19,8 +18,12 @@ import {
 // ---------- helpers ----------
 const clamp = (n: number, min = -1_000_000, max = 1_000_000) =>
   Math.min(max, Math.max(min, n));
+
 const asMoney = (n: number) =>
   n.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+
+const isPlatformKey = (v: unknown): v is PlatformKey =>
+  typeof v === 'string' && PLATFORMS.some((p) => p.key === v);
 
 // ---------- UI state ----------
 type Inputs = {
@@ -36,12 +39,12 @@ export default function Page() {
     price: 100,
     shipping: 0,
     discountPct: 0,
-    platform: (PLATFORMS[0] ?? 'mercari') as PlatformKey,
+    platform: (PLATFORMS[0]?.key ?? 'mercari') as PlatformKey,
   }));
 
   const rule: FeeRule | undefined = RULES[inputs.platform];
 
-  // Derived calcs (kept simple to avoid type issues)
+  // Derived calcs
   const { discountedPrice, marketplaceFee, payout } = useMemo(() => {
     const price = clamp(Number(inputs.price) || 0, 0, 1_000_000);
     const ship = clamp(Number(inputs.shipping) || 0, 0, 1_000_000);
@@ -49,11 +52,11 @@ export default function Page() {
 
     const discounted = price * (1 - discountPct / 100);
 
-    // Marketplace % fee only (avoid optional fields that weren’t in FeeRule)
+    // Marketplace % fee only (avoid optional fields that might not exist)
     const pct = (rule?.marketplacePct ?? 0) / 100;
     const mkt = discounted * pct;
 
-    // rudimentary payout: price - discount - fee - shipping (floor at 0)
+    // rudimentary payout
     const payoutCalc = Math.max(0, discounted - mkt - ship);
 
     return {
@@ -107,13 +110,13 @@ export default function Page() {
     if (p.get('price')) next.price = Number(p.get('price'));
     if (p.get('shipping')) next.shipping = Number(p.get('shipping'));
     if (p.get('discountPct')) next.discountPct = Number(p.get('discountPct'));
-    if (p.get('platform') && PLATFORMS.includes(p.get('platform') as PlatformKey)) {
-      next.platform = p.get('platform') as PlatformKey;
-    }
+
+    const fromUrl = p.get('platform');
+    if (isPlatformKey(fromUrl)) next.platform = fromUrl;
+
     if (Object.keys(next).length) {
       setInputs((curr) => ({ ...curr, ...next }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -132,7 +135,7 @@ export default function Page() {
       </header>
 
       {/* Controls */}
-      <section className="mb-4 rounded-2xl border border-purple-400/50 p-4">
+      <section className="mb-4 rounded-2xl border border-purple-500/60 p-4">
         <div className="mb-2 flex flex-wrap items-end gap-3">
           <label className="flex flex-col">
             <span className="text-xs text-neutral-500">Platform</span>
@@ -147,8 +150,8 @@ export default function Page() {
               }
             >
               {PLATFORMS.map((p) => (
-                <option key={p} value={p}>
-                  {p}
+                <option key={p.key} value={p.key}>
+                  {p.label}
                 </option>
               ))}
             </select>
@@ -206,17 +209,17 @@ export default function Page() {
 
       {/* Summary */}
       <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-purple-400/70 p-4">
+        <div className="rounded-2xl border border-purple-500/70 p-4">
           <div className="text-xs text-neutral-500">Discounted price</div>
           <div className="text-lg font-semibold">{asMoney(discountedPrice)}</div>
         </div>
 
-        <div className="rounded-2xl border border-purple-400/70 p-4">
+        <div className="rounded-2xl border border-purple-500/70 p-4">
           <div className="text-xs text-neutral-500">Marketplace fee</div>
           <div className="text-lg font-semibold">{asMoney(marketplaceFee)}</div>
         </div>
 
-        <div className="rounded-2xl border border-purple-400/70 p-4">
+        <div className="rounded-2xl border border-purple-500/70 p-4">
           <div className="text-xs text-neutral-500">Estimated payout</div>
           <div className="text-lg font-semibold">{asMoney(payout)}</div>
         </div>
