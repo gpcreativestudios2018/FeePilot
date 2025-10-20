@@ -1,7 +1,9 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import HeaderActions from './components/HeaderActions';
+import Footer from './components/Footer';
+
 import {
   PLATFORMS,
   RULES,
@@ -10,474 +12,373 @@ import {
   type FeeRule,
 } from '@/data/fees';
 
-/** ---------- tiny helpers ---------- */
-const clamp = (n: number, min = -1_000_000, max = 1_000_000) =>
-  isFinite(n) ? Math.min(Math.max(n, min), max) : 0;
+/* ---------------------------------- types --------------------------------- */
 
-const asMoney = (n: number) =>
-  n.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
-
-/** Parse number input safely */
-const parseNum = (v: string) => {
-  const n = Number(v.replace(/[^0-9.\-]/g, ''));
-  return isFinite(n) ? n : 0;
+type Inputs = {
+  platform: PlatformKey;
+  price: number;
+  shipCharge: number; // what you charge the buyer for shipping
+  shipCost: number;   // your actual shipping cost
+  cogs: number;       // cost of goods sold
+  discountPct: number;
+  tax: number;        // tax collected (if any)
 };
 
-/** --------- small components (local to page) ---------- */
-function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full px-2 py-0.5 text-xs border border-purple-500/40 text-purple-200/90">
-      {children}
-    </span>
-  );
-}
+/* ------------------------------ handy utilities ---------------------------- */
 
-function Card({
-  title,
-  value,
-}: {
-  title: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-purple-500/30 p-5">
-      <div className="text-purple-300/90 mb-2">{title}</div>
-      <div className="text-3xl font-semibold text-emerald-300">{value}</div>
-    </div>
-  );
-}
+const parseNum = (v: string) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
 
-/** --------- BREAKDOWN GRID ---------- */
-function Breakdown({
-  payout,
-  marginPct,
-  mktFee,
-  payFee,
-  listFee,
-  shipCost,
-  cogs,
-  totalFees,
-}: {
-  payout: number;
-  marginPct: number;
-  mktFee: number;
-  payFee: number;
-  listFee: number;
-  shipCost: number;
-  cogs: number;
+const clamp = (n: number, min = -1_000_000, max = 1_000_000) =>
+  Math.min(max, Math.max(min, n));
+
+const pct = (n: number) => n / 100;
+
+/** Safely read a possibly-missing fixed listing fee without tripping TS. */
+const getListingFixed = (rule: FeeRule): number => {
+  // Some platforms (e.g., Etsy) may define a flat listing fee.
+  // It's optional in our data, so access defensively.
+  const anyRule = rule as unknown as { listingFixed?: number };
+  return anyRule.listingFixed ?? 0;
+};
+
+/** Core calculator for one platform. */
+function calcFor(
+  rule: FeeRule,
+  inputs: Inputs
+): {
+  discounted: number;
+  marketplaceFee: number;
+  paymentFee: number;
+  listingFee: number;
   totalFees: number;
-}) {
-  return (
-    <div className="grid md:grid-cols-2 gap-4">
-      <Card title="Profit" value={asMoney(payout)} />
-      <Card title="Margin" value={`${marginPct.toFixed(1)}%`} />
-      <Card title="Marketplace fee" value={asMoney(mktFee)} />
-      <Card title="Payment fee" value={asMoney(payFee)} />
-      <Card title="Listing fee" value={asMoney(listFee)} />
-      <Card title="Shipping cost (your cost)" value={asMoney(shipCost)} />
-      <Card title="COGS" value={asMoney(cogs)} />
-      <Card title="Total fees" value={asMoney(totalFees)} />
-    </div>
-  );
+  net: number;
+  profit: number;
+  marginPct: number;
+} {
+  const discounted = clamp(inputs.price * (1 - pct(inputs.discountPct)));
+
+  const base = discounted + inputs.shipCharge;
+
+  const marketplaceFee =
+    clamp(base * pct(rule.marketplacePct ?? 0)) + (rule.marketplaceFixed ?? 0);
+
+  const paymentFee =
+    clamp(base * pct(rule.paymentPct ?? 0)) + (rule.paymentFixed ?? 0);
+
+  const listingFee = getListingFixed(rule);
+
+  const totalFees = marketplaceFee + paymentFee + listingFee;
+
+  const net =
+    discounted +
+    inputs.shipCharge -
+    totalFees -
+    inputs.shipCost -
+    inputs.cogs -
+    inputs.tax;
+
+  const profit = net;
+  const marginPct = discounted > 0 ? (profit / discounted) * 100 : 0;
+
+  return {
+    discounted,
+    marketplaceFee,
+    paymentFee,
+    listingFee,
+    totalFees,
+    net,
+    profit,
+    marginPct,
+  };
 }
 
-/** --------- COMPARE TABLE ---------- */
-function CompareTable({
-  inputs,
-}: {
-  inputs: {
-    price: number;
-    shipCharge: number;
-    shipCost: number;
-    cogs: number;
-    discountPct: number;
-    tax: number;
-  };
-}) {
-  type Row = {
-    platform: PlatformKey;
-    profit: number;
-    margin: number;
-    mkt: number;
-    pay: number;
-    list: number;
-    total: number;
-  };
+/* ----------------------------- share/copy helpers -------------------------- */
+/*  NOTE: These now return Promise<void> to satisfy HeaderActions props.       */
 
-  const rows: Row[] = useMemo(() => {
-    const list: Row[] = [];
-    Object.keys(RULES).forEach((key) => {
-      const p = key as PlatformKey;
-      const rule = RULES[p] as FeeRule;
+const shareLink = async (): Promise<void> => {
+  const url = window.location.href;
 
-      const discounted = inputs.price * (1 - inputs.discountPct / 100);
-      const grossToSeller = discounted + inputs.shipCharge;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'FeePilot', url });
+    } catch {
+      // user canceled share — ignore
+    }
+  } else {
+    await navigator.clipboard.writeText(url);
+  }
+};
 
-      const marketplaceFee =
-        (rule.marketplacePct ?? 0) * grossToSeller / 100 +
-        (rule.marketplaceFixed ?? 0);
+const copyLink = async (): Promise<void> => {
+  const url = window.location.href;
+  await navigator.clipboard.writeText(url);
+};
 
-      const paymentBase = grossToSeller;
-      const paymentFee =
-        (rule.paymentPct ?? 0) * paymentBase / 100 +
-        (rule.paymentFixed ?? 0);
+/* ----------------------------------- UI ----------------------------------- */
 
-      const listingFee = rule.listingFixed ?? 0;
+export default function Page() {
+  const [inputs, setInputs] = useState<Inputs>({
+    platform: PLATFORMS[0] ?? ('mercari' as PlatformKey),
+    price: 100,
+    shipCharge: 0,
+    shipCost: 10,
+    cogs: 40,
+    discountPct: 0,
+    tax: 0,
+  });
 
-      const totalFees = marketplaceFee + paymentFee + listingFee;
-      const net = discounted + inputs.shipCharge - totalFees - inputs.shipCost - inputs.cogs - inputs.tax;
-      const margin =
-        (net / (discounted + inputs.shipCharge || 1)) * 100;
+  const rule = RULES[inputs.platform];
 
-      list.push({
-        platform: p,
-        profit: net,
-        margin,
-        mkt: marketplaceFee,
-        pay: paymentFee,
-        list: listingFee,
-        total: totalFees,
-      });
+  const current = useMemo(() => calcFor(rule, inputs), [rule, inputs]);
+
+  const comparison = useMemo(() => {
+    return PLATFORMS.map((p) => {
+      const r = RULES[p];
+      const c = calcFor(r, inputs);
+      return { platform: p, r, ...c };
     });
-    return list.sort((a, b) => b.profit - a.profit);
   }, [inputs]);
 
   return (
-    <div className="rounded-2xl border border-purple-500/30 p-4">
-      <div className="text-purple-200/90 mb-3">
-        Comparing with current inputs (
-        <Badge>
-          {asMoney(inputs.price)} price
-        </Badge>
-        , <Badge>{asMoney(inputs.shipCharge)} ship charge</Badge>,{' '}
-        <Badge>{asMoney(inputs.shipCost)} ship cost</Badge>,{' '}
-        <Badge>{asMoney(inputs.cogs)} COGS</Badge>,{' '}
-        <Badge>{inputs.discountPct.toFixed(1)}% discount</Badge>,{' '}
-        <Badge>{asMoney(inputs.tax)} tax</Badge>).
-      </div>
+    <div className="min-h-dvh bg-black text-white">
+      <header className="mx-auto max-w-6xl px-4 py-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-semibold tracking-tight">FeePilot</h1>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[800px] text-left">
-          <thead className="text-sm text-purple-200/80">
-            <tr>
-              <th className="py-2">Platform</th>
-              <th className="py-2">Profit</th>
-              <th className="py-2">Margin</th>
-              <th className="py-2">Marketplace fee</th>
-              <th className="py-2">Payment fee</th>
-              <th className="py-2">Listing fee</th>
-              <th className="py-2">Total fees</th>
-            </tr>
-          </thead>
-          <tbody className="text-[15px]">
-            {rows.map((r) => (
-              <tr key={r.platform} className="border-t border-white/5">
-                <td className="py-3">
-                  <span className="rounded-full border border-white/10 px-2 py-0.5 text-sm">
-                    {r.platform}
-                  </span>
-                </td>
-                <td className="py-3 text-emerald-300">{asMoney(r.profit)}</td>
-                <td className="py-3">{r.margin.toFixed(1)}%</td>
-                <td className="py-3">{asMoney(r.mkt)}</td>
-                <td className="py-3">{asMoney(r.pay)}</td>
-                <td className="py-3">{asMoney(r.list)}</td>
-                <td className="py-3">{asMoney(r.total)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-/** ================== PAGE ================== */
-export default function Page() {
-  // persisted settings (so returning users keep inputs)
-  const [platform, setPlatform] = useState<PlatformKey>('mercari');
-  const [price, setPrice] = useState(120);
-  const [shipCharge, setShipCharge] = useState(0);
-  const [shipCost, setShipCost] = useState(10);
-  const [cogs, setCogs] = useState(40);
-  const [discountPct, setDiscountPct] = useState(0);
-  const [tax, setTax] = useState(0);
-  const [targetProfit, setTargetProfit] = useState(50);
-
-  useEffect(() => {
-    const raw = localStorage.getItem('feepilot_v1');
-    if (raw) {
-      try {
-        const s = JSON.parse(raw);
-        setPlatform(s.platform ?? 'mercari');
-        setPrice(s.price ?? 120);
-        setShipCharge(s.shipCharge ?? 0);
-        setShipCost(s.shipCost ?? 10);
-        setCogs(s.cogs ?? 40);
-        setDiscountPct(s.discountPct ?? 0);
-        setTax(s.tax ?? 0);
-        setTargetProfit(s.targetProfit ?? 50);
-      } catch {}
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(
-      'feepilot_v1',
-      JSON.stringify({
-        platform,
-        price,
-        shipCharge,
-        shipCost,
-        cogs,
-        discountPct,
-        tax,
-        targetProfit,
-      })
-    );
-  }, [platform, price, shipCharge, shipCost, cogs, discountPct, tax, targetProfit]);
-
-  const rule = RULES[platform] as FeeRule;
-
-  const calc = useMemo(() => {
-    const discounted = price * (1 - discountPct / 100);
-    const grossToSeller = discounted + shipCharge;
-
-    const marketplaceFee =
-      (rule.marketplacePct ?? 0) * grossToSeller / 100 +
-      (rule.marketplaceFixed ?? 0);
-
-    const paymentFee =
-      (rule.paymentPct ?? 0) * grossToSeller / 100 +
-      (rule.paymentFixed ?? 0);
-
-    const listingFee = rule.listingFixed ?? 0;
-
-    const totalFees = marketplaceFee + paymentFee + listingFee;
-    const profit =
-      discounted + shipCharge - totalFees - shipCost - cogs - tax;
-
-    const margin =
-      (profit / (discounted + shipCharge || 1)) * 100;
-
-    // price you’d need to hit target profit (rough, fee-on-price approx)
-    const pctOnPrice =
-      ((rule.marketplacePct ?? 0) + (rule.paymentPct ?? 0)) / 100;
-    const fixed = (rule.marketplaceFixed ?? 0) + (rule.paymentFixed ?? 0) + (rule.listingFixed ?? 0);
-    const requiredPrice =
-      (targetProfit + shipCost + cogs + tax + fixed - shipCharge) /
-      (1 - pctOnPrice);
-
-    return {
-      discounted,
-      grossToSeller,
-      marketplaceFee,
-      paymentFee,
-      listingFee,
-      totalFees,
-      profit,
-      margin,
-      requiredPrice: isFinite(requiredPrice) ? Math.max(0, requiredPrice) : 0,
-    };
-  }, [price, shipCharge, discountPct, shipCost, cogs, tax, rule, targetProfit]);
-
-  const shareLink = async () => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('p', platform);
-    url.searchParams.set('price', String(price));
-    url.searchParams.set('shipCharge', String(shipCharge));
-    url.searchParams.set('shipCost', String(shipCost));
-    url.searchParams.set('cogs', String(cogs));
-    url.searchParams.set('discount', String(discountPct));
-    url.searchParams.set('tax', String(tax));
-    navigator.clipboard.writeText(url.toString());
-    return url.toString();
-  };
-
-  const copyLink = async () => {
-    await shareLink();
-    return 'copied';
-  };
-
-  // load from URL (Share)
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    const p = q.get('p') as PlatformKey | null;
-    if (p && PLATFORMS.includes(p)) setPlatform(p);
-    const n = (k: string, setter: (n: number) => void) => {
-      const v = q.get(k);
-      if (v != null) setter(parseNum(v));
-    };
-    n('price', setPrice);
-    n('shipCharge', setShipCharge);
-    n('shipCost', setShipCost);
-    n('cogs', setCogs);
-    n('discount', setDiscountPct);
-    n('tax', setTax);
-  }, []);
-
-  return (
-    <main className="max-w-5xl mx-auto px-5 py-10 text-white">
-      <header className="flex items-center justify-between gap-3 mb-6">
-        <div className="flex items-center gap-4">
-          <div className="text-2xl font-semibold">FeePilot</div>
-          <div className="rounded-full border border-purple-500/40 px-3 py-1 text-sm text-purple-200">
-            Rules last updated: {RULES_UPDATED_AT}
-          </div>
+          <HeaderActions onShare={shareLink} onCopy={copyLink} />
         </div>
-        <HeaderActions onShare={shareLink} onCopy={copyLink} />
+
+        <div className="mt-3 inline-flex rounded-full border border-purple-600/50 px-3 py-1 text-sm text-purple-200">
+          Rules last updated: {RULES_UPDATED_AT}
+        </div>
       </header>
 
-      {/* Inputs */}
-      <section className="rounded-2xl border border-purple-500/40 p-5 mb-6">
-        <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <label className="text-purple-200/90 block mb-2">
-              Platform <span className="opacity-60">(?)</span>
-            </label>
-            <select
-              className="w-full rounded-xl bg-black/30 border border-purple-500/30 px-3 py-2 outline-none"
-              value={platform}
-              onChange={(e) =>
-                setPlatform((e.target.value as PlatformKey) ?? 'mercari')
-              }
-            >
-              {PLATFORMS.map((p) => (
-                <option key={p} value={p}>
-                  {p.charAt(0).toUpperCase() + p.slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
+      <main className="mx-auto max-w-6xl px-4 pb-20">
+        {/* Inputs */}
+        <section className="rounded-2xl border border-purple-600/40 p-4 sm:p-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <label className="mb-2 block text-sm text-gray-300">
+                Platform
+              </label>
+              <select
+                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
+                value={inputs.platform}
+                onChange={(e) =>
+                  setInputs((s) => ({
+                    ...s,
+                    platform: e.target.value as PlatformKey,
+                  }))
+                }
+              >
+                {PLATFORMS.map((p) => (
+                  <option
+                    key={p}
+                    value={p}
+                    className="bg-black text-white"
+                  >
+                    {p[0].toUpperCase() + p.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div>
-            <label className="text-purple-200/90 block mb-2">
-              Item price <span className="opacity-60">(?)</span>
-            </label>
-            <input
-              inputMode="decimal"
-              className="w-full rounded-xl bg-black/30 border border-purple-500/30 px-3 py-2 outline-none"
-              value={price}
-              onChange={(e) => setPrice(clamp(parseNum(e.target.value)))}
-            />
-          </div>
+            <div>
+              <label className="mb-2 block text-sm text-gray-300">
+                Item price ($)
+              </label>
+              <input
+                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
+                inputMode="decimal"
+                value={inputs.price}
+                onChange={(e) =>
+                  setInputs((s) => ({ ...s, price: clamp(parseNum(e.target.value), 0) }))
+                }
+              />
+            </div>
 
-          <div>
-            <label className="text-purple-200/90 block mb-2">
-              Discount % <span className="opacity-60">(?)</span>
-            </label>
-            <input
-              inputMode="decimal"
-              className="w-full rounded-xl bg-black/30 border border-purple-500/30 px-3 py-2 outline-none"
-              value={discountPct}
-              onChange={(e) => setDiscountPct(clamp(parseNum(e.target.value), 0, 100))}
-            />
-          </div>
+            <div>
+              <label className="mb-2 block text-sm text-gray-300">
+                Discount (%)
+              </label>
+              <input
+                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
+                inputMode="decimal"
+                value={inputs.discountPct}
+                onChange={(e) =>
+                  setInputs((s) => ({
+                    ...s,
+                    discountPct: clamp(parseNum(e.target.value), 0, 100),
+                  }))
+                }
+              />
+            </div>
 
-          <div>
-            <label className="text-purple-200/90 block mb-2">
-              Shipping charged to buyer ($)
-            </label>
-            <input
-              inputMode="decimal"
-              className="w-full rounded-xl bg-black/30 border border-purple-500/30 px-3 py-2 outline-none"
-              value={shipCharge}
-              onChange={(e) => setShipCharge(clamp(parseNum(e.target.value)))}
-            />
-          </div>
+            <div>
+              <label className="mb-2 block text-sm text-gray-300">
+                Shipping charged to buyer ($)
+              </label>
+              <input
+                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
+                inputMode="decimal"
+                value={inputs.shipCharge}
+                onChange={(e) =>
+                  setInputs((s) => ({ ...s, shipCharge: clamp(parseNum(e.target.value), 0) }))
+                }
+              />
+            </div>
 
-          <div>
-            <label className="text-purple-200/90 block mb-2">
-              Your shipping cost ($)
-            </label>
-            <input
-              inputMode="decimal"
-              className="w-full rounded-xl bg-black/30 border border-purple-500/30 px-3 py-2 outline-none"
-              value={shipCost}
-              onChange={(e) => setShipCost(clamp(parseNum(e.target.value)))}
-            />
-          </div>
+            <div>
+              <label className="mb-2 block text-sm text-gray-300">
+                Your shipping cost ($)
+              </label>
+              <input
+                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
+                inputMode="decimal"
+                value={inputs.shipCost}
+                onChange={(e) =>
+                  setInputs((s) => ({ ...s, shipCost: clamp(parseNum(e.target.value), 0) }))
+                }
+              />
+            </div>
 
-          <div>
-            <label className="text-purple-200/90 block mb-2">COGS ($)</label>
-            <input
-              inputMode="decimal"
-              className="w-full rounded-xl bg-black/30 border border-purple-500/30 px-3 py-2 outline-none"
-              value={cogs}
-              onChange={(e) => setCogs(clamp(parseNum(e.target.value)))}
-            />
-          </div>
+            <div>
+              <label className="mb-2 block text-sm text-gray-300">COGS ($)</label>
+              <input
+                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
+                inputMode="decimal"
+                value={inputs.cogs}
+                onChange={(e) =>
+                  setInputs((s) => ({ ...s, cogs: clamp(parseNum(e.target.value), 0) }))
+                }
+              />
+            </div>
 
-          <div>
-            <label className="text-purple-200/90 block mb-2">Tax collected ($)</label>
-            <input
-              inputMode="decimal"
-              className="w-full rounded-xl bg-black/30 border border-purple-500/30 px-3 py-2 outline-none"
-              value={tax}
-              onChange={(e) => setTax(clamp(parseNum(e.target.value)))}
-            />
-          </div>
-
-          <div>
-            <label className="text-purple-200/90 block mb-2">Target profit ($)</label>
-            <input
-              inputMode="decimal"
-              className="w-full rounded-xl bg-black/30 border border-purple-500/30 px-3 py-2 outline-none"
-              value={targetProfit}
-              onChange={(e) => setTargetProfit(clamp(parseNum(e.target.value)))}
-            />
-            <div className="mt-2 text-sm text-purple-200/80">
-              You’d need ~{asMoney(calc.requiredPrice)} list price to hit the target.
+            <div>
+              <label className="mb-2 block text-sm text-gray-300">Tax collected ($)</label>
+              <input
+                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
+                inputMode="decimal"
+                value={inputs.tax}
+                onChange={(e) =>
+                  setInputs((s) => ({ ...s, tax: clamp(parseNum(e.target.value), 0) }))
+                }
+              />
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Summary tiles */}
-      <section className="mb-6">
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="rounded-2xl border border-purple-500/30 p-5">
-            <div className="text-purple-300/90 mb-2">Discounted price</div>
-            <div className="text-3xl font-semibold">{asMoney(calc.discounted)}</div>
+        {/* Cards */}
+        <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-2xl border border-purple-600/40 p-5">
+            <div className="text-sm text-gray-300">Discounted price</div>
+            <div className="mt-2 text-3xl font-semibold">
+              ${current.discounted.toFixed(2)}
+            </div>
           </div>
-          <div className="rounded-2xl border border-purple-500/30 p-5">
-            <div className="text-purple-300/90 mb-2">Marketplace fee</div>
-            <div className="text-3xl font-semibold">{asMoney(calc.marketplaceFee)}</div>
+
+          <div className="rounded-2xl border border-purple-600/40 p-5">
+            <div className="text-sm text-gray-300">Marketplace fee</div>
+            <div className="mt-2 text-3xl font-semibold">
+              ${current.marketplaceFee.toFixed(2)}
+            </div>
           </div>
-          <div className="rounded-2xl border border-purple-500/30 p-5">
-            <div className="text-purple-300/90 mb-2">Estimated payout</div>
-            <div className="text-3xl font-semibold">{asMoney(calc.profit)}</div>
+
+          <div className="rounded-2xl border border-purple-600/40 p-5">
+            <div className="text-sm text-gray-300">Payment fee</div>
+            <div className="mt-2 text-3xl font-semibold">
+              ${current.paymentFee.toFixed(2)}
+            </div>
           </div>
-        </div>
-      </section>
 
-      {/* Detailed breakdown */}
-      <section className="mb-8">
-        <Breakdown
-          payout={calc.profit}
-          marginPct={calc.margin}
-          mktFee={calc.marketplaceFee}
-          payFee={calc.paymentFee}
-          listFee={calc.listingFee}
-          shipCost={shipCost}
-          cogs={cogs}
-          totalFees={calc.totalFees}
-        />
-      </section>
+          {current.listingFee > 0 && (
+            <div className="rounded-2xl border border-purple-600/40 p-5">
+              <div className="text-sm text-gray-300">Listing fee</div>
+              <div className="mt-2 text-3xl font-semibold">
+                ${current.listingFee.toFixed(2)}
+              </div>
+            </div>
+          )}
 
-      {/* Compare all platforms */}
-      <section className="mb-12">
-        <CompareTable
-          inputs={{ price, shipCharge, shipCost, cogs, discountPct, tax }}
-        />
-      </section>
+          <div className="rounded-2xl border border-purple-600/40 p-5">
+            <div className="text-sm text-gray-300">Total fees</div>
+            <div className="mt-2 text-3xl font-semibold">
+              ${current.totalFees.toFixed(2)}
+            </div>
+          </div>
 
-      <footer className="text-center text-purple-200/80">
-        FeePilot by GP Creative Studios &nbsp;
-        <a className="underline" href="mailto:info@gpcreativestudios.com">
-          (contact)
-        </a>
-      </footer>
-    </main>
+          <div className="rounded-2xl border border-purple-600/40 p-5">
+            <div className="text-sm text-gray-300">Estimated payout</div>
+            <div className="mt-2 text-3xl font-semibold">
+              ${current.net.toFixed(2)}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-purple-600/40 p-5">
+            <div className="text-sm text-gray-300">Profit</div>
+            <div className="mt-2 text-3xl font-semibold text-emerald-300">
+              ${current.profit.toFixed(2)}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-purple-600/40 p-5">
+            <div className="text-sm text-gray-300">Margin</div>
+            <div className="mt-2 text-3xl font-semibold">
+              {current.marginPct.toFixed(1)}%
+            </div>
+          </div>
+        </section>
+
+        {/* Comparison table */}
+        <section className="mt-10 rounded-2xl border border-purple-600/40 p-4 sm:p-6">
+          <div className="mb-4 text-sm text-gray-300">
+            Comparing with current inputs (${inputs.price.toFixed(2)} price, $
+            {inputs.shipCharge.toFixed(2)} ship charge, $
+            {inputs.shipCost.toFixed(2)} ship cost, ${inputs.cogs.toFixed(2)} COGS,{' '}
+            {inputs.discountPct.toFixed(1)}% discount, ${inputs.tax.toFixed(2)} tax)
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-gray-300">
+                <tr>
+                  <th className="py-2 pr-4">Platform</th>
+                  <th className="py-2 pr-4">Profit</th>
+                  <th className="py-2 pr-4">Margin</th>
+                  <th className="py-2 pr-4">Marketplace fee</th>
+                  <th className="py-2 pr-4">Payment fee</th>
+                  <th className="py-2 pr-4">Listing fee</th>
+                  <th className="py-2 pr-4">Total fees</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparison.map((row) => (
+                  <tr key={row.platform} className="border-t border-white/10">
+                    <td className="py-2 pr-4">
+                      <span className="rounded-lg border border-white/10 px-2 py-1">
+                        {row.platform[0].toUpperCase() + row.platform.slice(1)}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-4 text-emerald-300">
+                      ${row.profit.toFixed(2)}
+                    </td>
+                    <td className="py-2 pr-4">{row.marginPct.toFixed(1)}%</td>
+                    <td className="py-2 pr-4">${row.marketplaceFee.toFixed(2)}</td>
+                    <td className="py-2 pr-4">${row.paymentFee.toFixed(2)}</td>
+                    <td className="py-2 pr-4">${row.listingFee.toFixed(2)}</td>
+                    <td className="py-2 pr-4">${row.totalFees.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <Footer className="mt-10" />
+      </main>
+    </div>
   );
 }
