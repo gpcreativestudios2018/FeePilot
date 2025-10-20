@@ -14,8 +14,8 @@ import {
 type Inputs = {
   platform: PlatformKey;
   price: number;
-  shipping: number;
-  discountPct: number;
+  shipping: number;     // paid by buyer
+  discountPct: number;  // % off list price
 };
 
 // ---------- helpers ----------
@@ -40,6 +40,29 @@ function parseInputs(raw: string | null, fallback: Inputs): Inputs {
   }
 }
 
+function computeFor(
+  rule: FeeRule,
+  price: number,
+  discountPct: number
+): {
+  discounted: number;
+  marketplaceFee: number;
+  paymentFee: number;
+  totalFees: number;
+  payout: number;
+  effectiveRatePct: number;
+  marginPct: number;
+} {
+  const discounted = clamp(price * (1 - clamp(discountPct, 0, 100) / 100), 0);
+  const marketplaceFee = clamp(discounted * ((rule.marketplacePct ?? 0) / 100) + (rule.marketplaceFixed ?? 0), 0);
+  const paymentFee = clamp(discounted * ((rule.paymentPct ?? 0) / 100) + (rule.paymentFixed ?? 0), 0);
+  const totalFees = marketplaceFee + paymentFee;
+  const payout = clamp(discounted - totalFees, 0);
+  const effectiveRatePct = discounted > 0 ? (totalFees / discounted) * 100 : 0;
+  const marginPct = price > 0 ? (payout / price) * 100 : 0;
+  return { discounted, marketplaceFee, paymentFee, totalFees, payout, effectiveRatePct, marginPct };
+}
+
 export default function Page() {
   const defaultPlatform =
     (PLATFORMS[0]?.key as PlatformKey | undefined) ?? ('mercari' as PlatformKey);
@@ -52,6 +75,7 @@ export default function Page() {
   );
 
   const [toastAt, setToastAt] = useState<number>(0);
+  const [showCompare, setShowCompare] = useState<boolean>(false);
 
   // persist settings
   useEffect(() => {
@@ -62,24 +86,19 @@ export default function Page() {
 
   const rule: FeeRule = RULES[inputs.platform];
 
-  const discounted = useMemo(() => {
-    const pct = clamp(inputs.discountPct, 0, 100);
-    return clamp(inputs.price * (1 - pct / 100), 0);
-  }, [inputs.price, inputs.discountPct]);
-
-  const marketplaceFee = useMemo(() => {
-    const pct = (rule.marketplacePct ?? 0) / 100;
-    return clamp(discounted * pct, 0);
-  }, [discounted, rule.marketplacePct]);
-
-  const paymentFee = useMemo(() => {
-    const pct = (rule.paymentPct ?? 0) / 100;
-    const fixed = rule.paymentFixed ?? 0;
-    return clamp(discounted * pct + fixed, 0);
-  }, [discounted, rule.paymentPct, rule.paymentFixed]);
-
-  const totalFees = marketplaceFee + paymentFee;
-  const payout = clamp(discounted - totalFees, 0);
+  // core calcs for the chosen platform (shipping doesn't affect fees, only buyer pays it)
+  const {
+    discounted,
+    marketplaceFee,
+    paymentFee,
+    totalFees,
+    payout,
+    effectiveRatePct,
+    marginPct,
+  } = useMemo(
+    () => computeFor(rule, inputs.price, inputs.discountPct),
+    [rule, inputs.price, inputs.discountPct]
+  );
 
   async function shareLink(): Promise<void> {
     const url = window.location.href;
@@ -103,10 +122,11 @@ export default function Page() {
     } catch {}
   }
 
-  const ringBox = 'rounded-2xl bg-black/20 p-6 ring-2 ring-inset ring-violet-500/70 border border-violet-500/30';
+  const ringBox =
+    'rounded-2xl bg-black/20 p-6 ring-2 ring-inset ring-violet-500/70 border border-violet-500/30';
 
   return (
-    <main className="mx-auto max-w-5xl px-6 pb-16">
+    <main className="mx-auto max-w-6xl px-6 pb-16">
       {/* Header */}
       <header className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -131,9 +151,9 @@ export default function Page() {
 
       {/* Inputs */}
       <section className={ringBox}>
-        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4">
           {/* Platform */}
-          <div className="md:col-span-1">
+          <div>
             <label className="mb-1 block text-sm text-neutral-400">
               Platform <span className="ml-1 text-neutral-500" title="Choose where you sell">(?)</span>
             </label>
@@ -163,6 +183,22 @@ export default function Page() {
               value={inputs.price}
               onChange={(e) =>
                 setInputs((s) => ({ ...s, price: clamp(Number(e.target.value), 0) }))
+              }
+              className="w-full rounded-xl bg-black/40 px-3 py-2 ring-2 ring-violet-500/60 focus:outline-none focus:ring-2 focus:ring-violet-400"
+            />
+          </div>
+
+          {/* Buyer shipping */}
+          <div>
+            <label className="mb-1 block text-sm text-neutral-400">
+              Buyer shipping <span className="ml-1 text-neutral-500" title="Shipping paid by buyer, not included in fees">(?)</span>
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={inputs.shipping}
+              onChange={(e) =>
+                setInputs((s) => ({ ...s, shipping: clamp(Number(e.target.value), 0) }))
               }
               className="w-full rounded-xl bg-black/40 px-3 py-2 ring-2 ring-violet-500/60 focus:outline-none focus:ring-2 focus:ring-violet-400"
             />
@@ -200,16 +236,72 @@ export default function Page() {
           <div className="rounded-2xl bg-black/30 p-5 ring-2 ring-violet-500/60">
             <div className="text-sm text-neutral-400">
               Marketplace fee{' '}
-              <span className="ml-1 text-neutral-500" title="Based on the selected platform’s rules">(?)</span>
+              <span className="ml-1 text-neutral-500" title="Percent/fixed by platform">(?)</span>
             </div>
             <div className="mt-2 text-2xl font-semibold">{toMoney(marketplaceFee)}</div>
+          </div>
+
+          <div className="rounded-2xl bg-black/30 p-5 ring-2 ring-violet-500/60">
+            <div className="text-sm text-neutral-400">
+              Payment fee <span className="ml-1 text-neutral-500" title="Processor fees">(?)</span>
+            </div>
+            <div className="mt-2 text-2xl font-semibold">{toMoney(paymentFee)}</div>
+          </div>
+
+          <div className="rounded-2xl bg-black/30 p-5 ring-2 ring-violet-500/60">
+            <div className="text-sm text-neutral-400">Total fees</div>
+            <div className="mt-2 text-2xl font-semibold">{toMoney(totalFees)}</div>
           </div>
 
           <div className="rounded-2xl bg-black/30 p-5 ring-2 ring-violet-500/60">
             <div className="text-sm text-neutral-400">Estimated payout</div>
             <div className="mt-2 text-2xl font-semibold">{toMoney(payout)}</div>
           </div>
+
+          <div className="rounded-2xl bg-black/30 p-5 ring-2 ring-violet-500/60">
+            <div className="text-sm text-neutral-400">
+              Margin / Eff. fee{' '}
+              <span className="ml-1 text-neutral-500" title="Payout ÷ price, and fees ÷ discounted">(?)</span>
+            </div>
+            <div className="mt-2 text-xl font-semibold">
+              {marginPct.toFixed(1)}%{' '}
+              <span className="text-neutral-400"> / fee {effectiveRatePct.toFixed(1)}%</span>
+            </div>
+          </div>
         </div>
+
+        {/* Compare toggle */}
+        <div className="mt-6 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setShowCompare((v) => !v)}
+            className="rounded-xl px-3 py-2 text-sm font-medium ring-2 ring-violet-500/60 hover:ring-violet-400/80 hover:bg-white/5 transition"
+          >
+            {showCompare ? 'Hide' : 'Show'} Compare
+          </button>
+        </div>
+
+        {/* Compare grid */}
+        {showCompare && (
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            {PLATFORMS.map((p) => {
+              const r = RULES[p.key as PlatformKey];
+              const c = computeFor(r, inputs.price, inputs.discountPct);
+              return (
+                <div
+                  key={p.key}
+                  className="rounded-2xl bg-black/30 p-4 ring-2 ring-violet-500/50"
+                >
+                  <div className="mb-1 text-sm text-neutral-400">{p.label}</div>
+                  <div className="text-lg font-semibold">{toMoney(c.payout)}</div>
+                  <div className="mt-1 text-xs text-neutral-400">
+                    fee {c.effectiveRatePct.toFixed(1)}% • margin {c.marginPct.toFixed(1)}%
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* Copied toast */}
