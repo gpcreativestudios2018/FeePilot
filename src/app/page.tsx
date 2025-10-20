@@ -1,353 +1,312 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
 import HeaderActions from './components/HeaderActions';
 import Footer from './components/Footer';
 
+// ✅ Correct path (page.tsx is in src/app, data is in src/data)
 import {
   PLATFORMS,
   RULES,
   RULES_UPDATED_AT,
   type PlatformKey,
   type FeeRule,
-} from './data/fees';
+} from '../data/fees';
 
-// ---------- helpers ----------
+/* ---------------- helpers ---------------- */
+
 const clamp = (n: number, min = -1_000_000, max = 1_000_000) =>
-  Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : 0;
+  Math.max(min, Math.min(max, Number.isFinite(n) ? n : 0));
 
-const toNum = (v: unknown) => clamp(parseFloat(String(v ?? '')) || 0);
+const fmt = (n: number) =>
+  new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  }).format(n);
 
-const fmtMoney = (n: number) =>
-  n.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+const toPlatformKey = (v: string): PlatformKey =>
+  (PLATFORMS.find((p) => p.key === v)?.key ?? 'mercari') as PlatformKey;
 
-const brandPurple = 'ring-1 ring-purple-500/70 rounded-2xl shadow-[0_0_0_2px_rgba(168,85,247,.25)]';
+/* ---------------- share / copy ---------------- */
 
-// ---------- types for local UI state ----------
-type Inputs = {
-  price: number;        // item price
-  shipCharge: number;   // shipping charged to buyer
-  shipCost: number;     // shipping you pay
-  cogs: number;         // your cost
-  discount: number;     // % discount off item price (0-100)
-  tax: number;          // % marketplace tax on buyer total (0-100)
-  platform: PlatformKey;
-};
+async function shareLink(): Promise<string> {
+  const url =
+    typeof window !== 'undefined' ? window.location.href : 'https://feepilot.app';
 
-// ---------- defaults ----------
-const DEFAULTS: Inputs = {
-  price: 200,
-  shipCharge: 0,
-  shipCost: 10,
-  cogs: 12,
-  discount: 0,
-  tax: 0,
-  platform: 'etsy' as PlatformKey,
-};
-
-// read querystring (deep-link) if present
-const readFromQuery = (): Partial<Inputs> => {
-  if (typeof window === 'undefined') return {};
-  const q = new URLSearchParams(window.location.search);
-  return {
-    price: toNum(q.get('p')),
-    shipCharge: toNum(q.get('sc')),
-    shipCost: toNum(q.get('ss')),
-    cogs: toNum(q.get('c')),
-    discount: toNum(q.get('d')),
-    tax: toNum(q.get('t')),
-    platform: (q.get('pf') as PlatformKey) || undefined,
-  };
-};
-
-// ---------- fee engine ----------
-function computeFees(rule: FeeRule, inputs: Inputs) {
-  // price after discount
-  const discountedPrice = inputs.price * (1 - clamp(inputs.discount, 0, 100) / 100);
-
-  // marketplace fee base = discounted item price + shipping charged + tax (if any)
-  const marketplaceBase =
-    discountedPrice + clamp(inputs.shipCharge, 0) + (discountedPrice * clamp(inputs.tax, 0, 100)) / 100;
-
-  // Allow optional “fixed” knobs even if the FeeRule type didn't include them yet
-  const marketplaceFixed = (rule as any).marketplaceFixed ?? 0;
-  const paymentFixed = (rule as any).paymentFixed ?? 0;
-  const listingFee = (rule as any).listingFee ?? 0;
-
-  const marketplaceFee = (marketplaceBase * ((rule as any).marketplacePct ?? 0)) / 100 + marketplaceFixed;
-  const paymentFee = (discountedPrice * ((rule as any).paymentPct ?? 0)) / 100 + paymentFixed;
-
-  const totalFees = marketplaceFee + paymentFee + listingFee;
-  const profit = discountedPrice + inputs.shipCharge - inputs.shipCost - inputs.cogs - totalFees;
-
-  const margin = discountedPrice === 0 ? 0 : (profit / discountedPrice) * 100;
-
-  return {
-    marketplaceFee,
-    paymentFee,
-    listingFee,
-    totalFees,
-    profit,
-    margin,
-  };
+  try {
+    if (typeof window !== 'undefined' && (navigator as any)?.share) {
+      await (navigator as any).share({
+        title: 'FeePilot',
+        url,
+        text: 'Estimate marketplace fees with FeePilot',
+      });
+    } else if (typeof window !== 'undefined' && navigator.clipboard) {
+      await navigator.clipboard.writeText(url);
+    }
+  } catch {
+    // ignore user-cancel
+  }
+  return url;
 }
 
+async function copyLink(): Promise<string> {
+  const url =
+    typeof window !== 'undefined' ? window.location.href : 'https://feepilot.app';
+
+  if (typeof window !== 'undefined' && navigator.clipboard) {
+    await navigator.clipboard.writeText(url);
+  }
+  return url;
+}
+
+/* ---------------- component ---------------- */
+
+type Inputs = {
+  price: number;
+  shipping: number;
+  tax: number;
+  discountPct: number;
+  tx: number; // payment processor txn fee %
+  sc: number; // seller credit / promo %
+};
+
 export default function Page() {
-  // -------- state --------
-  const seed = useMemo(readFromQuery, []);
-  const [inputs, setInputs] = useState<Inputs>({ ...DEFAULTS, ...seed });
+  const [platform, setPlatform] = useState<PlatformKey>('mercari');
+  const [inputs, setInputs] = useState<Inputs>({
+    price: 100,
+    shipping: 0,
+    tax: 0,
+    discountPct: 0,
+    tx: 0,
+    sc: 0,
+  });
 
-  // -------- reset (clicking the logo) --------
-  const resetAll = () => {
-    setInputs({ ...DEFAULTS });
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      url.search = '';
-      window.history.replaceState({}, '', url);
-    }
-  };
-
-  // -------- deep link builders for Share / Copy --------
-  const buildLink = (): string => {
-    if (typeof window === 'undefined') return '';
-    const url = new URL(window.location.href);
-    url.searchParams.set('p', String(inputs.price));
-    url.searchParams.set('sc', String(inputs.shipCharge));
-    url.searchParams.set('ss', String(inputs.shipCost));
-    url.searchParams.set('c', String(inputs.cogs));
-    url.searchParams.set('d', String(inputs.discount));
-    url.searchParams.set('t', String(inputs.tax));
-    url.searchParams.set('pf', inputs.platform);
-    return url.toString();
-  };
-
-  const shareLink = async (): Promise<string> => {
-    const link = buildLink();
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'FeePilot', url: link });
-      } catch {
-        // user closed/cancelled
-      }
-    }
-    return link;
-  };
-
-  const copyLink = async (): Promise<string> => {
-    const link = buildLink();
+  // Persist last selections (optional nicety)
+  useEffect(() => {
     try {
-      await navigator.clipboard.writeText(link);
-    } catch {
-      // no-op
-    }
-    return link;
-  };
+      const raw = localStorage.getItem('feepilot:last');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.platform) setPlatform(toPlatformKey(String(parsed.platform)));
+        if (parsed?.inputs) setInputs((s) => ({ ...s, ...parsed.inputs }));
+      }
+    } catch {}
+  }, []);
 
-  // -------- derived (overview for selected platform) --------
-  const selectedRule = RULES[inputs.platform];
-  const overview = useMemo(() => computeFees(selectedRule, inputs), [selectedRule, inputs]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        'feepilot:last',
+        JSON.stringify({ platform, inputs }),
+      );
+    } catch {}
+  }, [platform, inputs]);
 
-  // -------- compare all platforms --------
-  const rows = useMemo(
-    () =>
-      PLATFORMS.map((p) => {
-        const r = RULES[p];
-        const calc = computeFees(r, inputs);
-        return {
-          key: p,
-          label: (r as any).label ?? p,
-          ...calc,
-        };
-      }),
-    [inputs]
-  );
+  const rule: FeeRule = RULES[platform];
 
-  // green vs red money
-  const moneyClass = (n: number) =>
-    n >= 0 ? 'text-emerald-400 font-medium' : 'text-red-400 font-medium';
+  // basic computation that is resilient to optional fields on FeeRule
+  const breakdown = useMemo(() => {
+    const price = clamp(inputs.price, 0);
+    const shippingIn = clamp(inputs.shipping, 0);
+    const tax = clamp(inputs.tax, 0);
+    const discount = clamp(inputs.discountPct, 0);
 
-  // -------- UI small pieces --------
-  const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-    <section className={`p-5 md:p-6 bg-neutral-950/40 ${brandPurple}`}>
-      <div className="text-neutral-200/80 mb-4 font-medium">{title}</div>
-      {children}
-    </section>
-  );
+    const discountedPrice = price * (1 - discount / 100);
 
-  const Num: React.FC<{
-    value: number;
-    onChange: (n: number) => void;
-    step?: number;
-    suffix?: string;
-    min?: number;
-  }> = ({ value, onChange, step = 1, suffix, min = 0 }) => (
-    <div className="flex items-center gap-2">
-      <input
-        inputMode="decimal"
-        className="rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
-        value={Number.isFinite(value) ? String(value) : ''}
-        onChange={(e) => onChange(toNum(e.target.value))}
-        step={step}
-        min={min}
-      />
-      {suffix ? <span className="text-neutral-400 text-sm">{suffix}</span> : null}
-    </div>
-  );
+    // Marketplace %
+    const pct = (rule as any)?.marketplacePct ?? 0;
+
+    // Optional fixed marketplace fee if present in data; safe-cast to any to avoid TS errors
+    const fixed = (rule as any)?.marketplaceFixed ?? 0;
+
+    const marketplaceBase =
+      discountedPrice + clamp(inputs.sc, 0) + clamp(inputs.tx, 0);
+
+    const marketplaceFee = (marketplaceBase * pct) / 100 + fixed;
+
+    // Payment processor (simple example)
+    const paymentPct = (rule as any)?.paymentPct ?? 0;
+    const paymentFixed = (rule as any)?.paymentFixed ?? 0;
+    const paymentFee = (discountedPrice * paymentPct) / 100 + paymentFixed;
+
+    const shippingOut = (rule as any)?.shippingPassThru ? shippingIn : 0;
+
+    const totalFees = marketplaceFee + paymentFee;
+    const proceeds = discountedPrice + shippingIn - tax - totalFees - shippingOut;
+
+    return {
+      price,
+      shippingIn,
+      tax,
+      discountedPrice,
+      marketplaceFee,
+      paymentFee,
+      totalFees,
+      proceeds,
+    };
+  }, [inputs, platform, rule]);
+
+  const strongRing =
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2';
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-6 md:py-10">
+    <main className="min-h-dvh bg-neutral-950 text-neutral-50">
       {/* Header */}
-      <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <button
-          onClick={resetAll}
-          className="text-xl font-semibold tracking-tight text-white/90 hover:text-white transition"
-          aria-label="Reset and go home"
-        >
-          FeePilot
-        </button>
+      <header className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
+          <button
+            className={`rounded-xl px-2 py-1 text-left ${strongRing}`}
+            onClick={() => {
+              setInputs({
+                price: 100,
+                shipping: 0,
+                tax: 0,
+                discountPct: 0,
+                tx: 0,
+                sc: 0,
+              });
+              setPlatform('mercari');
+            }}
+            aria-label="Reset"
+            title="Reset"
+          >
+            <span className="text-xl font-semibold tracking-tight">FeePilot</span>
+          </button>
 
-        <HeaderActions onShare={shareLink} onCopy={copyLink} />
+          {/* Share / Copy / Pro */}
+          <HeaderActions
+            onShare={shareLink}
+            onCopy={copyLink}
+            proHref="https://github.com/gpcreativestudios2018"
+          />
+        </div>
       </header>
 
-      {/* Controls */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Section title="Inputs">
-          <div className="grid grid-cols-1 gap-4">
-            <div className="flex items-center justify-between">
-              <span className="text-neutral-300">Item price</span>
-              <Num value={inputs.price} onChange={(n) => setInputs({ ...inputs, price: n })} />
+      {/* Content */}
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        {/* Platform + updated date */}
+        <section className="mb-6 rounded-2xl border border-neutral-800 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <label
+                htmlFor="platform"
+                className="block text-sm text-neutral-400"
+              >
+                Platform
+              </label>
+              <select
+                id="platform"
+                value={platform}
+                onChange={(e) => setPlatform(toPlatformKey(e.target.value))}
+                className={`mt-1 w-64 rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm ${strongRing}`}
+              >
+                {PLATFORMS.map((p) => (
+                  <option key={p.key} value={p.key}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-neutral-300">Shipping charged</span>
-              <Num value={inputs.shipCharge} onChange={(n) => setInputs({ ...inputs, shipCharge: n })} />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-neutral-300">Shipping cost (you)</span>
-              <Num value={inputs.shipCost} onChange={(n) => setInputs({ ...inputs, shipCost: n })} />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-neutral-300">COGS</span>
-              <Num value={inputs.cogs} onChange={(n) => setInputs({ ...inputs, cogs: n })} />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-neutral-300">Discount</span>
-              <Num value={inputs.discount} onChange={(n) => setInputs({ ...inputs, discount: n })} suffix="%" />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-neutral-300">Tax</span>
-              <Num value={inputs.tax} onChange={(n) => setInputs({ ...inputs, tax: n })} suffix="%" />
-            </div>
-          </div>
-        </Section>
 
-        <Section title="Platform">
-          <div className="flex items-center justify-between">
-            <select
-              className="w-full rounded-xl border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-neutral-100 outline-none focus:border-purple-500"
-              value={inputs.platform}
-              onChange={(e) => {
-                const value = e.target.value as PlatformKey;
-                const next = (PLATFORMS as PlatformKey[]).includes(value) ? value : inputs.platform;
-                setInputs({ ...inputs, platform: next });
-              }}
-            >
-              {PLATFORMS.map((p) => (
-                <option key={p} value={p}>
-                  {(RULES[p] as any).label ?? p}
-                </option>
-              ))}
-            </select>
+            <div className="mt-2 text-sm text-neutral-400">
+              Rules last updated:{' '}
+              <span className="font-mono text-neutral-300">
+                {RULES_UPDATED_AT ?? ''}
+              </span>
+            </div>
           </div>
+        </section>
 
-          <div className="mt-2 text-xs text-neutral-400">
-            Rules last updated:{' '}
-            <span className="font-mono">{RULES_UPDATED_AT ?? ''}</span>
-          </div>
-        </Section>
+        {/* Inputs */}
+        <section className="mb-6 grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Item price"
+            value={inputs.price}
+            onChange={(v) => setInputs((s) => ({ ...s, price: v }))}
+            strongRing={strongRing}
+          />
+          <Field
+            label="Shipping (buyer pays)"
+            value={inputs.shipping}
+            onChange={(v) => setInputs((s) => ({ ...s, shipping: v }))}
+            strongRing={strongRing}
+          />
+          <Field
+            label="Sales tax"
+            value={inputs.tax}
+            onChange={(v) => setInputs((s) => ({ ...s, tax: v }))}
+            strongRing={strongRing}
+          />
+          <Field
+            label="Discount %"
+            value={inputs.discountPct}
+            onChange={(v) => setInputs((s) => ({ ...s, discountPct: v }))}
+            strongRing={strongRing}
+          />
+          <Field
+            label="Txn % (processor)"
+            value={inputs.tx}
+            onChange={(v) => setInputs((s) => ({ ...s, tx: v }))}
+            strongRing={strongRing}
+          />
+          <Field
+            label="Seller credit %"
+            value={inputs.sc}
+            onChange={(v) => setInputs((s) => ({ ...s, sc: v }))}
+            strongRing={strongRing}
+          />
+        </section>
 
-        <Section title="Overview">
-          <div className="grid grid-cols-2 gap-4">
-            <div className={`p-4 ${brandPurple}`}>
-              <div className="text-neutral-400 text-xs">Profit</div>
-              <div className={`text-2xl ${moneyClass(overview.profit)}`}>{fmtMoney(overview.profit)}</div>
-            </div>
-            <div className={`p-4 ${brandPurple}`}>
-              <div className="text-neutral-400 text-xs">Margin</div>
-              <div className="text-2xl text-neutral-100">
-                {overview.margin.toFixed(1)}%
-              </div>
-            </div>
-            <div className={`p-4 ${brandPurple}`}>
-              <div className="text-neutral-400 text-xs">Marketplace fee</div>
-              <div className="text-xl text-neutral-100">{fmtMoney(overview.marketplaceFee)}</div>
-            </div>
-            <div className={`p-4 ${brandPurple}`}>
-              <div className="text-neutral-400 text-xs">Payment fee</div>
-              <div className="text-xl text-neutral-100">{fmtMoney(overview.paymentFee)}</div>
-            </div>
-            <div className={`p-4 ${brandPurple}`}>
-              <div className="text-neutral-400 text-xs">Listing fee</div>
-              <div className="text-xl text-neutral-100">{fmtMoney(overview.listingFee)}</div>
-            </div>
-            <div className={`p-4 ${brandPurple}`}>
-              <div className="text-neutral-400 text-xs">Total fees</div>
-              <div className="text-xl text-neutral-100">{fmtMoney(overview.totalFees)}</div>
-            </div>
-          </div>
-        </Section>
+        {/* Results */}
+        <section className="grid gap-4 sm:grid-cols-2">
+          <Card title="Marketplace fee">{fmt(breakdown.marketplaceFee)}</Card>
+          <Card title="Payment fee">{fmt(breakdown.paymentFee)}</Card>
+          <Card title="Total fees">{fmt(breakdown.totalFees)}</Card>
+          <Card title="Estimated proceeds">{fmt(breakdown.proceeds)}</Card>
+        </section>
       </div>
 
-      {/* Compare table */}
-      <section className={`mt-6 p-5 md:p-6 bg-neutral-950/40 ${brandPurple}`}>
-        <div className="mb-4 text-neutral-200/80 font-medium">
-          Comparing with current inputs (
-          <span className="font-mono">
-            {fmtMoney(inputs.price)} price, {fmtMoney(inputs.shipCharge)} ship charge,{' '}
-            {fmtMoney(inputs.shipCost)} ship cost, {fmtMoney(inputs.cogs)} COGS,{' '}
-            {inputs.discount}% discount, {inputs.tax}% tax
-          </span>
-          ).
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="text-neutral-400">
-              <tr className="text-left">
-                <th className="px-3 py-2">Platform</th>
-                <th className="px-3 py-2">Profit</th>
-                <th className="px-3 py-2">Margin</th>
-                <th className="px-3 py-2">Marketplace fee</th>
-                <th className="px-3 py-2">Payment fee</th>
-                <th className="px-3 py-2">Listing fee</th>
-                <th className="px-3 py-2">Total fees</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.key} className="border-t border-neutral-900/60">
-                  <td className="px-3 py-2">
-                    <span className="inline-flex items-center rounded-lg bg-neutral-900 px-2 py-1 text-neutral-200">
-                      {(RULES[row.key] as any).label ?? row.key}
-                    </span>
-                  </td>
-                  <td className={`px-3 py-2 ${moneyClass(row.profit)}`}>{fmtMoney(row.profit)}</td>
-                  <td className="px-3 py-2 text-neutral-200">{row.margin.toFixed(1)}%</td>
-                  <td className="px-3 py-2 text-neutral-200">{fmtMoney(row.marketplaceFee)}</td>
-                  <td className="px-3 py-2 text-neutral-200">{fmtMoney(row.paymentFee)}</td>
-                  <td className="px-3 py-2 text-neutral-200">{fmtMoney(row.listingFee)}</td>
-                  <td className="px-3 py-2 text-neutral-200">{fmtMoney(row.totalFees)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <div className="mt-8">
-        <Footer />
-      </div>
+      <Footer />
     </main>
+  );
+}
+
+/* ---------------- small components ---------------- */
+
+function Field({
+  label,
+  value,
+  onChange,
+  strongRing,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  strongRing: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm text-neutral-400">{label}</span>
+      <input
+        type="number"
+        inputMode="decimal"
+        className={`w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 ${strongRing}`}
+        value={Number.isFinite(value) ? value : 0}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+    </label>
+  );
+}
+
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4">
+      <div className="text-sm text-neutral-400">{title}</div>
+      <div className="mt-1 text-2xl font-semibold">{children}</div>
+    </div>
   );
 }
