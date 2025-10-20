@@ -14,7 +14,7 @@ import {
 type Inputs = {
   platform: PlatformKey;
   price: number;
-  shipping: number;     // buyer shipping (informational only)
+  shipping: number;
   discountPct: number;
 };
 
@@ -51,7 +51,7 @@ export default function Page() {
     )
   );
 
-  const [copiedAt, setCopiedAt] = useState<number>(0); // toast timer
+  const [toastAt, setToastAt] = useState<number>(0);
 
   // persist settings
   useEffect(() => {
@@ -88,12 +88,12 @@ export default function Page() {
     } else {
       await navigator.clipboard.writeText(url);
     }
-    setCopiedAt(Date.now());
+    setToastAt(Date.now());
   }
 
   async function copyLink(): Promise<void> {
     await navigator.clipboard.writeText(window.location.href);
-    setCopiedAt(Date.now());
+    setToastAt(Date.now());
   }
 
   function resetAll() {
@@ -102,6 +102,8 @@ export default function Page() {
       localStorage.removeItem('feepilot:inputs');
     } catch {}
   }
+
+  const ringBox = 'rounded-2xl bg-black/20 p-6 ring-2 ring-inset ring-violet-500/70 border border-violet-500/30';
 
   return (
     <main className="mx-auto max-w-5xl px-6 pb-16">
@@ -117,7 +119,7 @@ export default function Page() {
           </button>
 
           <span
-            className="ml-2 inline-flex items-center rounded-full bg-white/5 px-3 py-1 text-[11px] font-medium ring-1 ring-white/10"
+            className="ml-2 inline-flex items-center rounded-full bg-white/5 px-3 py-1 text-[11px] font-medium ring-2 ring-violet-500/60"
             title="Last time the fee rules were reviewed"
           >
             Rules last updated: {RULES_UPDATED_AT}
@@ -128,22 +130,19 @@ export default function Page() {
       </header>
 
       {/* Inputs */}
-      <section className="rounded-2xl border border-violet-500/40 bg-black/20 p-6 ring-1 ring-inset ring-violet-500/40">
+      <section className={ringBox}>
         <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
           {/* Platform */}
           <div className="md:col-span-1">
             <label className="mb-1 block text-sm text-neutral-400">
-              Platform
-              <span className="ml-1 text-neutral-500" title="Choose where you sell">
-                (?)
-              </span>
+              Platform <span className="ml-1 text-neutral-500" title="Choose where you sell">(?)</span>
             </label>
             <select
               value={inputs.platform}
               onChange={(e) =>
                 setInputs((s) => ({ ...s, platform: e.target.value as PlatformKey }))
               }
-              className="w-full rounded-xl bg-black/40 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full rounded-xl bg-black/40 px-3 py-2 ring-2 ring-violet-500/60 focus:outline-none focus:ring-2 focus:ring-violet-400"
             >
               {PLATFORMS.map((p) => (
                 <option key={p.key} value={p.key}>
@@ -156,10 +155,7 @@ export default function Page() {
           {/* Item price */}
           <div>
             <label className="mb-1 block text-sm text-neutral-400">
-              Item price
-              <span className="ml-1 text-neutral-500" title="Before fees & discounts">
-                (?)
-              </span>
+              Item price <span className="ml-1 text-neutral-500" title="Before fees & discounts">(?)</span>
             </label>
             <input
               type="number"
@@ -168,20 +164,15 @@ export default function Page() {
               onChange={(e) =>
                 setInputs((s) => ({ ...s, price: clamp(Number(e.target.value), 0) }))
               }
-              className="w-full rounded-xl bg-black/40 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full rounded-xl bg-black/40 px-3 py-2 ring-2 ring-violet-500/60 focus:outline-none focus:ring-2 focus:ring-violet-400"
             />
           </div>
 
           {/* Discount % */}
           <div>
             <label className="mb-1 block text-sm text-neutral-400">
-              Discount %
-              <span
-                className="ml-1 text-neutral-500"
-                title="Percentage off list price applied by you or the platform"
-              >
-                (?)
-              </span>
+              Discount %{' '}
+              <span className="ml-1 text-neutral-500" title="Percentage off list price">(?)</span>
             </label>
             <input
               type="number"
@@ -194,42 +185,37 @@ export default function Page() {
                   discountPct: clamp(Number(e.target.value), 0, 100),
                 }))
               }
-              className="w-full rounded-xl bg-black/40 px-3 py-2 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full rounded-xl bg-black/40 px-3 py-2 ring-2 ring-violet-500/60 focus:outline-none focus:ring-2 focus:ring-violet-400"
             />
           </div>
         </div>
 
         {/* Results */}
         <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-3">
-          <div className="rounded-2xl bg-black/30 p-5 ring-1 ring-violet-500/50">
+          <div className="rounded-2xl bg-black/30 p-5 ring-2 ring-violet-500/60">
             <div className="text-sm text-neutral-400">Discounted price</div>
             <div className="mt-2 text-2xl font-semibold">{toMoney(discounted)}</div>
           </div>
 
-          <div className="rounded-2xl bg-black/30 p-5 ring-1 ring-violet-500/50">
+          <div className="rounded-2xl bg-black/30 p-5 ring-2 ring-violet-500/60">
             <div className="text-sm text-neutral-400">
-              Marketplace fee
-              <span
-                className="ml-1 text-neutral-500"
-                title="Marketplace fee based on the rule set for this platform"
-              >
-                (?)
-              </span>
+              Marketplace fee{' '}
+              <span className="ml-1 text-neutral-500" title="Based on the selected platform’s rules">(?)</span>
             </div>
             <div className="mt-2 text-2xl font-semibold">{toMoney(marketplaceFee)}</div>
           </div>
 
-          <div className="rounded-2xl bg-black/30 p-5 ring-1 ring-violet-500/50">
+          <div className="rounded-2xl bg-black/30 p-5 ring-2 ring-violet-500/60">
             <div className="text-sm text-neutral-400">Estimated payout</div>
             <div className="mt-2 text-2xl font-semibold">{toMoney(payout)}</div>
           </div>
         </div>
       </section>
 
-      {/* tiny “copied!” toast */}
-      {copiedAt > 0 && Date.now() - copiedAt < 1800 && (
-        <div className="pointer-events-none fixed right-5 top-5 z-50 rounded-xl bg-white/10 px-3 py-1.5 text-sm text-white backdrop-blur ring-1 ring-white/20">
-          copied!
+      {/* Copied toast */}
+      {toastAt > 0 && Date.now() - toastAt < 2200 && (
+        <div className="pointer-events-none fixed right-6 top-6 z-50 rounded-lg bg-violet-600/90 px-3 py-1.5 text-sm font-semibold text-white shadow-lg">
+          Copied!
         </div>
       )}
 
