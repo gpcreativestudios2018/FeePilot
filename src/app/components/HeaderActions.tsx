@@ -5,7 +5,7 @@ import React from 'react';
 type Props = {
   onShare: () => Promise<void> | void;
   onCopy: () => Promise<void> | void;
-  /** If omitted, Pro is shown as disabled with “Coming soon”. */
+  /** If omitted, Pro is disabled and shows “coming soon”. */
   proHref?: string;
 };
 

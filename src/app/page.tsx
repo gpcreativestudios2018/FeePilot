@@ -14,18 +14,17 @@ import {
 type Inputs = {
   platform: PlatformKey;
   price: number;
-  shipping: number;     // buyer shipping (informational)
+  shipping: number;     // buyer shipping (informational only)
   discountPct: number;
 };
 
-// ----- helpers -----
+// ---------- helpers ----------
 const clamp = (n: number, min = -1_000_000, max = 1_000_000) =>
   Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : 0;
 
 const toMoney = (n: number) =>
   n.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
-// safe parse from localStorage
 function parseInputs(raw: string | null, fallback: Inputs): Inputs {
   try {
     if (!raw) return fallback;
@@ -52,11 +51,10 @@ export default function Page() {
     )
   );
 
-  // tiny toast when share/copy happens
-  const [copiedAt, setCopiedAt] = useState<number>(0);
+  const [copiedAt, setCopiedAt] = useState<number>(0); // toast timer
 
+  // persist settings
   useEffect(() => {
-    // persist settings
     try {
       localStorage.setItem('feepilot:inputs', JSON.stringify(inputs));
     } catch {}
@@ -69,7 +67,6 @@ export default function Page() {
     return clamp(inputs.price * (1 - pct / 100), 0);
   }, [inputs.price, inputs.discountPct]);
 
-  // Marketplace fee and payment fee (if defined in the rule map)
   const marketplaceFee = useMemo(() => {
     const pct = (rule.marketplacePct ?? 0) / 100;
     return clamp(discounted * pct, 0);
@@ -130,7 +127,7 @@ export default function Page() {
         <HeaderActions onShare={shareLink} onCopy={copyLink} />
       </header>
 
-      {/* Input Card */}
+      {/* Inputs */}
       <section className="rounded-2xl border border-violet-500/40 bg-black/20 p-6 ring-1 ring-inset ring-violet-500/40">
         <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
           {/* Platform */}
@@ -156,7 +153,7 @@ export default function Page() {
             </select>
           </div>
 
-          {/* Price */}
+          {/* Item price */}
           <div>
             <label className="mb-1 block text-sm text-neutral-400">
               Item price
@@ -175,7 +172,7 @@ export default function Page() {
             />
           </div>
 
-          {/* Discount */}
+          {/* Discount % */}
           <div>
             <label className="mb-1 block text-sm text-neutral-400">
               Discount %
@@ -229,7 +226,7 @@ export default function Page() {
         </div>
       </section>
 
-      {/* tiny toast for copy/share */}
+      {/* tiny “copied!” toast */}
       {copiedAt > 0 && Date.now() - copiedAt < 1800 && (
         <div className="pointer-events-none fixed right-5 top-5 z-50 rounded-xl bg-white/10 px-3 py-1.5 text-sm text-white backdrop-blur ring-1 ring-white/20">
           copied!
