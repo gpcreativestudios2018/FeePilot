@@ -1,88 +1,68 @@
 // src/data/fees.ts
 
-// ---------- types ----------
-
 export type PlatformKey =
-  | 'mercari'
-  | 'ebay'
-  | 'poshmark'
-  | 'depop'
   | 'etsy'
-  | 'grailed'
-  | 'whatnot';
+  | 'stockx'
+  | 'ebay'
+  | 'depop'
+  | 'mercari'
+  | 'poshmark';
 
-export type FeeRule = {
-  /** % of item price (after any discount) that the marketplace takes */
-  marketplacePct?: number;
-  /** Flat marketplace fee (USD) added on top of the % fee, if any */
-  marketplaceFixed?: number;
-  /** % payment processing fee (applied to discounted item price) */
-  paymentPct?: number;
-  /** Flat payment fee (USD), if any */
-  paymentFixed?: number;
-  /** Optional note shown in tooltips, etc. */
-  note?: string;
-};
-
-// ---------- UI: platforms list for the selector ----------
-
-export const PLATFORMS: { key: PlatformKey; label: string }[] = [
-  { key: 'mercari', label: 'Mercari' },
-  { key: 'ebay', label: 'eBay' },
-  { key: 'poshmark', label: 'Poshmark' },
-  { key: 'depop', label: 'Depop' },
-  { key: 'etsy', label: 'Etsy' },
-  { key: 'grailed', label: 'Grailed' },
-  { key: 'whatnot', label: 'Whatnot' },
+export const PLATFORMS: PlatformKey[] = [
+  'etsy',
+  'stockx',
+  'ebay',
+  'depop',
+  'mercari',
+  'poshmark',
 ];
 
-// ---------- Fee rules (simple, single-tier approximations) ----------
-// These values are intentionally simple so the app compiles and runs.
-// Adjust them as needed.
-
-export const RULES: Record<PlatformKey, FeeRule> = {
-  mercari: {
-    marketplacePct: 10,
-    paymentPct: 2.9,
-    paymentFixed: 0.50,
-    note: 'Marketplace 10%. Payment ~2.9% + $0.50.',
-  },
-  ebay: {
-    // eBay varies by category; use a single blended rate for now
-    marketplacePct: 13.25,
-    paymentFixed: 0.30,
-    note: 'Approx blended final value fee + $0.30 processing.',
-  },
-  poshmark: {
-    // Poshmark is $2.95 under $15, and 20% otherwise; use 20% simple tier
-    marketplacePct: 20,
-    note: 'Simple 20% tier (flat $2.95 under $15 not modeled here).',
-  },
-  depop: {
-    marketplacePct: 10,
-    paymentPct: 3.0,
-    paymentFixed: 0.30,
-    note: 'Marketplace 10% + ~3% + $0.30 processing.',
-  },
-  etsy: {
-    marketplacePct: 6.5, // transaction fee
-    paymentPct: 3.0,
-    paymentFixed: 0.25,
-    note: '6.5% transaction + ~3% + $0.25 processing.',
-  },
-  grailed: {
-    marketplacePct: 9,
-    paymentPct: 3.49,
-    note: 'Marketplace ~9% + ~3.49% processing.',
-  },
-  whatnot: {
-    marketplacePct: 8,
-    paymentPct: 2.9,
-    paymentFixed: 0.30,
-    note: 'Seller fee ~8% + 2.9% + $0.30 processing.',
-  },
+export type FeeRule = {
+  /** % of (discounted price + shipping charged to buyer) */
+  marketplacePct?: number;
+  /** flat fee added by the marketplace */
+  marketplaceFixed?: number;
+  /** % payment processing fee on the same base */
+  paymentPct?: number;
+  /** flat payment processing fee */
+  paymentFixed?: number;
+  /** flat listing fee (per listing/order) */
+  listingFixed?: number;
 };
 
-// ---------- “Rules last updated” stamp shown in the header ----------
+export const RULES: Record<PlatformKey, FeeRule> = {
+  etsy: {
+    marketplacePct: 6.5,
+    paymentPct: 3.0, // tune these numbers to your latest reference
+    paymentFixed: 0.85,
+    listingFixed: 0.2, // Etsy has a $0.20 listing fee
+  },
+  stockx: {
+    marketplacePct: 10, // example
+    paymentPct: 3,
+    paymentFixed: 0.6,
+  },
+  ebay: {
+    marketplacePct: 12, // example
+    paymentPct: 0,
+    paymentFixed: 0,
+  },
+  depop: {
+    marketplacePct: 10, // example
+    paymentPct: 2.9,
+    paymentFixed: 0.5,
+  },
+  mercari: {
+    marketplacePct: 10, // example: marketplace fee
+    paymentPct: 2.9,
+    paymentFixed: 0.5,
+  },
+  poshmark: {
+    // Poshmark often acts like flat $2.95 under $15 / 20% above; this is a simple placeholder.
+    marketplacePct: 20,
+    paymentPct: 0,
+    paymentFixed: 0,
+  },
+};
 
 export const RULES_UPDATED_AT = '2025-01-15';
