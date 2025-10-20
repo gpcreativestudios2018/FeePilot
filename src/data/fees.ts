@@ -90,10 +90,5 @@ export const RULES: Record<PlatformKey, FeeRule> = {
     notes: '2.00 flat under $15; 20% otherwise (approximated).',
   },
 };
-import {
-  PLATFORMS,
-  RULES,
-  RULES_UPDATED_AT,  // ← add this
-  PlatformKey,
-  FeeRule
-} from '@/data/fees';
+// When you last verified the fee tables (displayed in the header)
+export const RULES_UPDATED_AT = '2025-01-15';
