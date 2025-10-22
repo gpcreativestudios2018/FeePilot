@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import HeaderActions from './components/HeaderActions';
 import Footer from './components/Footer';
+import ResetButton from './components/ResetButton';
 
 import {
   PLATFORMS,
@@ -11,6 +12,10 @@ import {
   type PlatformKey,
   type FeeRule,
 } from '@/data/fees';
+
+// helpers & components we added
+import { cx, formatMoneyWithParens } from '../lib/format';
+import ComparisonTableSection from './components/ComparisonTableSection';
 
 /* ---------------------------------- types --------------------------------- */
 
@@ -26,8 +31,9 @@ type Inputs = {
 
 /* ------------------------------ handy utilities ---------------------------- */
 
+// accept decimals; treat invalid/empty as 0
 const parseNum = (v: string) => {
-  const n = Number(v);
+  const n = Number.parseFloat(v);
   return Number.isFinite(n) ? n : 0;
 };
 
@@ -93,7 +99,6 @@ function calcFor(
 }
 
 /* ----------------------------- share/copy helpers -------------------------- */
-/*  NOTE: These return Promise<void> to satisfy HeaderActions props.           */
 
 const shareLink = async (): Promise<void> => {
   const url = window.location.href;
@@ -114,10 +119,10 @@ const copyLink = async (): Promise<void> => {
   await navigator.clipboard.writeText(url);
 };
 
-/* ----------------------------------- UI ----------------------------------- */
+/* ---------------------------- defaults + component ------------------------- */
 
-export default function Page() {
-  const [inputs, setInputs] = useState<Inputs>({
+function makeDefaults(): Inputs {
+  return {
     platform: PLATFORMS[0] ?? ('mercari' as PlatformKey),
     price: 100,
     shipCharge: 0,
@@ -125,7 +130,14 @@ export default function Page() {
     cogs: 40,
     discountPct: 0,
     tax: 0,
-  });
+  };
+}
+
+/* ----------------------------------- UI ----------------------------------- */
+
+export default function Page() {
+  const [inputs, setInputs] = useState<Inputs>(makeDefaults());
+  const resetInputs = () => setInputs(makeDefaults());
 
   const rule = RULES[inputs.platform];
 
@@ -143,8 +155,19 @@ export default function Page() {
     <div className="min-h-dvh bg-black text-white">
       <header className="mx-auto max-w-6xl px-4 py-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-semibold tracking-tight">FeePilot</h1>
-          <HeaderActions onShare={shareLink} onCopy={copyLink} />
+          <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight">
+            <span
+              aria-hidden
+              className="inline-block h-3 w-3 rounded-full bg-purple-500 ring-2 ring-purple-400/50"
+            />
+            FeePilot
+          </h1>
+
+          {/* Right-side actions */}
+          <div className="flex items-center gap-3">
+            <ResetButton onClick={resetInputs} />
+            <HeaderActions onShare={shareLink} onCopy={copyLink} />
+          </div>
         </div>
 
         <div className="mt-3 inline-flex rounded-full border border-purple-600/50 px-3 py-1 text-sm text-purple-200">
@@ -179,8 +202,10 @@ export default function Page() {
             <div>
               <label className="mb-2 block text-sm text-gray-300">Item price ($)</label>
               <input
-                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
+                type="number"
+                step="any"
                 inputMode="decimal"
+                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
                 value={inputs.price}
                 onChange={(e) =>
                   setInputs((s) => ({ ...s, price: clamp(parseNum(e.target.value), 0) }))
@@ -191,8 +216,10 @@ export default function Page() {
             <div>
               <label className="mb-2 block text-sm text-gray-300">Discount (%)</label>
               <input
-                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
+                type="number"
+                step="any"
                 inputMode="decimal"
+                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
                 value={inputs.discountPct}
                 onChange={(e) =>
                   setInputs((s) => ({
@@ -208,8 +235,10 @@ export default function Page() {
                 Shipping charged to buyer ($)
               </label>
               <input
-                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
+                type="number"
+                step="any"
                 inputMode="decimal"
+                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
                 value={inputs.shipCharge}
                 onChange={(e) =>
                   setInputs((s) => ({
@@ -225,8 +254,10 @@ export default function Page() {
                 Your shipping cost ($)
               </label>
               <input
-                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
+                type="number"
+                step="any"
                 inputMode="decimal"
+                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
                 value={inputs.shipCost}
                 onChange={(e) =>
                   setInputs((s) => ({ ...s, shipCost: clamp(parseNum(e.target.value), 0) }))
@@ -237,8 +268,10 @@ export default function Page() {
             <div>
               <label className="mb-2 block text-sm text-gray-300">COGS ($)</label>
               <input
-                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
+                type="number"
+                step="any"
                 inputMode="decimal"
+                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
                 value={inputs.cogs}
                 onChange={(e) =>
                   setInputs((s) => ({ ...s, cogs: clamp(parseNum(e.target.value), 0) }))
@@ -249,8 +282,10 @@ export default function Page() {
             <div>
               <label className="mb-2 block text-sm text-gray-300">Tax collected ($)</label>
               <input
-                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
+                type="number"
+                step="any"
                 inputMode="decimal"
+                className="w-full rounded-xl border border-purple-600/50 bg-transparent px-3 py-2 outline-none"
                 value={inputs.tax}
                 onChange={(e) =>
                   setInputs((s) => ({ ...s, tax: clamp(parseNum(e.target.value), 0) }))
@@ -265,106 +300,92 @@ export default function Page() {
           <div className="rounded-2xl border border-purple-600/40 p-5">
             <div className="text-sm text-gray-300">Discounted price</div>
             <div className="mt-2 text-3xl font-semibold">
-              ${current.discounted.toFixed(2)}
+              {formatMoneyWithParens(current.discounted)}
             </div>
           </div>
 
           <div className="rounded-2xl border border-purple-600/40 p-5">
             <div className="text-sm text-gray-300">Marketplace fee</div>
             <div className="mt-2 text-3xl font-semibold">
-              ${current.marketplaceFee.toFixed(2)}
+              {formatMoneyWithParens(current.marketplaceFee)}
             </div>
           </div>
 
           <div className="rounded-2xl border border-purple-600/40 p-5">
             <div className="text-sm text-gray-300">Payment fee</div>
             <div className="mt-2 text-3xl font-semibold">
-              ${current.paymentFee.toFixed(2)}
+              {formatMoneyWithParens(current.paymentFee)}
             </div>
           </div>
 
-          {current.listingFee > 0 && (
-            <div className="rounded-2xl border border-purple-600/40 p-5">
-              <div className="text-sm text-gray-300">Listing fee</div>
-              <div className="mt-2 text-3xl font-semibold">
-                ${current.listingFee.toFixed(2)}
-              </div>
+          {/* Always show Listing fee card (even when $0.00) */}
+          <div className="rounded-2xl border border-purple-600/40 p-5">
+            <div className="text-sm text-gray-300">Listing fee</div>
+            <div className="mt-2 text-3xl font-semibold">
+              {formatMoneyWithParens(current.listingFee)}
             </div>
-          )}
+          </div>
 
           <div className="rounded-2xl border border-purple-600/40 p-5">
             <div className="text-sm text-gray-300">Total fees</div>
             <div className="mt-2 text-3xl font-semibold">
-              ${current.totalFees.toFixed(2)}
+              {formatMoneyWithParens(current.totalFees)}
             </div>
           </div>
 
           <div className="rounded-2xl border border-purple-600/40 p-5">
             <div className="text-sm text-gray-300">Estimated payout</div>
             <div className="mt-2 text-3xl font-semibold">
-              ${current.net.toFixed(2)}
+              {formatMoneyWithParens(current.net)}
             </div>
           </div>
 
           <div className="rounded-2xl border border-purple-600/40 p-5">
             <div className="text-sm text-gray-300">Profit</div>
-            <div className="mt-2 text-3xl font-semibold text-emerald-300">
-              ${current.profit.toFixed(2)}
+            <div
+              className={cx(
+                'mt-2 text-3xl font-semibold',
+                current.profit < 0 ? 'text-red-500' : 'text-emerald-300'
+              )}
+            >
+              {formatMoneyWithParens(current.profit)}
             </div>
           </div>
 
           <div className="rounded-2xl border border-purple-600/40 p-5">
             <div className="text-sm text-gray-300">Margin</div>
-            <div className="mt-2 text-3xl font-semibold">
+            <div
+              className={cx(
+                'mt-2 text-3xl font-semibold',
+                current.marginPct < 0 && 'text-red-500'
+              )}
+            >
               {current.marginPct.toFixed(1)}%
             </div>
           </div>
         </section>
 
-        {/* Comparison table */}
-        <section className="mt-10 rounded-2xl border border-purple-600/40 p-4 sm:p-6">
-          <div className="mb-4 text-sm text-gray-300">
-            Comparing with current inputs (${inputs.price.toFixed(2)} price, $
-            {inputs.shipCharge.toFixed(2)} ship charge, $
-            {inputs.shipCost.toFixed(2)} ship cost, ${inputs.cogs.toFixed(2)} COGS,{' '}
-            {inputs.discountPct.toFixed(1)}% discount, ${inputs.tax.toFixed(2)} tax)
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-gray-300">
-                <tr>
-                  <th className="py-2 pr-4">Platform</th>
-                  <th className="py-2 pr-4">Profit</th>
-                  <th className="py-2 pr-4">Margin</th>
-                  <th className="py-2 pr-4">Marketplace fee</th>
-                  <th className="py-2 pr-4">Payment fee</th>
-                  <th className="py-2 pr-4">Listing fee</th>
-                  <th className="py-2 pr-4">Total fees</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comparison.map((row) => (
-                  <tr key={row.platform} className="border-t border-white/10">
-                    <td className="py-2 pr-4">
-                      <span className="rounded-lg border border-white/10 px-2 py-1">
-                        {row.platform[0].toUpperCase() + row.platform.slice(1)}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-4 text-emerald-300">
-                      ${row.profit.toFixed(2)}
-                    </td>
-                    <td className="py-2 pr-4">{row.marginPct.toFixed(1)}%</td>
-                    <td className="py-2 pr-4">${row.marketplaceFee.toFixed(2)}</td>
-                    <td className="py-2 pr-4">${row.paymentFee.toFixed(2)}</td>
-                    <td className="py-2 pr-4">${row.listingFee.toFixed(2)}</td>
-                    <td className="py-2 pr-4">${row.totalFees.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        {/* Comparison table (now via component, with banner + negative formatting) */}
+        <ComparisonTableSection
+          className="mt-10"
+          inputs={{
+            price: inputs.price,
+            shipCharge: inputs.shipCharge,
+            shipCost: inputs.shipCost,
+            cogs: inputs.cogs,
+            discountPct: inputs.discountPct,
+            tax: inputs.tax,
+          }}
+          comparison={comparison.map((row) => ({
+            platform: row.platform,
+            profit: row.profit,
+            marginPct: row.marginPct,
+            marketplaceFee: row.marketplaceFee,
+            paymentFee: row.paymentFee,
+            listingFee: row.listingFee,
+            totalFees: row.totalFees,
+          }))}
+        />
 
         {/* Footer – wrap to apply margin since Footer doesn't accept props */}
         <div className="mt-10">
