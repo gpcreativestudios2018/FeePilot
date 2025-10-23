@@ -14,6 +14,8 @@ export type CurrentInputsProps = {
   discountPct: number;
   tax: number;
   className?: string;
+  // NEW: makes the small summary line darker in light mode
+  isLight?: boolean;
 };
 
 export default function CurrentInputs({
@@ -24,11 +26,14 @@ export default function CurrentInputs({
   discountPct,
   tax,
   className,
+  isLight = false,
 }: CurrentInputsProps) {
+  const detailClass = isLight ? "text-gray-700" : "text-gray-300";
+
   return (
     <div className={cx("mb-4", className)}>
       <div className="text-base font-semibold">Current Inputs</div>
-      <div className="text-sm text-gray-300">
+      <div className={cx("text-sm", detailClass)}>
         (
         {formatMoneyWithParens(price)} price,{" "}
         {formatMoneyWithParens(shipCharge)} ship charge,{" "}

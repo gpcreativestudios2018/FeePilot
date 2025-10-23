@@ -1,9 +1,8 @@
-// src/app/components/ComparisonTableSection.tsx
 "use client";
 
 import React, { useMemo } from "react";
 import CurrentInputs, { CurrentInputsProps } from "./CurrentInputs";
-import NumberCell from "./NumberCell";
+import { TableNumberCell } from "./NumberCell";
 import { cx, formatMoneyWithParens } from "../../lib/format";
 
 export type ComparisonRow = {
@@ -20,42 +19,37 @@ type Props = {
   inputs: CurrentInputsProps;
   comparison: ComparisonRow[];
   className?: string;
+  /** adjust header/text colors + green strength for light mode */
+  isLight?: boolean;
 };
 
 export default function ComparisonTableSection({
   inputs,
   comparison,
   className,
+  isLight = false,
 }: Props) {
-  // Find index of highest profit row (first one wins ties)
   const bestIndex = useMemo(() => {
     if (!comparison.length) return -1;
     let idx = 0;
     let max = -Infinity;
     for (let i = 0; i < comparison.length; i++) {
       const v = comparison[i].profit;
-      if (v > max) {
-        max = v;
-        idx = i;
-      }
+      if (v > max) { max = v; idx = i; }
     }
     return idx;
   }, [comparison]);
 
+  const theadColor = isLight ? "text-gray-800" : "text-gray-300";
+
   return (
-    <section
-      className={cx(
-        "mt-10 rounded-2xl border border-purple-600/40 p-4 sm:p-6",
-        className
-      )}
-    >
-      {/* Current Inputs banner */}
-      <CurrentInputs {...inputs} className="mb-4" />
+    <section className={cx("mt-10 rounded-2xl border p-4 sm:p-6", className)}>
+      <CurrentInputs {...inputs} isLight={isLight} className="mb-4" />
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
-          <thead className="text-gray-300">
-            <tr>
+          <thead className={theadColor}>
+            <tr className="font-semibold">
               <th className="py-2 pr-4">Platform</th>
               <th className="py-2 pr-4">Profit</th>
               <th className="py-2 pr-4">Margin</th>
@@ -71,10 +65,7 @@ export default function ComparisonTableSection({
               return (
                 <tr
                   key={row.platform}
-                  className={cx(
-                    "border-t border-white/10",
-                    isBest && "bg-emerald-500/5"
-                  )}
+                  className={cx("border-t border-white/10", isBest && "bg-emerald-500/5")}
                 >
                   <td className="py-2 pr-4">
                     <span className="inline-flex items-center gap-2">
@@ -82,18 +73,18 @@ export default function ComparisonTableSection({
                         {row.platform.slice(0, 1).toUpperCase() + row.platform.slice(1)}
                       </span>
                       {isBest && (
-                        <span className="rounded-full border border-emerald-500/50 px-2 py-0.5 text-xs text-emerald-300">
+                        <span className="rounded-full border border-emerald-500/50 px-2 py-0.5 text-xs text-emerald-700">
                           Best
                         </span>
                       )}
                     </span>
                   </td>
 
-                  {/* Profit with red + parentheses when negative, green when positive */}
-                  <NumberCell kind="money" value={row.profit} positiveGreen />
+                  {/* Profit with emerald-700 in light mode */}
+                  <TableNumberCell kind="money" value={row.profit} positiveGreen isLight={isLight} />
 
-                  {/* Margin in red when negative (shows natural minus sign) */}
-                  <NumberCell kind="percent" value={row.marginPct} />
+                  {/* Margin */}
+                  <TableNumberCell kind="percent" value={row.marginPct} />
 
                   {/* Fees and totals */}
                   <td className="py-2 pr-4">{formatMoneyWithParens(row.marketplaceFee)}</td>
