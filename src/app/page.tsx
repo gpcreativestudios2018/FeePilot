@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import HeaderActions from './components/HeaderActions';
 import Footer from './components/Footer';
 import ResetButton from './components/ResetButton';
@@ -94,14 +94,74 @@ function makeDefaults(): Inputs {
   };
 }
 
+/* ------------------------- PERSISTENCE KEYS -------------------------------- */
+const THEME_KEY = 'feepilot:theme';          // 'light' | 'dark'
+const INPUTS_KEY = 'feepilot:inputs:v1';     // JSON of Inputs
+
 /* ----------------------------------- UI ----------------------------------- */
 export default function Page() {
+  // inputs (start with defaults)
   const [inputs, setInputs] = useState<Inputs>(makeDefaults());
-  const resetInputs = () => setInputs(makeDefaults());
 
   // theme (default dark)
   const [isLight, setIsLight] = useState(false);
   const toggleTheme = () => setIsLight((v) => !v);
+
+  // guard so we don't save defaults before we've loaded from storage
+  const didInitRef = useRef(false);
+  const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false);
+
+  // Load saved theme + inputs ONCE on mount
+  useEffect(() => {
+    if (didInitRef.current) return;
+    didInitRef.current = true;
+
+    try {
+      const savedTheme = localStorage.getItem(THEME_KEY);
+      if (savedTheme === 'light') setIsLight(true);
+      if (savedTheme === 'dark') setIsLight(false);
+    } catch {}
+
+    try {
+      const raw = localStorage.getItem(INPUTS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<Inputs>;
+        const defaults = makeDefaults();
+        const candidate: Inputs = {
+          platform: (parsed.platform && PLATFORMS.includes(parsed.platform as PlatformKey)
+            ? (parsed.platform as PlatformKey)
+            : defaults.platform),
+          price: Number.isFinite(parsed.price) ? (parsed.price as number) : defaults.price,
+          shipCharge: Number.isFinite(parsed.shipCharge) ? (parsed.shipCharge as number) : defaults.shipCharge,
+          shipCost: Number.isFinite(parsed.shipCost) ? (parsed.shipCost as number) : defaults.shipCost,
+          cogs: Number.isFinite(parsed.cogs) ? (parsed.cogs as number) : defaults.cogs,
+          discountPct: Number.isFinite(parsed.discountPct) ? (parsed.discountPct as number) : defaults.discountPct,
+          tax: Number.isFinite(parsed.tax) ? (parsed.tax as number) : defaults.tax,
+        };
+        setInputs(candidate);
+      }
+    } catch {}
+
+    setHasLoadedFromStorage(true);
+  }, []);
+
+  // Persist theme whenever it changes (after first load)
+  useEffect(() => {
+    if (!hasLoadedFromStorage) return;
+    try { localStorage.setItem(THEME_KEY, isLight ? 'light' : 'dark'); } catch {}
+  }, [isLight, hasLoadedFromStorage]);
+
+  // Persist inputs whenever they change (after first load)
+  useEffect(() => {
+    if (!hasLoadedFromStorage) return;
+    try { localStorage.setItem(INPUTS_KEY, JSON.stringify(inputs)); } catch {}
+  }, [inputs, hasLoadedFromStorage]);
+
+  const resetInputs = () => {
+    const next = makeDefaults();
+    setInputs(next);
+    try { localStorage.removeItem(INPUTS_KEY); } catch {}
+  };
 
   const rule = RULES[inputs.platform];
   const current = useMemo(() => calcFor(rule, inputs), [rule, inputs]);
@@ -118,7 +178,6 @@ export default function Page() {
   const pageBgText = isLight ? 'bg-white text-black' : 'bg-black text-white';
   const subtleText = isLight ? 'text-gray-700' : 'text-gray-300';
   const selectOption = isLight ? 'bg-white text-black' : 'bg-black text-white';
-  // darker borders in light to match dark strength
   const panelBorder = isLight ? 'border-purple-800/70' : 'border-purple-600/40';
   const controlBorder = isLight ? 'border-purple-800/70' : 'border-purple-600/50';
 
@@ -309,15 +368,19 @@ export default function Page() {
             discountPct: inputs.discountPct,
             tax: inputs.tax,
           }}
-          comparison={comparison.map((row) => ({
-            platform: row.platform,
-            profit: row.profit,
-            marginPct: row.marginPct,
-            marketplaceFee: row.marketplaceFee,
-            paymentFee: row.paymentFee,
-            listingFee: row.listingFee,
-            totalFees: row.totalFees,
-          }))}
+          comparison={PLATFORMS.map((p) => {
+            const r = RULES[p];
+            const c = calcFor(r, inputs);
+            return {
+              platform: p,
+              profit: c.profit,
+              marginPct: c.marginPct,
+              marketplaceFee: c.marketplaceFee,
+              paymentFee: c.paymentFee,
+              listingFee: c.listingFee,
+              totalFees: c.totalFees,
+            };
+          })}
         />
 
         <div className="mt-10">
