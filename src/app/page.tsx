@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import HeaderActions from './components/HeaderActions';
 import Footer from './components/Footer';
 import ResetButton from './components/ResetButton';
@@ -100,79 +100,62 @@ const INPUTS_KEY = 'feepilot:inputs:v1';     // JSON of Inputs
 
 /* ----------------------------------- UI ----------------------------------- */
 export default function Page() {
-  // inputs (start with defaults)
-  const [inputs, setInputs] = useState<Inputs>(makeDefaults());
+  // Read saved inputs synchronously (prevents “reset on refresh”)
+  const [inputs, setInputs] = useState<Inputs>(() => {
+    if (typeof window === 'undefined') return makeDefaults();
+    try {
+      const raw = window.localStorage.getItem(INPUTS_KEY);
+      if (!raw) return makeDefaults();
+      const p = JSON.parse(raw) as Partial<Inputs>;
+      const d = makeDefaults();
+      return {
+        platform: (p.platform && PLATFORMS.includes(p.platform as PlatformKey))
+          ? (p.platform as PlatformKey) : d.platform,
+        price: Number.isFinite(p.price) ? (p.price as number) : d.price,
+        shipCharge: Number.isFinite(p.shipCharge) ? (p.shipCharge as number) : d.shipCharge,
+        shipCost: Number.isFinite(p.shipCost) ? (p.shipCost as number) : d.shipCost,
+        cogs: Number.isFinite(p.cogs) ? (p.cogs as number) : d.cogs,
+        discountPct: Number.isFinite(p.discountPct) ? (p.discountPct as number) : d.discountPct,
+        tax: Number.isFinite(p.tax) ? (p.tax as number) : d.tax,
+      };
+    } catch {
+      return makeDefaults();
+    }
+  });
 
-  // theme (default dark)
-  const [isLight, setIsLight] = useState(false);
+  // Theme with synchronous init, too
+  const [isLight, setIsLight] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return window.localStorage.getItem(THEME_KEY) === 'light';
+    } catch {
+      return false;
+    }
+  });
   const toggleTheme = () => setIsLight((v) => !v);
 
-  // guard so we don't save defaults before we've loaded from storage
-  const didInitRef = useRef(false);
-  const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false);
-
-  // Load saved theme + inputs ONCE on mount
+  // Save inputs on any change
   useEffect(() => {
-    if (didInitRef.current) return;
-    didInitRef.current = true;
-
     try {
-      const savedTheme = localStorage.getItem(THEME_KEY);
-      if (savedTheme === 'light') setIsLight(true);
-      if (savedTheme === 'dark') setIsLight(false);
+      window.localStorage.setItem(INPUTS_KEY, JSON.stringify(inputs));
     } catch {}
+  }, [inputs]);
 
+  // Save theme on change
+  useEffect(() => {
     try {
-      const raw = localStorage.getItem(INPUTS_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<Inputs>;
-        const defaults = makeDefaults();
-        const candidate: Inputs = {
-          platform: (parsed.platform && PLATFORMS.includes(parsed.platform as PlatformKey)
-            ? (parsed.platform as PlatformKey)
-            : defaults.platform),
-          price: Number.isFinite(parsed.price) ? (parsed.price as number) : defaults.price,
-          shipCharge: Number.isFinite(parsed.shipCharge) ? (parsed.shipCharge as number) : defaults.shipCharge,
-          shipCost: Number.isFinite(parsed.shipCost) ? (parsed.shipCost as number) : defaults.shipCost,
-          cogs: Number.isFinite(parsed.cogs) ? (parsed.cogs as number) : defaults.cogs,
-          discountPct: Number.isFinite(parsed.discountPct) ? (parsed.discountPct as number) : defaults.discountPct,
-          tax: Number.isFinite(parsed.tax) ? (parsed.tax as number) : defaults.tax,
-        };
-        setInputs(candidate);
-      }
+      window.localStorage.setItem(THEME_KEY, isLight ? 'light' : 'dark');
     } catch {}
-
-    setHasLoadedFromStorage(true);
-  }, []);
-
-  // Persist theme whenever it changes (after first load)
-  useEffect(() => {
-    if (!hasLoadedFromStorage) return;
-    try { localStorage.setItem(THEME_KEY, isLight ? 'light' : 'dark'); } catch {}
-  }, [isLight, hasLoadedFromStorage]);
-
-  // Persist inputs whenever they change (after first load)
-  useEffect(() => {
-    if (!hasLoadedFromStorage) return;
-    try { localStorage.setItem(INPUTS_KEY, JSON.stringify(inputs)); } catch {}
-  }, [inputs, hasLoadedFromStorage]);
+  }, [isLight]);
 
   const resetInputs = () => {
     const next = makeDefaults();
     setInputs(next);
-    try { localStorage.removeItem(INPUTS_KEY); } catch {}
+    try { window.localStorage.removeItem(INPUTS_KEY); } catch {}
   };
 
   const rule = RULES[inputs.platform];
   const current = useMemo(() => calcFor(rule, inputs), [rule, inputs]);
-
-  const comparison = useMemo(() => {
-    return PLATFORMS.map((p) => {
-      const r = RULES[p];
-      const c = calcFor(r, inputs);
-      return { platform: p, r, ...c };
-    });
-  }, [inputs]);
 
   // theme helpers
   const pageBgText = isLight ? 'bg-white text-black' : 'bg-black text-white';
@@ -356,7 +339,7 @@ export default function Page() {
           </div>
         </section>
 
-        {/* Comparison table */}
+        {/* Comparison table (no unused variable; inline map) */}
         <ComparisonTableSection
           className={cx('mt-10', 'border', panelBorder, 'rounded-2xl')}
           isLight={isLight}
