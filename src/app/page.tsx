@@ -69,20 +69,6 @@ function calcFor(rule: FeeRule, inputs: Inputs) {
   return { discounted, marketplaceFee, paymentFee, listingFee, totalFees, net, profit, marginPct };
 }
 
-/* ----------------------------- share/copy --------------------------------- */
-const shareLink = async (): Promise<void> => {
-  const url = window.location.href;
-  if (navigator.share) {
-    try { await navigator.share({ title: 'FeePilot', url }); } catch {}
-  } else {
-    await navigator.clipboard.writeText(url);
-  }
-};
-const copyLink = async (): Promise<void> => {
-  const url = window.location.href;
-  await navigator.clipboard.writeText(url);
-};
-
 function makeDefaults(): Inputs {
   return {
     platform: PLATFORMS[0] ?? ('mercari' as PlatformKey),
@@ -99,11 +85,82 @@ function makeDefaults(): Inputs {
 const THEME_KEY = 'feepilot:theme';          // 'light' | 'dark'
 const INPUTS_KEY = 'feepilot:inputs:v1';     // JSON of Inputs
 
+/* ------------------------- PERMALINK HELPERS ------------------------------- */
+function buildPermalinkUrl(inputs: Inputs): string {
+  const url = new URL(window.location.href);
+  // clear existing to avoid duplicates
+  url.searchParams.delete('platform');
+  url.searchParams.delete('price');
+  url.searchParams.delete('shipCharge');
+  url.searchParams.delete('shipCost');
+  url.searchParams.delete('cogs');
+  url.searchParams.delete('discountPct');
+  url.searchParams.delete('tax');
+
+  url.searchParams.set('platform', inputs.platform);
+  url.searchParams.set('price', String(inputs.price));
+  url.searchParams.set('shipCharge', String(inputs.shipCharge));
+  url.searchParams.set('shipCost', String(inputs.shipCost));
+  url.searchParams.set('cogs', String(inputs.cogs));
+  url.searchParams.set('discountPct', String(inputs.discountPct));
+  url.searchParams.set('tax', String(inputs.tax));
+
+  return url.toString();
+}
+
+function inputsFromSearch(): Inputs | null {
+  try {
+    const url = new URL(window.location.href);
+    const hasAny =
+      url.searchParams.has('platform') ||
+      url.searchParams.has('price') ||
+      url.searchParams.has('shipCharge') ||
+      url.searchParams.has('shipCost') ||
+      url.searchParams.has('cogs') ||
+      url.searchParams.has('discountPct') ||
+      url.searchParams.has('tax');
+
+    if (!hasAny) return null;
+
+    const d = makeDefaults();
+    const platformParam = url.searchParams.get('platform') ?? d.platform;
+    const platform = (PLATFORMS.includes(platformParam as PlatformKey)
+      ? (platformParam as PlatformKey)
+      : d.platform);
+
+    const candidate: Inputs = {
+      platform,
+      price: parseNum(url.searchParams.get('price') ?? String(d.price)),
+      shipCharge: parseNum(url.searchParams.get('shipCharge') ?? String(d.shipCharge)),
+      shipCost: parseNum(url.searchParams.get('shipCost') ?? String(d.shipCost)),
+      cogs: parseNum(url.searchParams.get('cogs') ?? String(d.cogs)),
+      discountPct: parseNum(url.searchParams.get('discountPct') ?? String(d.discountPct)),
+      tax: parseNum(url.searchParams.get('tax') ?? String(d.tax)),
+    };
+
+    // clamp to keep safe
+    candidate.price = clamp(candidate.price, 0);
+    candidate.shipCharge = clamp(candidate.shipCharge, 0);
+    candidate.shipCost = clamp(candidate.shipCost, 0);
+    candidate.cogs = clamp(candidate.cogs, 0);
+    candidate.discountPct = clamp(candidate.discountPct, 0, 100);
+    candidate.tax = clamp(candidate.tax, 0);
+
+    return candidate;
+  } catch {
+    return null;
+  }
+}
+
 /* ----------------------------------- UI ----------------------------------- */
 export default function Page() {
-  // Read saved inputs synchronously (prevents “reset on refresh”)
+  // Inputs init priority: URL query params → localStorage → defaults.
   const [inputs, setInputs] = useState<Inputs>(() => {
     if (typeof window === 'undefined') return makeDefaults();
+
+    const fromUrl = inputsFromSearch();
+    if (fromUrl) return fromUrl;
+
     try {
       const raw = window.localStorage.getItem(INPUTS_KEY);
       if (!raw) return makeDefaults();
@@ -135,24 +192,46 @@ export default function Page() {
   });
   const toggleTheme = () => setIsLight((v) => !v);
 
-  // Save inputs on any change
+  // Persist inputs whenever they change
   useEffect(() => {
     try {
       window.localStorage.setItem(INPUTS_KEY, JSON.stringify(inputs));
     } catch {}
   }, [inputs]);
 
-  // Save theme on change
+  // Persist theme whenever it changes
   useEffect(() => {
     try {
       window.localStorage.setItem(THEME_KEY, isLight ? 'light' : 'dark');
     } catch {}
   }, [isLight]);
 
+  // Share / Copy use permalink with current inputs
+  const shareLink = async (): Promise<void> => {
+    const url = buildPermalinkUrl(inputs);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'FeePilot', url });
+      } catch { /* user canceled */ }
+    } else {
+      await navigator.clipboard.writeText(url);
+    }
+  };
+  const copyLink = async (): Promise<void> => {
+    const url = buildPermalinkUrl(inputs);
+    await navigator.clipboard.writeText(url);
+  };
+
   const resetInputs = () => {
     const next = makeDefaults();
     setInputs(next);
     try { window.localStorage.removeItem(INPUTS_KEY); } catch {}
+    // also strip query params so refresh doesn’t re-apply them
+    try {
+      const url = new URL(window.location.href);
+      url.search = '';
+      window.history.replaceState({}, '', url.toString());
+    } catch {}
   };
 
   const rule = RULES[inputs.platform];
@@ -183,14 +262,12 @@ export default function Page() {
             FeePilot
           </h1>
 
-          <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
             <ThemeToggle isLight={isLight} onToggle={toggleTheme} />
             <ResetButton onClick={resetInputs} />
-
-            {/* HeaderActions renders Share / Copy / Pro */}
+            {/* Share / Copy / Pro */}
             <HeaderActions onShare={shareLink} onCopy={copyLink} />
-
-            {/* Dev-only: place AFTER Pro (far right), styled like other pills */}
+            {/* Dev-only helper after Pro */}
             {process.env.NODE_ENV !== 'production' && (
               <ClearSavedDataButton
                 keys={[THEME_KEY, INPUTS_KEY]}
