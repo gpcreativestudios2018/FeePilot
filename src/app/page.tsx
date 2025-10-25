@@ -5,6 +5,7 @@ import HeaderActions from './components/HeaderActions';
 import Footer from './components/Footer';
 import ResetButton from './components/ResetButton';
 import ThemeToggle from './components/ThemeToggle';
+import ClearSavedDataButton from './components/ClearSavedDataButton';
 
 import {
   PLATFORMS,
@@ -164,6 +165,14 @@ export default function Page() {
   const panelBorder = isLight ? 'border-purple-800/70' : 'border-purple-600/40';
   const controlBorder = isLight ? 'border-purple-800/70' : 'border-purple-600/50';
 
+  // unified pill style (matches other header buttons)
+  const pillButton = cx(
+    'rounded-full px-4 py-2 text-base select-none border',
+    isLight
+      ? 'border-purple-800/70 text-black hover:bg-purple-50'
+      : 'border-purple-600/50 text-white hover:bg-white/5'
+  );
+
   return (
     <div className={cx('min-h-dvh', pageBgText)}>
       <header className="mx-auto max-w-6xl px-4 py-6">
@@ -177,7 +186,23 @@ export default function Page() {
           <div className="flex items-center gap-3">
             <ThemeToggle isLight={isLight} onToggle={toggleTheme} />
             <ResetButton onClick={resetInputs} />
+
+            {/* HeaderActions renders Share / Copy / Pro */}
             <HeaderActions onShare={shareLink} onCopy={copyLink} />
+
+            {/* Dev-only: place AFTER Pro (far right), styled like other pills */}
+            {process.env.NODE_ENV !== 'production' && (
+              <ClearSavedDataButton
+                keys={[THEME_KEY, INPUTS_KEY]}
+                className={pillButton}
+                onCleared={() => {
+                  setInputs(makeDefaults());
+                  setIsLight(false);
+                }}
+              >
+                Clear saved data
+              </ClearSavedDataButton>
+            )}
           </div>
         </div>
 
@@ -339,7 +364,7 @@ export default function Page() {
           </div>
         </section>
 
-        {/* Comparison table (no unused variable; inline map) */}
+        {/* Comparison table */}
         <ComparisonTableSection
           className={cx('mt-10', 'border', panelBorder, 'rounded-2xl')}
           isLight={isLight}
