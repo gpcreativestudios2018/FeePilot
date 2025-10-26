@@ -16,6 +16,7 @@ import {
 } from '@/data/fees';
 
 import { cx, formatMoneyWithParens } from '../lib/format';
+import copyWithToast from '../lib/copyWithToast';
 import ComparisonTableSection from './components/ComparisonTableSection';
 
 /* ---------------------------------- types --------------------------------- */
@@ -214,12 +215,12 @@ export default function Page() {
         await navigator.share({ title: 'FeePilot', url });
       } catch { /* user canceled */ }
     } else {
-      await navigator.clipboard.writeText(url);
+      await copyWithToast(url); // fallback copies + shows toast
     }
   };
   const copyLink = async (): Promise<void> => {
     const url = buildPermalinkUrl(inputs);
-    await navigator.clipboard.writeText(url);
+    await copyWithToast(url); // copies + shows toast
   };
 
   const resetInputs = () => {
@@ -393,32 +394,44 @@ export default function Page() {
         <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className={cx('rounded-2xl border p-5', panelBorder)}>
             <div className={cx('text-sm', subtleText)}>Discounted price</div>
-            <div className="mt-2 text-3xl font-semibold">{formatMoneyWithParens(current.discounted)}</div>
+            <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+              {formatMoneyWithParens(current.discounted)}
+            </div>
           </div>
 
           <div className={cx('rounded-2xl border p-5', panelBorder)}>
             <div className={cx('text-sm', subtleText)}>Marketplace fee</div>
-            <div className="mt-2 text-3xl font-semibold">{formatMoneyWithParens(current.marketplaceFee)}</div>
+            <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+              {formatMoneyWithParens(current.marketplaceFee)}
+            </div>
           </div>
 
           <div className={cx('rounded-2xl border p-5', panelBorder)}>
             <div className={cx('text-sm', subtleText)}>Payment fee</div>
-            <div className="mt-2 text-3xl font-semibold">{formatMoneyWithParens(current.paymentFee)}</div>
+            <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+              {formatMoneyWithParens(current.paymentFee)}
+            </div>
           </div>
 
           <div className={cx('rounded-2xl border p-5', panelBorder)}>
             <div className={cx('text-sm', subtleText)}>Listing fee</div>
-            <div className="mt-2 text-3xl font-semibold">{formatMoneyWithParens(current.listingFee)}</div>
+            <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+              {formatMoneyWithParens(current.listingFee)}
+            </div>
           </div>
 
           <div className={cx('rounded-2xl border p-5', panelBorder)}>
             <div className={cx('text-sm', subtleText)}>Total fees</div>
-            <div className="mt-2 text-3xl font-semibold">{formatMoneyWithParens(current.totalFees)}</div>
+            <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+              {formatMoneyWithParens(current.totalFees)}
+            </div>
           </div>
 
           <div className={cx('rounded-2xl border p-5', panelBorder)}>
             <div className={cx('text-sm', subtleText)}>Estimated payout</div>
-            <div className="mt-2 text-3xl font-semibold">{formatMoneyWithParens(current.net)}</div>
+            <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+              {formatMoneyWithParens(current.net)}
+            </div>
           </div>
 
           <div className={cx('rounded-2xl border p-5', panelBorder)}>
@@ -428,6 +441,7 @@ export default function Page() {
                 'mt-2 text-3xl font-semibold',
                 current.profit < 0 ? 'text-red-500' : isLight ? 'text-emerald-700' : 'text-emerald-300'
               )}
+              suppressHydrationWarning
             >
               {formatMoneyWithParens(current.profit)}
             </div>
@@ -435,7 +449,10 @@ export default function Page() {
 
           <div className={cx('rounded-2xl border p-5', panelBorder)}>
             <div className={cx('text-sm', subtleText)}>Margin</div>
-            <div className={cx('mt-2 text-3xl font-semibold', current.marginPct < 0 && 'text-red-500')}>
+            <div
+              className={cx('mt-2 text-3xl font-semibold', current.marginPct < 0 && 'text-red-500')}
+              suppressHydrationWarning
+            >
               {current.marginPct.toFixed(1)}%
             </div>
           </div>

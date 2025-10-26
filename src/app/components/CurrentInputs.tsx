@@ -1,45 +1,42 @@
-// src/app/components/CurrentInputs.tsx
-import React from "react";
-import {
-  formatMoneyWithParens,
-  formatPercent,
-  cx,
-} from "../../lib/format";
+'use client';
 
-export type CurrentInputsProps = {
+import React from 'react';
+import { cx, formatMoneyWithParens } from '../../lib/format';
+
+type Props = {
+  className?: string;
+  isLight?: boolean;
   price: number;
   shipCharge: number;
   shipCost: number;
   cogs: number;
   discountPct: number;
   tax: number;
-  className?: string;
-  // NEW: makes the small summary line darker in light mode
-  isLight?: boolean;
 };
 
 export default function CurrentInputs({
+  className,
+  isLight = false,
   price,
   shipCharge,
   shipCost,
   cogs,
   discountPct,
   tax,
-  className,
-  isLight = false,
-}: CurrentInputsProps) {
-  const detailClass = isLight ? "text-gray-700" : "text-gray-300";
+}: Props) {
+  const detailClass = isLight ? 'text-gray-700' : 'text-gray-300';
 
   return (
-    <div className={cx("mb-4", className)}>
+    <div className={cx('mb-4', className)}>
       <div className="text-base font-semibold">Current Inputs</div>
-      <div className={cx("text-sm", detailClass)}>
+      {/* Hydration-safe: values can differ between server and client */}
+      <div className={cx('text-sm', detailClass)} suppressHydrationWarning>
         (
-        {formatMoneyWithParens(price)} price,{" "}
-        {formatMoneyWithParens(shipCharge)} ship charge,{" "}
-        {formatMoneyWithParens(shipCost)} ship cost,{" "}
-        {formatMoneyWithParens(cogs)} COGS,{" "}
-        {formatPercent(discountPct, 1)} discount,{" "}
+        {formatMoneyWithParens(price)} price,{' '}
+        {formatMoneyWithParens(shipCharge)} ship charge,{' '}
+        {formatMoneyWithParens(shipCost)} ship cost,{' '}
+        {formatMoneyWithParens(cogs)} COGS,{' '}
+        {discountPct.toFixed(1)}% discount,{' '}
         {formatMoneyWithParens(tax)} tax
         )
       </div>
