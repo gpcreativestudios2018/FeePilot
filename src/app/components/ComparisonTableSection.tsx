@@ -1,12 +1,21 @@
-"use client";
+'use client';
 
-import React, { useMemo } from "react";
-import CurrentInputs, { CurrentInputsProps } from "./CurrentInputs";
-import { TableNumberCell } from "./NumberCell";
-import { cx, formatMoneyWithParens } from "../../lib/format";
+import React from 'react';
+import CurrentInputs from './CurrentInputs';
+import { cx, formatMoneyWithParens } from '../../lib/format';
+import type { PlatformKey } from '@/data/fees';
 
-export type ComparisonRow = {
-  platform: string;
+type InputsLite = {
+  price: number;
+  shipCharge: number;
+  shipCost: number;
+  cogs: number;
+  discountPct: number;
+  tax: number;
+};
+
+type Row = {
+  platform: PlatformKey;
   profit: number;
   marginPct: number;
   marketplaceFee: number;
@@ -15,87 +24,112 @@ export type ComparisonRow = {
   totalFees: number;
 };
 
-type Props = {
-  inputs: CurrentInputsProps;
-  comparison: ComparisonRow[];
-  className?: string;
-  /** adjust header/text colors + green strength for light mode */
-  isLight?: boolean;
-};
-
 export default function ComparisonTableSection({
+  className,
+  isLight,
   inputs,
   comparison,
-  className,
-  isLight = false,
-}: Props) {
-  const bestIndex = useMemo(() => {
-    if (!comparison.length) return -1;
-    let idx = 0;
-    let max = -Infinity;
-    for (let i = 0; i < comparison.length; i++) {
-      const v = comparison[i].profit;
-      if (v > max) { max = v; idx = i; }
-    }
-    return idx;
-  }, [comparison]);
+}: {
+  className?: string;
+  isLight: boolean;
+  inputs: InputsLite;
+  comparison: Row[];
+}) {
+  const border = isLight ? 'border-purple-800/70' : 'border-white/10';
+  const headText = isLight ? 'text-gray-800' : 'text-gray-200';
+  const bodyText = isLight ? 'text-gray-800' : 'text-gray-200';
+  const subtle = isLight ? 'text-gray-600' : 'text-gray-400';
 
-  const theadColor = isLight ? "text-gray-800" : "text-gray-300";
+  // Gate dynamic classes to avoid SSR/client className mismatches
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
 
   return (
-    <section className={cx("mt-10 rounded-2xl border p-4 sm:p-6", className)}>
-      <CurrentInputs {...inputs} isLight={isLight} className="mb-4" />
+    <section className={cx('rounded-2xl p-4 sm:p-6', className)}>
+      <CurrentInputs
+        isLight={isLight}
+        className="mb-4"
+        price={inputs.price}
+        shipCharge={inputs.shipCharge}
+        shipCost={inputs.shipCost}
+        cogs={inputs.cogs}
+        discountPct={inputs.discountPct}
+        tax={inputs.tax}
+      />
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className={theadColor}>
-            <tr className="font-semibold">
+      <div className="overflow-x-auto rounded-2xl">
+        <table className={cx('w-full text-sm', bodyText)}>
+          <thead className={cx(subtle, headText)}>
+            <tr className="text-left">
               <th className="py-2 pr-4">Platform</th>
-              <th className="py-2 pr-4">Profit</th>
-              <th className="py-2 pr-4">Margin</th>
               <th className="py-2 pr-4">Marketplace fee</th>
               <th className="py-2 pr-4">Payment fee</th>
               <th className="py-2 pr-4">Listing fee</th>
               <th className="py-2 pr-4">Total fees</th>
+              <th className="py-2 pr-4">Profit</th>
+              <th className="py-2 pr-0">Margin</th>
             </tr>
           </thead>
-          <tbody>
-            {comparison.map((row, i) => {
-              const isBest = i === bestIndex;
-              return (
-                <tr
-                  key={row.platform}
-                  className={cx("border-t border-white/10", isBest && "bg-emerald-500/5")}
-                >
-                  <td className="py-2 pr-4">
-                    <span className="inline-flex items-center gap-2">
-                      <span className="rounded-lg border border-white/10 px-2 py-1">
-                        {row.platform.slice(0, 1).toUpperCase() + row.platform.slice(1)}
-                      </span>
-                      {isBest && (
-                        <span className="rounded-full border border-emerald-500/50 px-2 py-0.5 text-xs text-emerald-700">
-                          Best
-                        </span>
-                      )}
+
+          <tbody className={cx('border-t', border)}>
+            {comparison.map((row) => (
+              <tr key={row.platform} className="border-t first:border-0">
+                <td className="py-2 pr-4">
+                  <span className="inline-flex items-center gap-2">
+                    <span className={cx('rounded-lg border px-2 py-1', border)}>
+                      {row.platform.slice(0, 1).toUpperCase() + row.platform.slice(1)}
                     </span>
-                  </td>
+                  </span>
+                </td>
 
-                  {/* Profit with emerald-700 in light mode */}
-                  <TableNumberCell kind="money" value={row.profit} positiveGreen isLight={isLight} />
+                <td className="py-2 pr-4">
+                  <span suppressHydrationWarning>
+                    {formatMoneyWithParens(row.marketplaceFee)}
+                  </span>
+                </td>
+                <td className="py-2 pr-4">
+                  <span suppressHydrationWarning>
+                    {formatMoneyWithParens(row.paymentFee)}
+                  </span>
+                </td>
+                <td className="py-2 pr-4">
+                  <span suppressHydrationWarning>
+                    {formatMoneyWithParens(row.listingFee)}
+                  </span>
+                </td>
+                <td className="py-2 pr-4">
+                  <span suppressHydrationWarning>
+                    {formatMoneyWithParens(row.totalFees)}
+                  </span>
+                </td>
 
-                  {/* Margin */}
-                  <TableNumberCell kind="percent" value={row.marginPct} />
+                <td
+                  className={cx(
+                    'py-2 pr-4',
+                    mounted && (row.profit < 0 ? 'text-red-500' : isLight ? 'text-emerald-700' : 'text-emerald-300')
+                  )}
+                >
+                  <span suppressHydrationWarning>
+                    {formatMoneyWithParens(row.profit)}
+                  </span>
+                </td>
 
-                  {/* Fees and totals */}
-                  <td className="py-2 pr-4">{formatMoneyWithParens(row.marketplaceFee)}</td>
-                  <td className="py-2 pr-4">{formatMoneyWithParens(row.paymentFee)}</td>
-                  <td className="py-2 pr-4">{formatMoneyWithParens(row.listingFee)}</td>
-                  <td className="py-2 pr-4">{formatMoneyWithParens(row.totalFees)}</td>
-                </tr>
-              );
-            })}
+                <td className="py-2 pr-0">
+                  <span
+                    className={cx(mounted && row.marginPct < 0 && 'text-red-500')}
+                    suppressHydrationWarning
+                  >
+                    {row.marginPct.toFixed(1)}%
+                  </span>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
+
+        <div className={cx('mt-2 text-xs', subtle)}>
+          Values are estimates based on current inputs.
+        </div>
       </div>
     </section>
   );
