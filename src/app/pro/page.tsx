@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { PILL_CLASS } from '@/lib/ui';
 
 export default function ProPage() {
   return (
@@ -25,10 +26,7 @@ export default function ProPage() {
             <li>• Comparison table</li>
           </ul>
           <div className="mt-6">
-            <Link
-              href="/"
-              className="inline-flex items-center rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
-            >
+            <Link href="/" className={PILL_CLASS}>
               Continue free
             </Link>
           </div>
@@ -44,18 +42,23 @@ export default function ProPage() {
             <li>• <b>CSV export</b> of comparisons</li>
             <li>• Priority updates to fee rules</li>
           </ul>
-          <div className="mt-6">
-            {/* Placeholder CTA for now; we’ll wire real checkout later */}
+          <div className="mt-6 flex flex-wrap gap-3">
+            {/* Placeholder checkout */}
             <a
               href="#"
               onClick={(e) => {
                 e.preventDefault();
                 alert('Checkout coming soon ✨');
               }}
-              className="inline-flex items-center rounded-full border border-purple-600/60 px-4 py-2 text-sm hover:bg-white/5"
+              className={PILL_CLASS}
             >
               Get Pro
             </a>
+
+            {/* NEW: link to Reverse calculator stub */}
+            <Link href="/pro/target" className={PILL_CLASS}>
+              Reverse calculator (beta)
+            </Link>
           </div>
           <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
             Looking for early access? Email <a href="mailto:hello@example.com" className="underline">hello@example.com</a>
