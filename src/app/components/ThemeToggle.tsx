@@ -1,24 +1,26 @@
-// src/app/components/ThemeToggle.tsx
-"use client";
+'use client';
 
-import React from "react";
-import { actionButtonClass } from "./HeaderActions";
+import React from 'react';
+import { PILL_CLASS } from '../../lib/ui';
 
 type Props = {
   isLight: boolean;
   onToggle: () => void;
+  className?: string;
 };
 
-export default function ThemeToggle({ isLight, onToggle }: Props) {
+export default function ThemeToggle({ isLight, onToggle, className }: Props) {
+  const label = isLight ? 'Dark mode' : 'Light mode';
+
   return (
     <button
       type="button"
       onClick={onToggle}
+      className={`${PILL_CLASS} ${className ?? ''}`}
       aria-label="Toggle theme"
-      title={isLight ? "Switch to Dark mode" : "Switch to Light mode"}
-      className={actionButtonClass}
+      title="Toggle theme"
     >
-      {isLight ? "Dark mode" : "Light mode"}
+      {label}
     </button>
   );
 }

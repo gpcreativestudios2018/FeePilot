@@ -245,13 +245,16 @@ export default function Page() {
   const panelBorder = isLight ? 'border-purple-800/70' : 'border-purple-600/40';
   const controlBorder = isLight ? 'border-purple-800/70' : 'border-purple-600/50';
 
-  // unified pill style (matches other header buttons)
+  // unified pill style (kept in each component where needed)
   const pillButton = cx(
     'rounded-full px-4 py-2 text-base select-none border',
     isLight
       ? 'border-purple-800/70 text-black hover:bg-purple-50'
       : 'border-purple-600/50 text-white hover:bg-white/5'
   );
+
+  // Show dev tools (like "Clear saved data") in dev OR when the preview flag is set
+  const showDevTools = process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_DEV_TOOLS === '1';
 
   return (
     <div className={cx('min-h-dvh', pageBgText)}>
@@ -268,8 +271,8 @@ export default function Page() {
             <ResetButton onClick={resetInputs} />
             {/* Share / Copy / Pro */}
             <HeaderActions onShare={shareLink} onCopy={copyLink} />
-            {/* Dev-only helper after Pro */}
-            {process.env.NODE_ENV !== 'production' && (
+            {/* Dev-only helper after Pro (shows in dev or when preview flag is set) */}
+            {showDevTools && (
               <ClearSavedDataButton
                 keys={[THEME_KEY, INPUTS_KEY]}
                 className={pillButton}

@@ -1,19 +1,18 @@
-// src/app/components/ResetButton.tsx
-"use client";
+'use client';
 
-import React from "react";
-import { actionButtonClass } from "./HeaderActions";
+import React from 'react';
+import { PILL_CLASS } from '../../lib/ui';
 
-type Props = { onClick: () => void };
+type Props = { onClick: () => void; className?: string };
 
-export default function ResetButton({ onClick }: Props) {
+export default function ResetButton({ onClick, className }: Props) {
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label="Reset inputs to defaults"
+      className={`${PILL_CLASS} ${className ?? ''}`}
+      aria-label="Reset inputs"
       title="Reset inputs"
-      className={actionButtonClass}
     >
       Reset
     </button>
