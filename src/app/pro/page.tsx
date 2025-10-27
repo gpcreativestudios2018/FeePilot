@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import type { Route } from 'next';
 import { PILL_CLASS } from '@/lib/ui';
 
 export default function ProPage() {
@@ -26,7 +27,7 @@ export default function ProPage() {
             <li>• Comparison table</li>
           </ul>
           <div className="mt-6">
-            <Link href="/" className={PILL_CLASS}>
+            <Link href={"/" as Route} className={PILL_CLASS}>
               Continue free
             </Link>
           </div>
@@ -38,7 +39,7 @@ export default function ProPage() {
           <div className="mt-2 text-3xl font-semibold">$5/mo</div>
           <ul className="mt-4 space-y-2 text-sm">
             <li>• <b>Custom fee rules</b> per platform</li>
-            <li>• <b>Saved presets</b> (name & quick-load)</li>
+            <li>• <b>Saved presets</b> (name &amp; quick-load)</li>
             <li>• <b>CSV export</b> of comparisons</li>
             <li>• Priority updates to fee rules</li>
           </ul>
@@ -55,8 +56,8 @@ export default function ProPage() {
               Get Pro
             </a>
 
-            {/* NEW: link to Reverse calculator stub */}
-            <Link href="/pro/target" className={PILL_CLASS}>
+            {/* Link to Reverse calculator stub (typed route) */}
+            <Link href={"/pro/target" as Route} className={PILL_CLASS}>
               Reverse calculator (beta)
             </Link>
           </div>
