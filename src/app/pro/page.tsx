@@ -2,6 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
+import type { Route } from 'next';
+import { PILL_CLASS } from '@/lib/ui';
 
 export default function ProPage() {
   return (
@@ -25,10 +27,7 @@ export default function ProPage() {
             <li>• Comparison table</li>
           </ul>
           <div className="mt-6">
-            <Link
-              href="/"
-              className="inline-flex items-center rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
-            >
+            <Link href={'/' as Route} className={PILL_CLASS}>
               Continue free
             </Link>
           </div>
@@ -40,22 +39,26 @@ export default function ProPage() {
           <div className="mt-2 text-3xl font-semibold">$5/mo</div>
           <ul className="mt-4 space-y-2 text-sm">
             <li>• <b>Custom fee rules</b> per platform</li>
-            <li>• <b>Saved presets</b> (name & quick-load)</li>
+            <li>• <b>Saved presets</b> (name &amp; quick-load)</li>
             <li>• <b>CSV export</b> of comparisons</li>
             <li>• Priority updates to fee rules</li>
           </ul>
-          <div className="mt-6">
-            {/* Placeholder CTA for now; we’ll wire real checkout later */}
+          <div className="mt-6 flex flex-wrap gap-3">
             <a
               href="#"
               onClick={(e) => {
                 e.preventDefault();
                 alert('Checkout coming soon ✨');
               }}
-              className="inline-flex items-center rounded-full border border-purple-600/60 px-4 py-2 text-sm hover:bg-white/5"
+              className={PILL_CLASS}
             >
               Get Pro
             </a>
+
+            {/* Link to Reverse calculator stub (typed route) */}
+            <Link href={'/pro/target' as Route} className={PILL_CLASS}>
+              Reverse calculator (beta)
+            </Link>
           </div>
           <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
             Looking for early access? Email <a href="mailto:hello@example.com" className="underline">hello@example.com</a>
