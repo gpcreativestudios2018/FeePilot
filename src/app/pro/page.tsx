@@ -27,7 +27,7 @@ export default function ProPage() {
             <li>• Comparison table</li>
           </ul>
           <div className="mt-6">
-            <Link href={"/" as Route} className={PILL_CLASS}>
+            <Link href={'/' as Route} className={PILL_CLASS}>
               Continue free
             </Link>
           </div>
@@ -44,7 +44,6 @@ export default function ProPage() {
             <li>• Priority updates to fee rules</li>
           </ul>
           <div className="mt-6 flex flex-wrap gap-3">
-            {/* Placeholder checkout */}
             <a
               href="#"
               onClick={(e) => {
@@ -57,7 +56,7 @@ export default function ProPage() {
             </a>
 
             {/* Link to Reverse calculator stub (typed route) */}
-            <Link href={"/pro/target" as Route} className={PILL_CLASS}>
+            <Link href={'/pro/target' as Route} className={PILL_CLASS}>
               Reverse calculator (beta)
             </Link>
           </div>
