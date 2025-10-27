@@ -3,6 +3,7 @@
 import React from 'react';
 import CurrentInputs from './CurrentInputs';
 import { cx, formatMoneyWithParens } from '../../lib/format';
+import { downloadCsv } from '@/lib/csv';
 import type { PlatformKey } from '@/data/fees';
 
 type InputsLite = {
@@ -44,18 +45,70 @@ export default function ComparisonTableSection({
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
+  const onExportCsv = React.useCallback(() => {
+    const rows: (string | number)[][] = [
+      [
+        'Platform',
+        'Marketplace fee',
+        'Payment fee',
+        'Listing fee',
+        'Total fees',
+        'Profit',
+        'Margin %',
+      ],
+      ...comparison.map((r) => [
+        r.platform[0].toUpperCase() + r.platform.slice(1),
+        r.marketplaceFee.toFixed(2),
+        r.paymentFee.toFixed(2),
+        r.listingFee.toFixed(2),
+        r.totalFees.toFixed(2),
+        r.profit.toFixed(2),
+        r.marginPct.toFixed(1),
+      ]),
+    ];
+
+    const nameBits = [
+      `price-${inputs.price}`,
+      `shipCharge-${inputs.shipCharge}`,
+      `shipCost-${inputs.shipCost}`,
+      `cogs-${inputs.cogs}`,
+      `disc-${inputs.discountPct}`,
+      `tax-${inputs.tax}`,
+    ].join('_');
+
+    downloadCsv(`feepilot_comparison_${nameBits}.csv`, rows);
+  }, [comparison, inputs]);
+
   return (
     <section className={cx('rounded-2xl p-4 sm:p-6', className)}>
-      <CurrentInputs
-        isLight={isLight}
-        className="mb-4"
-        price={inputs.price}
-        shipCharge={inputs.shipCharge}
-        shipCost={inputs.shipCost}
-        cogs={inputs.cogs}
-        discountPct={inputs.discountPct}
-        tax={inputs.tax}
-      />
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <CurrentInputs
+          isLight={isLight}
+          className="mb-0"
+          price={inputs.price}
+          shipCharge={inputs.shipCharge}
+          shipCost={inputs.shipCost}
+          cogs={inputs.cogs}
+          discountPct={inputs.discountPct}
+          tax={inputs.tax}
+        />
+
+        {/* Export CSV */}
+        <button
+          type="button"
+          onClick={onExportCsv}
+          className={cx(
+            'shrink-0 rounded-full px-4 py-2 text-base select-none border',
+            isLight
+              ? 'border-purple-800/70 text-black hover:bg-purple-50'
+              : 'border-purple-600/50 text-white hover:bg-white/5'
+          )}
+          aria-label="Export comparison as CSV"
+          title="Export comparison as CSV"
+        >
+          Export CSV
+        </button>
+      </div>
 
       <div className="overflow-x-auto rounded-2xl">
         <table className={cx('w-full text-sm', bodyText)}>
