@@ -11,7 +11,7 @@ import {
   type FeeRule,
 } from '@/data/fees';
 
-// --- helpers (mirrors main calculator math) ---
+// --- helpers (mirror main calculator math) ---
 const pct = (n: number) => n / 100;
 const clamp = (n: number, min = 0, max = 1_000_000) => Math.min(max, Math.max(min, n));
 const parseNum = (v: string) => {
@@ -38,7 +38,8 @@ function computeAtPrice(opts: {
   const { rule, price, discountPct, shipCharge, shipCost, cogs } = opts;
 
   const discounted = clamp(price * (1 - pct(discountPct)), 0);
-  const base = discounted + shipCharge; // many platforms fee on (price - discount) + buyer shipping
+  // Many platforms fee on (discounted price + buyer shipping)
+  const base = discounted + shipCharge;
 
   const marketplaceFee =
     clamp(base * pct(rule.marketplacePct ?? 0)) + (rule.marketplaceFixed ?? 0);
@@ -119,7 +120,7 @@ export default function ReverseCalcPage() {
   const [cogs, setCogs] = React.useState<string>('12');
   const [shipCost, setShipCost] = React.useState<string>('5');
 
-  // NEW: price components that affect fees
+  // price components that affect fees
   const [discountPct, setDiscountPct] = React.useState<string>('0');
   const [shipCharge, setShipCharge] = React.useState<string>('0'); // what buyer pays
 
@@ -224,7 +225,7 @@ export default function ReverseCalcPage() {
             />
           </label>
 
-          {/* NEW: Discount (%) */}
+          {/* Discount (%) */}
           <label className="block">
             <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Discount (%)</span>
             <input
@@ -237,7 +238,7 @@ export default function ReverseCalcPage() {
             />
           </label>
 
-          {/* NEW: Shipping charged to buyer ($) */}
+          {/* Shipping charged to buyer ($) */}
           <label className="block">
             <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Shipping charged to buyer ($)</span>
             <input
@@ -252,7 +253,7 @@ export default function ReverseCalcPage() {
         </div>
 
         <div className="mt-5 flex gap-3">
-          <Link href={"/pro" as Route} className={PILL_CLASS}>
+          <Link href={'/pro' as Route} className={PILL_CLASS}>
             Back to Pro
           </Link>
         </div>
