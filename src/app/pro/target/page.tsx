@@ -11,7 +11,7 @@ import {
   type FeeRule,
 } from '@/data/fees';
 
-// --- small helpers (mirrors your main page math) ---
+// --- helpers (mirror main calculator math) ---
 const pct = (n: number) => n / 100;
 const clamp = (n: number, min = 0, max = 1_000_000) => Math.min(max, Math.max(min, n));
 const parseNum = (v: string) => {
@@ -27,9 +27,18 @@ const getListingFixed = (rule: FeeRule): number => {
 };
 
 // Given a price P and inputs, compute profit & margin with platform rule
-function computeAtPrice(rule: FeeRule, price: number, shipCost: number, cogs: number) {
-  const discounted = clamp(price, 0); // no discount fields (v1)
-  const shipCharge = 0;               // buyer pays 0 (v1)
+function computeAtPrice(opts: {
+  rule: FeeRule;
+  price: number;
+  discountPct: number;
+  shipCharge: number; // what buyer pays
+  shipCost: number;   // your cost
+  cogs: number;
+}) {
+  const { rule, price, discountPct, shipCharge, shipCost, cogs } = opts;
+
+  const discounted = clamp(price * (1 - pct(discountPct)), 0);
+  // Many platforms fee on (discounted price + buyer shipping)
   const base = discounted + shipCharge;
 
   const marketplaceFee =
@@ -54,12 +63,14 @@ function computeAtPrice(rule: FeeRule, price: number, shipCost: number, cogs: nu
 // Binary-search a price to hit a target profit OR margin
 function solvePrice(opts: {
   rule: FeeRule;
-  targetProfit?: number;   // dollars
-  targetMarginPct?: number; // %
+  targetProfit?: number;     // dollars
+  targetMarginPct?: number;  // %
+  discountPct: number;
+  shipCharge: number;
   shipCost: number;
   cogs: number;
 }) {
-  const { rule, targetProfit, targetMarginPct, shipCost, cogs } = opts;
+  const { rule, targetProfit, targetMarginPct, discountPct, shipCharge, shipCost, cogs } = opts;
 
   // prefer profit if both provided; else margin if provided; else null
   const mode: 'profit' | 'margin' | null =
@@ -69,42 +80,49 @@ function solvePrice(opts: {
       ? 'margin'
       : null;
 
-  if (!mode) return { price: 0, result: computeAtPrice(rule, 0, shipCost, cogs) };
+  if (!mode) {
+    const result = computeAtPrice({ rule, price: 0, discountPct, shipCharge, shipCost, cogs });
+    return { price: 0, result };
+  }
 
   let lo = 0;
   let hi = 1_000_000;
-  // Quick expand hi if needed (rare)
+
+  // Coarse then fine search
   for (let i = 0; i < 20; i++) {
     const mid = (lo + hi) / 2;
-    const r = computeAtPrice(rule, mid, shipCost, cogs);
+    const r = computeAtPrice({ rule, price: mid, discountPct, shipCharge, shipCost, cogs });
     const val = mode === 'profit' ? r.profit : r.marginPct;
-    if (val < (mode === 'profit' ? (targetProfit as number) : (targetMarginPct as number))) {
-      lo = mid;
-    } else {
-      hi = mid;
-    }
+    const tgt = mode === 'profit' ? (targetProfit as number) : (targetMarginPct as number);
+    if (val < tgt) lo = mid; else hi = mid;
   }
-  // Refine
   for (let i = 0; i < 60; i++) {
     const mid = (lo + hi) / 2;
-    const r = computeAtPrice(rule, mid, shipCost, cogs);
+    const r = computeAtPrice({ rule, price: mid, discountPct, shipCharge, shipCost, cogs });
     const val = mode === 'profit' ? r.profit : r.marginPct;
-    if (val < (mode === 'profit' ? (targetProfit as number) : (targetMarginPct as number))) {
-      lo = mid;
-    } else {
-      hi = mid;
-    }
+    const tgt = mode === 'profit' ? (targetProfit as number) : (targetMarginPct as number);
+    if (val < tgt) lo = mid; else hi = mid;
   }
+
   const price = Math.max(0, hi);
-  return { price, result: computeAtPrice(rule, price, shipCost, cogs) };
+  const result = computeAtPrice({ rule, price, discountPct, shipCharge, shipCost, cogs });
+  return { price, result };
 }
 
 export default function ReverseCalcPage() {
   const [platform, setPlatform] = React.useState<PlatformKey>(PLATFORMS[0] ?? ('mercari' as PlatformKey));
+
+  // targets
   const [targetProfit, setTargetProfit] = React.useState<string>('25');
   const [targetMarginPct, setTargetMarginPct] = React.useState<string>('0'); // leave 0 to ignore
+
+  // costs
   const [cogs, setCogs] = React.useState<string>('12');
   const [shipCost, setShipCost] = React.useState<string>('5');
+
+  // price components that affect fees
+  const [discountPct, setDiscountPct] = React.useState<string>('0');
+  const [shipCharge, setShipCharge] = React.useState<string>('0'); // what buyer pays
 
   const rule = RULES[platform];
 
@@ -115,11 +133,13 @@ export default function ReverseCalcPage() {
       rule,
       targetProfit: tProfit > 0 ? tProfit : undefined,
       targetMarginPct: tMargin > 0 ? tMargin : undefined,
+      discountPct: clamp(parseNum(discountPct), 0, 100),
+      shipCharge: clamp(parseNum(shipCharge), 0),
       shipCost: clamp(parseNum(shipCost), 0),
       cogs: clamp(parseNum(cogs), 0),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [platform, targetProfit, targetMarginPct, cogs, shipCost]);
+  }, [platform, targetProfit, targetMarginPct, discountPct, shipCharge, cogs, shipCost]);
 
   const { price, result } = solved;
 
@@ -128,12 +148,13 @@ export default function ReverseCalcPage() {
       <header className="mb-6">
         <h1 className="text-3xl font-semibold tracking-tight">Reverse calculator</h1>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Enter a target profit <i>or</i> margin — we’ll suggest a listing price (v1 assumes no discount and buyer pays $0 shipping).
+          Set a target profit <i>or</i> margin — we’ll suggest the listing price.
         </p>
       </header>
 
       <section className="rounded-2xl border border-purple-600/40 p-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Platform */}
           <label className="block">
             <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Platform</span>
             <select
@@ -149,6 +170,7 @@ export default function ReverseCalcPage() {
             </select>
           </label>
 
+          {/* Target profit */}
           <label className="block">
             <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Target profit ($)</span>
             <input
@@ -164,6 +186,7 @@ export default function ReverseCalcPage() {
             </span>
           </label>
 
+          {/* Target margin */}
           <label className="block">
             <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Target margin (%)</span>
             <input
@@ -176,6 +199,7 @@ export default function ReverseCalcPage() {
             />
           </label>
 
+          {/* COGS */}
           <label className="block">
             <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">COGS ($)</span>
             <input
@@ -188,6 +212,7 @@ export default function ReverseCalcPage() {
             />
           </label>
 
+          {/* Your shipping cost */}
           <label className="block">
             <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Your shipping cost ($)</span>
             <input
@@ -199,10 +224,36 @@ export default function ReverseCalcPage() {
               onChange={(e) => setShipCost(e.target.value)}
             />
           </label>
+
+          {/* Discount (%) */}
+          <label className="block">
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Discount (%)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="e.g. 10"
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              value={discountPct}
+              onChange={(e) => setDiscountPct(e.target.value)}
+            />
+          </label>
+
+          {/* Shipping charged to buyer ($) */}
+          <label className="block">
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Shipping charged to buyer ($)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="e.g. 8"
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              value={shipCharge}
+              onChange={(e) => setShipCharge(e.target.value)}
+            />
+          </label>
         </div>
 
         <div className="mt-5 flex gap-3">
-          <Link href={"/pro" as Route} className={PILL_CLASS}>
+          <Link href={'/pro' as Route} className={PILL_CLASS}>
             Back to Pro
           </Link>
         </div>
@@ -249,7 +300,7 @@ export default function ReverseCalcPage() {
         </div>
 
         <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-          v1 assumptions: no discount, buyer pays $0 shipping. Next: add discount & buyer shipping.
+          Now considers discount and buyer-paid shipping (both affect fee base).
         </p>
       </section>
     </main>
