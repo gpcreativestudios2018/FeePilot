@@ -3,6 +3,7 @@
 import React from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { PILL_CLASS } from '@/lib/ui';
 import {
   PLATFORMS,
@@ -10,6 +11,7 @@ import {
   type PlatformKey,
   type FeeRule,
 } from '@/data/fees';
+import SolvingForPill from './SolvingForPill';
 
 // --- helpers (mirror main calculator math) ---
 const pct = (n: number) => n / 100;
@@ -110,6 +112,8 @@ function solvePrice(opts: {
 }
 
 export default function ReverseCalcPage() {
+  const searchParams = useSearchParams();
+
   const [platform, setPlatform] = React.useState<PlatformKey>(PLATFORMS[0] ?? ('mercari' as PlatformKey));
 
   // targets
@@ -123,6 +127,41 @@ export default function ReverseCalcPage() {
   // price components that affect fees
   const [discountPct, setDiscountPct] = React.useState<string>('0');
   const [shipCharge, setShipCharge] = React.useState<string>('0'); // what buyer pays
+
+  // feedback
+  const [copied, setCopied] = React.useState(false);
+
+  // Initialize from query params (one-time on mount)
+  React.useEffect(() => {
+    // suppress SSR mismatch by only reading on client
+    try {
+      const p = searchParams.get('platform');
+      if (p && PLATFORMS.includes(p as PlatformKey)) {
+        setPlatform(p as PlatformKey);
+      }
+
+      const tp = searchParams.get('targetProfit');
+      if (tp !== null && tp !== undefined) setTargetProfit(tp);
+
+      const tm = searchParams.get('targetMarginPct');
+      if (tm !== null && tm !== undefined) setTargetMarginPct(tm);
+
+      const cg = searchParams.get('cogs');
+      if (cg !== null && cg !== undefined) setCogs(cg);
+
+      const sc = searchParams.get('shipCost');
+      if (sc !== null && sc !== undefined) setShipCost(sc);
+
+      const dc = searchParams.get('discountPct');
+      if (dc !== null && dc !== undefined) setDiscountPct(dc);
+
+      const sb = searchParams.get('shipCharge');
+      if (sb !== null && sb !== undefined) setShipCharge(sb);
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const rule = RULES[platform];
 
@@ -143,6 +182,43 @@ export default function ReverseCalcPage() {
 
   const { price, result } = solved;
 
+  const handleCopyLink = async () => {
+    try {
+      const url = new URL(window.location.href);
+      url.pathname = '/pro/target';
+      const params = url.searchParams;
+
+      params.set('platform', platform);
+      params.set('targetProfit', targetProfit);
+      params.set('targetMarginPct', targetMarginPct);
+      params.set('cogs', cogs);
+      params.set('shipCost', shipCost);
+      params.set('discountPct', discountPct);
+      params.set('shipCharge', shipCharge);
+
+      // ensure stable ordering for nicer diffing (optional)
+      const ordered = new URL(url.origin + url.pathname);
+      ([
+        ['platform', platform],
+        ['targetProfit', targetProfit],
+        ['targetMarginPct', targetMarginPct],
+        ['cogs', cogs],
+        ['shipCost', shipCost],
+        ['discountPct', discountPct],
+        ['shipCharge', shipCharge],
+      ] as const).forEach(([k, v]) => ordered.searchParams.set(k, v));
+
+      await navigator.clipboard.writeText(ordered.toString());
+      setCopied(true);
+      // clear after a short delay
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // fallback
+      setCopied(false);
+      alert('Unable to copy link');
+    }
+  };
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <header className="mb-6">
@@ -150,6 +226,22 @@ export default function ReverseCalcPage() {
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           Set a target profit <i>or</i> margin — we’ll suggest the listing price.
         </p>
+        <div className="mt-3 flex items-center gap-3">
+          <SolvingForPill />
+          {copied ? (
+            <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
+              Permalink copied!
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className={PILL_CLASS}
+            >
+              Copy share link
+            </button>
+          )}
+        </div>
       </header>
 
       <section className="rounded-2xl border border-purple-600/40 p-6">
