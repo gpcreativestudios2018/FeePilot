@@ -12,13 +12,70 @@ import {
   type FeeRule,
 } from '@/data/fees';
 import SolvingForPill from './SolvingForPill';
-import type { TargetPreset, NamedTargetPreset } from '@/lib/presets';
-import {
-  listPresets,
-  savePreset,
-  loadPreset,
-  deletePreset,
-} from '@/lib/presets';
+
+// ------- Inline presets helpers (avoid '@/lib/presets' import) -------
+type TargetPreset = {
+  platform: string;
+  targetProfit: string;
+  targetMarginPct: string;
+  cogs: string;
+  shipCost: string;
+  discountPct: string;
+  shipCharge: string;
+};
+type NamedTargetPreset = { name: string; updatedAt: number; data: TargetPreset };
+
+const PRESET_NS = 'feepilot:target-presets';
+
+function safeParse<T>(raw: string | null): T | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+function readAll(): NamedTargetPreset[] {
+  if (typeof window === 'undefined') return [];
+  const raw = localStorage.getItem(PRESET_NS);
+  const arr = safeParse<NamedTargetPreset[]>(raw);
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .filter((it) => it && typeof it.name === 'string' && typeof it.updatedAt === 'number' && it.data)
+    .slice(0, 200);
+}
+function writeAll(list: NamedTargetPreset[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(PRESET_NS, JSON.stringify(list));
+  } catch {
+    /* ignore */
+  }
+}
+function listPresets(): NamedTargetPreset[] {
+  return readAll().sort((a, b) => b.updatedAt - a.updatedAt);
+}
+function savePreset(name: string, data: TargetPreset): void {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  const all = readAll();
+  const idx = all.findIndex((p) => p.name.toLowerCase() === trimmed.toLowerCase());
+  const item: NamedTargetPreset = { name: trimmed, updatedAt: Date.now(), data };
+  if (idx >= 0) all[idx] = item; else all.push(item);
+  writeAll(all);
+}
+function loadPreset(name: string): TargetPreset | null {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  const found = readAll().find((p) => p.name.toLowerCase() === trimmed.toLowerCase());
+  return found ? found.data : null;
+}
+function deletePreset(name: string): void {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  writeAll(readAll().filter((p) => p.name.toLowerCase() !== trimmed.toLowerCase()));
+}
+// --------------------------------------------------------------------
 
 // --- helpers (mirror main calculator math) ---
 const pct = (n: number) => n / 100;
@@ -35,19 +92,16 @@ const getListingFixed = (rule: FeeRule): number => {
   return anyRule.listingFixed ?? 0;
 };
 
-// Given a price P and inputs, compute profit & margin with platform rule
 function computeAtPrice(opts: {
   rule: FeeRule;
   price: number;
   discountPct: number;
-  shipCharge: number; // what buyer pays
-  shipCost: number;   // your cost
+  shipCharge: number;
+  shipCost: number;
   cogs: number;
 }) {
   const { rule, price, discountPct, shipCharge, shipCost, cogs } = opts;
-
   const discounted = clamp(price * (1 - pct(discountPct)), 0);
-  // Many platforms fee on (discounted price + buyer shipping)
   const base = discounted + shipCharge;
 
   const marketplaceFee =
@@ -58,22 +112,16 @@ function computeAtPrice(opts: {
 
   const totalFees = marketplaceFee + paymentFee + listingFee;
 
-  const profit =
-    discounted + shipCharge -
-    totalFees -
-    shipCost -
-    cogs;
-
+  const profit = discounted + shipCharge - totalFees - shipCost - cogs;
   const marginPct = discounted > 0 ? (profit / discounted) * 100 : 0;
 
   return { discounted, marketplaceFee, paymentFee, listingFee, totalFees, profit, marginPct };
 }
 
-// Binary-search a price to hit a target profit OR margin
 function solvePrice(opts: {
   rule: FeeRule;
-  targetProfit?: number;     // dollars
-  targetMarginPct?: number;  // %
+  targetProfit?: number;
+  targetMarginPct?: number;
   discountPct: number;
   shipCharge: number;
   shipCost: number;
@@ -81,7 +129,6 @@ function solvePrice(opts: {
 }) {
   const { rule, targetProfit, targetMarginPct, discountPct, shipCharge, shipCost, cogs } = opts;
 
-  // prefer profit if both provided; else margin if provided; else null
   const mode: 'profit' | 'margin' | null =
     Number.isFinite(targetProfit as number) && (targetProfit as number) > 0
       ? 'profit'
@@ -97,7 +144,6 @@ function solvePrice(opts: {
   let lo = 0;
   let hi = 1_000_000;
 
-  // Coarse then fine search
   for (let i = 0; i < 20; i++) {
     const mid = (lo + hi) / 2;
     const r = computeAtPrice({ rule, price: mid, discountPct, shipCharge, shipCost, cogs });
@@ -118,10 +164,7 @@ function solvePrice(opts: {
   return { price, result };
 }
 
-/**
- * Small helper component that reads query params in a Suspense boundary,
- * then calls back once to initialize state in the parent page.
- */
+/** Suspense-safe query param init */
 function QueryParamsInitializer(props: {
   onInit: (vals: {
     platform?: PlatformKey;
@@ -134,7 +177,6 @@ function QueryParamsInitializer(props: {
   }) => void;
 }) {
   const searchParams = useSearchParams();
-
   React.useEffect(() => {
     const vals: {
       platform?: PlatformKey;
@@ -145,36 +187,21 @@ function QueryParamsInitializer(props: {
       discountPct?: string;
       shipCharge?: string;
     } = {};
-
     const p = searchParams.get('platform');
     if (p && PLATFORMS.includes(p as PlatformKey)) vals.platform = p as PlatformKey;
-
-    const tp = searchParams.get('targetProfit');
-    if (tp !== null && tp !== undefined) vals.targetProfit = tp;
-
-    const tm = searchParams.get('targetMarginPct');
-    if (tm !== null && tm !== undefined) vals.targetMarginPct = tm;
-
-    const cg = searchParams.get('cogs');
-    if (cg !== null && cg !== undefined) vals.cogs = cg;
-
-    const sc = searchParams.get('shipCost');
-    if (sc !== null && sc !== undefined) vals.shipCost = sc;
-
-    const dc = searchParams.get('discountPct');
-    if (dc !== null && dc !== undefined) vals.discountPct = dc;
-
-    const sb = searchParams.get('shipCharge');
-    if (sb !== null && sb !== undefined) vals.shipCharge = sb;
-
+    const tp = searchParams.get('targetProfit');      if (tp != null) vals.targetProfit = tp;
+    const tm = searchParams.get('targetMarginPct');  if (tm != null) vals.targetMarginPct = tm;
+    const cg = searchParams.get('cogs');             if (cg != null) vals.cogs = cg;
+    const sc = searchParams.get('shipCost');         if (sc != null) vals.shipCost = sc;
+    const dc = searchParams.get('discountPct');      if (dc != null) vals.discountPct = dc;
+    const sb = searchParams.get('shipCharge');       if (sb != null) vals.shipCharge = sb;
     props.onInit(vals);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
   return null;
 }
 
-/** Inlined presets controls (so we don’t rely on a separate import). */
+/** Inlined presets controls */
 function LocalPresetsControls(props: {
   getState: () => TargetPreset;
   applyPreset: (p: TargetPreset) => void;
@@ -186,24 +213,16 @@ function LocalPresetsControls(props: {
   const [flash, setFlash] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(() => {
-    try {
-      const items = listPresets();
-      setPresets(items);
-      if (items.length > 0 && !selected) {
-        setSelected(items[0].name);
-      }
-    } catch {
-      // ignore
-    }
+    const items = listPresets();
+    setPresets(items);
+    if (items.length > 0 && !selected) setSelected(items[0].name);
   }, [selected]);
 
   React.useEffect(() => {
     refresh();
     const onFocus = () => refresh();
     if (typeof window !== 'undefined') window.addEventListener('focus', onFocus);
-    return () => {
-      if (typeof window !== 'undefined') window.removeEventListener('focus', onFocus);
-    };
+    return () => window.removeEventListener('focus', onFocus);
   }, [refresh]);
 
   const endFlashSoon = () => window.setTimeout(() => setFlash(null), 1500);
@@ -312,23 +331,14 @@ function LocalPresetsControls(props: {
 
 export default function ReverseCalcPage() {
   const [platform, setPlatform] = React.useState<PlatformKey>(PLATFORMS[0] ?? ('mercari' as PlatformKey));
-
-  // targets
   const [targetProfit, setTargetProfit] = React.useState<string>('25');
-  const [targetMarginPct, setTargetMarginPct] = React.useState<string>('0'); // leave 0 to ignore
-
-  // costs
+  const [targetMarginPct, setTargetMarginPct] = React.useState<string>('0');
   const [cogs, setCogs] = React.useState<string>('12');
   const [shipCost, setShipCost] = React.useState<string>('5');
-
-  // price components that affect fees
   const [discountPct, setDiscountPct] = React.useState<string>('0');
-  const [shipCharge, setShipCharge] = React.useState<string>('0'); // what buyer pays
-
-  // feedback
+  const [shipCharge, setShipCharge] = React.useState<string>('0');
   const [copied, setCopied] = React.useState(false);
 
-  // One-time init from query params (via Suspense-safe child)
   const handleInitFromQuery = React.useCallback((vals: {
     platform?: PlatformKey;
     targetProfit?: string;
@@ -380,7 +390,6 @@ export default function ReverseCalcPage() {
         ['discountPct', discountPct],
         ['shipCharge', shipCharge],
       ] as const).forEach(([k, v]) => ordered.searchParams.set(k, v));
-
       await navigator.clipboard.writeText(ordered.toString());
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
@@ -390,23 +399,12 @@ export default function ReverseCalcPage() {
     }
   };
 
-  // ---- Presets wiring ----
   const getPresetState = React.useCallback((): TargetPreset => {
-    return {
-      platform,
-      targetProfit,
-      targetMarginPct,
-      cogs,
-      shipCost,
-      discountPct,
-      shipCharge,
-    };
+    return { platform, targetProfit, targetMarginPct, cogs, shipCost, discountPct, shipCharge };
   }, [platform, targetProfit, targetMarginPct, cogs, shipCost, discountPct, shipCharge]);
 
   const applyPreset = React.useCallback((p: TargetPreset) => {
-    if (p.platform && PLATFORMS.includes(p.platform as PlatformKey)) {
-      setPlatform(p.platform as PlatformKey);
-    }
+    if (p.platform && PLATFORMS.includes(p.platform as PlatformKey)) setPlatform(p.platform as PlatformKey);
     if (typeof p.targetProfit === 'string') setTargetProfit(p.targetProfit);
     if (typeof p.targetMarginPct === 'string') setTargetMarginPct(p.targetMarginPct);
     if (typeof p.cogs === 'string') setCogs(p.cogs);
@@ -417,7 +415,6 @@ export default function ReverseCalcPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
-      {/* Suspense boundary for useSearchParams() usage */}
       <React.Suspense fallback={null}>
         <QueryParamsInitializer onInit={handleInitFromQuery} />
       </React.Suspense>
@@ -550,7 +547,10 @@ export default function ReverseCalcPage() {
 
       {/* Presets */}
       <section className="mt-6">
-        <LocalPresetsControls getState={getPresetState} applyPreset={applyPreset} />
+        <LocalPresetsControls
+          getState={getPresetState}
+          applyPreset={applyPreset}
+        />
       </section>
 
       {/* Results */}
