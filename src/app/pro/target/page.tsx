@@ -111,9 +111,63 @@ function solvePrice(opts: {
   return { price, result };
 }
 
-export default function ReverseCalcPage() {
+/**
+ * Small helper component that reads query params in a Suspense boundary,
+ * then calls back once to initialize state in the parent page.
+ */
+function QueryParamsInitializer(props: {
+  onInit: (vals: {
+    platform?: PlatformKey;
+    targetProfit?: string;
+    targetMarginPct?: string;
+    cogs?: string;
+    shipCost?: string;
+    discountPct?: string;
+    shipCharge?: string;
+  }) => void;
+}) {
   const searchParams = useSearchParams();
 
+  React.useEffect(() => {
+    const vals: {
+      platform?: PlatformKey;
+      targetProfit?: string;
+      targetMarginPct?: string;
+      cogs?: string;
+      shipCost?: string;
+      discountPct?: string;
+      shipCharge?: string;
+    } = {};
+
+    const p = searchParams.get('platform');
+    if (p && PLATFORMS.includes(p as PlatformKey)) vals.platform = p as PlatformKey;
+
+    const tp = searchParams.get('targetProfit');
+    if (tp !== null && tp !== undefined) vals.targetProfit = tp;
+
+    const tm = searchParams.get('targetMarginPct');
+    if (tm !== null && tm !== undefined) vals.targetMarginPct = tm;
+
+    const cg = searchParams.get('cogs');
+    if (cg !== null && cg !== undefined) vals.cogs = cg;
+
+    const sc = searchParams.get('shipCost');
+    if (sc !== null && sc !== undefined) vals.shipCost = sc;
+
+    const dc = searchParams.get('discountPct');
+    if (dc !== null && dc !== undefined) vals.discountPct = dc;
+
+    const sb = searchParams.get('shipCharge');
+    if (sb !== null && sb !== undefined) vals.shipCharge = sb;
+
+    props.onInit(vals);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return null;
+}
+
+export default function ReverseCalcPage() {
   const [platform, setPlatform] = React.useState<PlatformKey>(PLATFORMS[0] ?? ('mercari' as PlatformKey));
 
   // targets
@@ -131,36 +185,23 @@ export default function ReverseCalcPage() {
   // feedback
   const [copied, setCopied] = React.useState(false);
 
-  // Initialize from query params (one-time on mount)
-  React.useEffect(() => {
-    // suppress SSR mismatch by only reading on client
-    try {
-      const p = searchParams.get('platform');
-      if (p && PLATFORMS.includes(p as PlatformKey)) {
-        setPlatform(p as PlatformKey);
-      }
-
-      const tp = searchParams.get('targetProfit');
-      if (tp !== null && tp !== undefined) setTargetProfit(tp);
-
-      const tm = searchParams.get('targetMarginPct');
-      if (tm !== null && tm !== undefined) setTargetMarginPct(tm);
-
-      const cg = searchParams.get('cogs');
-      if (cg !== null && cg !== undefined) setCogs(cg);
-
-      const sc = searchParams.get('shipCost');
-      if (sc !== null && sc !== undefined) setShipCost(sc);
-
-      const dc = searchParams.get('discountPct');
-      if (dc !== null && dc !== undefined) setDiscountPct(dc);
-
-      const sb = searchParams.get('shipCharge');
-      if (sb !== null && sb !== undefined) setShipCharge(sb);
-    } catch {
-      // ignore
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // One-time init from query params (via Suspense-safe child)
+  const handleInitFromQuery = React.useCallback((vals: {
+    platform?: PlatformKey;
+    targetProfit?: string;
+    targetMarginPct?: string;
+    cogs?: string;
+    shipCost?: string;
+    discountPct?: string;
+    shipCharge?: string;
+  }) => {
+    if (vals.platform) setPlatform(vals.platform);
+    if (vals.targetProfit !== undefined) setTargetProfit(vals.targetProfit);
+    if (vals.targetMarginPct !== undefined) setTargetMarginPct(vals.targetMarginPct);
+    if (vals.cogs !== undefined) setCogs(vals.cogs);
+    if (vals.shipCost !== undefined) setShipCost(vals.shipCost);
+    if (vals.discountPct !== undefined) setDiscountPct(vals.discountPct);
+    if (vals.shipCharge !== undefined) setShipCharge(vals.shipCharge);
   }, []);
 
   const rule = RULES[platform];
@@ -186,17 +227,6 @@ export default function ReverseCalcPage() {
     try {
       const url = new URL(window.location.href);
       url.pathname = '/pro/target';
-      const params = url.searchParams;
-
-      params.set('platform', platform);
-      params.set('targetProfit', targetProfit);
-      params.set('targetMarginPct', targetMarginPct);
-      params.set('cogs', cogs);
-      params.set('shipCost', shipCost);
-      params.set('discountPct', discountPct);
-      params.set('shipCharge', shipCharge);
-
-      // ensure stable ordering for nicer diffing (optional)
       const ordered = new URL(url.origin + url.pathname);
       ([
         ['platform', platform],
@@ -210,10 +240,8 @@ export default function ReverseCalcPage() {
 
       await navigator.clipboard.writeText(ordered.toString());
       setCopied(true);
-      // clear after a short delay
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
-      // fallback
       setCopied(false);
       alert('Unable to copy link');
     }
@@ -221,6 +249,11 @@ export default function ReverseCalcPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
+      {/* Suspense boundary for useSearchParams() usage */}
+      <React.Suspense fallback={null}>
+        <QueryParamsInitializer onInit={handleInitFromQuery} />
+      </React.Suspense>
+
       <header className="mb-6">
         <h1 className="text-3xl font-semibold tracking-tight">Reverse calculator</h1>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
