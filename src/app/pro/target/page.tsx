@@ -3,6 +3,7 @@
 import React from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { PILL_CLASS } from '@/lib/ui';
 import {
   PLATFORMS,
@@ -10,6 +11,71 @@ import {
   type PlatformKey,
   type FeeRule,
 } from '@/data/fees';
+import SolvingForPill from './SolvingForPill';
+
+// ------- Inline presets helpers (avoid '@/lib/presets' import) -------
+type TargetPreset = {
+  platform: string;
+  targetProfit: string;
+  targetMarginPct: string;
+  cogs: string;
+  shipCost: string;
+  discountPct: string;
+  shipCharge: string;
+};
+type NamedTargetPreset = { name: string; updatedAt: number; data: TargetPreset };
+
+const PRESET_NS = 'feepilot:target-presets';
+
+function safeParse<T>(raw: string | null): T | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+function readAll(): NamedTargetPreset[] {
+  if (typeof window === 'undefined') return [];
+  const raw = localStorage.getItem(PRESET_NS);
+  const arr = safeParse<NamedTargetPreset[]>(raw);
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .filter((it) => it && typeof it.name === 'string' && typeof it.updatedAt === 'number' && it.data)
+    .slice(0, 200);
+}
+function writeAll(list: NamedTargetPreset[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(PRESET_NS, JSON.stringify(list));
+  } catch {
+    /* ignore */
+  }
+}
+function listPresets(): NamedTargetPreset[] {
+  return readAll().sort((a, b) => b.updatedAt - a.updatedAt);
+}
+function savePreset(name: string, data: TargetPreset): void {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  const all = readAll();
+  const idx = all.findIndex((p) => p.name.toLowerCase() === trimmed.toLowerCase());
+  const item: NamedTargetPreset = { name: trimmed, updatedAt: Date.now(), data };
+  if (idx >= 0) all[idx] = item; else all.push(item);
+  writeAll(all);
+}
+function loadPreset(name: string): TargetPreset | null {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  const found = readAll().find((p) => p.name.toLowerCase() === trimmed.toLowerCase());
+  return found ? found.data : null;
+}
+function deletePreset(name: string): void {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  writeAll(readAll().filter((p) => p.name.toLowerCase() !== trimmed.toLowerCase()));
+}
+// --------------------------------------------------------------------
 
 // --- helpers (mirror main calculator math) ---
 const pct = (n: number) => n / 100;
@@ -26,19 +92,16 @@ const getListingFixed = (rule: FeeRule): number => {
   return anyRule.listingFixed ?? 0;
 };
 
-// Given a price P and inputs, compute profit & margin with platform rule
 function computeAtPrice(opts: {
   rule: FeeRule;
   price: number;
   discountPct: number;
-  shipCharge: number; // what buyer pays
-  shipCost: number;   // your cost
+  shipCharge: number;
+  shipCost: number;
   cogs: number;
 }) {
   const { rule, price, discountPct, shipCharge, shipCost, cogs } = opts;
-
   const discounted = clamp(price * (1 - pct(discountPct)), 0);
-  // Many platforms fee on (discounted price + buyer shipping)
   const base = discounted + shipCharge;
 
   const marketplaceFee =
@@ -49,22 +112,16 @@ function computeAtPrice(opts: {
 
   const totalFees = marketplaceFee + paymentFee + listingFee;
 
-  const profit =
-    discounted + shipCharge -
-    totalFees -
-    shipCost -
-    cogs;
-
+  const profit = discounted + shipCharge - totalFees - shipCost - cogs;
   const marginPct = discounted > 0 ? (profit / discounted) * 100 : 0;
 
   return { discounted, marketplaceFee, paymentFee, listingFee, totalFees, profit, marginPct };
 }
 
-// Binary-search a price to hit a target profit OR margin
 function solvePrice(opts: {
   rule: FeeRule;
-  targetProfit?: number;     // dollars
-  targetMarginPct?: number;  // %
+  targetProfit?: number;
+  targetMarginPct?: number;
   discountPct: number;
   shipCharge: number;
   shipCost: number;
@@ -72,7 +129,6 @@ function solvePrice(opts: {
 }) {
   const { rule, targetProfit, targetMarginPct, discountPct, shipCharge, shipCost, cogs } = opts;
 
-  // prefer profit if both provided; else margin if provided; else null
   const mode: 'profit' | 'margin' | null =
     Number.isFinite(targetProfit as number) && (targetProfit as number) > 0
       ? 'profit'
@@ -88,7 +144,6 @@ function solvePrice(opts: {
   let lo = 0;
   let hi = 1_000_000;
 
-  // Coarse then fine search
   for (let i = 0; i < 20; i++) {
     const mid = (lo + hi) / 2;
     const r = computeAtPrice({ rule, price: mid, discountPct, shipCharge, shipCost, cogs });
@@ -109,20 +164,198 @@ function solvePrice(opts: {
   return { price, result };
 }
 
+/** Suspense-safe query param init */
+function QueryParamsInitializer(props: {
+  onInit: (vals: {
+    platform?: PlatformKey;
+    targetProfit?: string;
+    targetMarginPct?: string;
+    cogs?: string;
+    shipCost?: string;
+    discountPct?: string;
+    shipCharge?: string;
+  }) => void;
+}) {
+  const searchParams = useSearchParams();
+  React.useEffect(() => {
+    const vals: {
+      platform?: PlatformKey;
+      targetProfit?: string;
+      targetMarginPct?: string;
+      cogs?: string;
+      shipCost?: string;
+      discountPct?: string;
+      shipCharge?: string;
+    } = {};
+    const p = searchParams.get('platform');
+    if (p && PLATFORMS.includes(p as PlatformKey)) vals.platform = p as PlatformKey;
+    const tp = searchParams.get('targetProfit');      if (tp != null) vals.targetProfit = tp;
+    const tm = searchParams.get('targetMarginPct');  if (tm != null) vals.targetMarginPct = tm;
+    const cg = searchParams.get('cogs');             if (cg != null) vals.cogs = cg;
+    const sc = searchParams.get('shipCost');         if (sc != null) vals.shipCost = sc;
+    const dc = searchParams.get('discountPct');      if (dc != null) vals.discountPct = dc;
+    const sb = searchParams.get('shipCharge');       if (sb != null) vals.shipCharge = sb;
+    props.onInit(vals);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
+/** Inlined presets controls */
+function LocalPresetsControls(props: {
+  getState: () => TargetPreset;
+  applyPreset: (p: TargetPreset) => void;
+}) {
+  const { getState, applyPreset } = props;
+  const [name, setName] = React.useState('');
+  const [presets, setPresets] = React.useState<NamedTargetPreset[]>([]);
+  const [selected, setSelected] = React.useState<string>('');
+  const [flash, setFlash] = React.useState<string | null>(null);
+
+  const refresh = React.useCallback(() => {
+    const items = listPresets();
+    setPresets(items);
+    if (items.length > 0 && !selected) setSelected(items[0].name);
+  }, [selected]);
+
+  React.useEffect(() => {
+    refresh();
+    const onFocus = () => refresh();
+    if (typeof window !== 'undefined') window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [refresh]);
+
+  const endFlashSoon = () => window.setTimeout(() => setFlash(null), 1500);
+
+  const onSave = () => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setFlash('Enter a name first');
+      endFlashSoon();
+      return;
+    }
+    savePreset(trimmed, getState());
+    setName('');
+    setSelected(trimmed);
+    refresh();
+    setFlash('Preset saved');
+    endFlashSoon();
+  };
+
+  const onLoad = () => {
+    const trimmed = selected.trim();
+    if (!trimmed) return;
+    const data = loadPreset(trimmed);
+    if (data) {
+      applyPreset(data);
+      setFlash(`Loaded “${trimmed}”`);
+      endFlashSoon();
+    }
+  };
+
+  const onDelete = () => {
+    const trimmed = selected.trim();
+    if (!trimmed) return;
+    deletePreset(trimmed);
+    setFlash(`Deleted “${trimmed}”`);
+    endFlashSoon();
+    setSelected('');
+    refresh();
+  };
+
+  return (
+    <div className="rounded-2xl border border-purple-600/30 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <label className="flex-1">
+          <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Preset name</span>
+          <input
+            type="text"
+            placeholder="e.g. Mercari 30% margin"
+            className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </label>
+        <button type="button" className={PILL_CLASS} onClick={onSave}>
+          Save preset
+        </button>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <label className="flex-1">
+          <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Saved presets</span>
+          <select
+            className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+          >
+            {presets.length === 0 ? (
+              <option value="" className="text-black dark:text-white bg-white dark:bg-black">
+                (none yet)
+              </option>
+            ) : null}
+            {presets.map((p) => (
+              <option key={p.name} value={p.name} className="text-black dark:text-white bg-white dark:bg-black">
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="flex gap-2">
+          <button type="button" className={PILL_CLASS} onClick={onLoad} disabled={!selected}>
+            Load
+          </button>
+          <button
+            type="button"
+            className={PILL_CLASS}
+            onClick={onDelete}
+            disabled={!selected}
+            aria-label="Delete selected preset"
+            title="Delete selected preset"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+
+      {flash ? (
+        <div className="mt-3">
+          <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
+            {flash}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function ReverseCalcPage() {
   const [platform, setPlatform] = React.useState<PlatformKey>(PLATFORMS[0] ?? ('mercari' as PlatformKey));
-
-  // targets
   const [targetProfit, setTargetProfit] = React.useState<string>('25');
-  const [targetMarginPct, setTargetMarginPct] = React.useState<string>('0'); // leave 0 to ignore
-
-  // costs
+  const [targetMarginPct, setTargetMarginPct] = React.useState<string>('0');
   const [cogs, setCogs] = React.useState<string>('12');
   const [shipCost, setShipCost] = React.useState<string>('5');
-
-  // price components that affect fees
   const [discountPct, setDiscountPct] = React.useState<string>('0');
-  const [shipCharge, setShipCharge] = React.useState<string>('0'); // what buyer pays
+  const [shipCharge, setShipCharge] = React.useState<string>('0');
+  const [copied, setCopied] = React.useState(false);
+
+  const handleInitFromQuery = React.useCallback((vals: {
+    platform?: PlatformKey;
+    targetProfit?: string;
+    targetMarginPct?: string;
+    cogs?: string;
+    shipCost?: string;
+    discountPct?: string;
+    shipCharge?: string;
+  }) => {
+    if (vals.platform) setPlatform(vals.platform);
+    if (vals.targetProfit !== undefined) setTargetProfit(vals.targetProfit);
+    if (vals.targetMarginPct !== undefined) setTargetMarginPct(vals.targetMarginPct);
+    if (vals.cogs !== undefined) setCogs(vals.cogs);
+    if (vals.shipCost !== undefined) setShipCost(vals.shipCost);
+    if (vals.discountPct !== undefined) setDiscountPct(vals.discountPct);
+    if (vals.shipCharge !== undefined) setShipCharge(vals.shipCharge);
+  }, []);
 
   const rule = RULES[platform];
 
@@ -143,13 +376,66 @@ export default function ReverseCalcPage() {
 
   const { price, result } = solved;
 
+  const handleCopyLink = async () => {
+    try {
+      const url = new URL(window.location.href);
+      url.pathname = '/pro/target';
+      const ordered = new URL(url.origin + url.pathname);
+      ([
+        ['platform', platform],
+        ['targetProfit', targetProfit],
+        ['targetMarginPct', targetMarginPct],
+        ['cogs', cogs],
+        ['shipCost', shipCost],
+        ['discountPct', discountPct],
+        ['shipCharge', shipCharge],
+      ] as const).forEach(([k, v]) => ordered.searchParams.set(k, v));
+      await navigator.clipboard.writeText(ordered.toString());
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+      alert('Unable to copy link');
+    }
+  };
+
+  const getPresetState = React.useCallback((): TargetPreset => {
+    return { platform, targetProfit, targetMarginPct, cogs, shipCost, discountPct, shipCharge };
+  }, [platform, targetProfit, targetMarginPct, cogs, shipCost, discountPct, shipCharge]);
+
+  const applyPreset = React.useCallback((p: TargetPreset) => {
+    if (p.platform && PLATFORMS.includes(p.platform as PlatformKey)) setPlatform(p.platform as PlatformKey);
+    if (typeof p.targetProfit === 'string') setTargetProfit(p.targetProfit);
+    if (typeof p.targetMarginPct === 'string') setTargetMarginPct(p.targetMarginPct);
+    if (typeof p.cogs === 'string') setCogs(p.cogs);
+    if (typeof p.shipCost === 'string') setShipCost(p.shipCost);
+    if (typeof p.discountPct === 'string') setDiscountPct(p.discountPct);
+    if (typeof p.shipCharge === 'string') setShipCharge(p.shipCharge);
+  }, []);
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
+      <React.Suspense fallback={null}>
+        <QueryParamsInitializer onInit={handleInitFromQuery} />
+      </React.Suspense>
+
       <header className="mb-6">
         <h1 className="text-3xl font-semibold tracking-tight">Reverse calculator</h1>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           Set a target profit <i>or</i> margin — we’ll suggest the listing price.
         </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <SolvingForPill />
+          {copied ? (
+            <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
+              Permalink copied!
+            </span>
+          ) : (
+            <button type="button" onClick={handleCopyLink} className={PILL_CLASS}>
+              Copy share link
+            </button>
+          )}
+        </div>
       </header>
 
       <section className="rounded-2xl border border-purple-600/40 p-6">
@@ -257,6 +543,14 @@ export default function ReverseCalcPage() {
             Back to Pro
           </Link>
         </div>
+      </section>
+
+      {/* Presets */}
+      <section className="mt-6">
+        <LocalPresetsControls
+          getState={getPresetState}
+          applyPreset={applyPreset}
+        />
       </section>
 
       {/* Results */}
