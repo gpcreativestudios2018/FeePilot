@@ -12,8 +12,13 @@ import {
   type FeeRule,
 } from '@/data/fees';
 import SolvingForPill from './SolvingForPill';
-import PresetsControls from './PresetsControls';
-import type { TargetPreset } from '@/lib/presets';
+import type { TargetPreset, NamedTargetPreset } from '@/lib/presets';
+import {
+  listPresets,
+  savePreset,
+  loadPreset,
+  deletePreset,
+} from '@/lib/presets';
 
 // --- helpers (mirror main calculator math) ---
 const pct = (n: number) => n / 100;
@@ -169,6 +174,142 @@ function QueryParamsInitializer(props: {
   return null;
 }
 
+/** Inlined presets controls (so we don’t rely on a separate import). */
+function LocalPresetsControls(props: {
+  getState: () => TargetPreset;
+  applyPreset: (p: TargetPreset) => void;
+}) {
+  const { getState, applyPreset } = props;
+  const [name, setName] = React.useState('');
+  const [presets, setPresets] = React.useState<NamedTargetPreset[]>([]);
+  const [selected, setSelected] = React.useState<string>('');
+  const [flash, setFlash] = React.useState<string | null>(null);
+
+  const refresh = React.useCallback(() => {
+    try {
+      const items = listPresets();
+      setPresets(items);
+      if (items.length > 0 && !selected) {
+        setSelected(items[0].name);
+      }
+    } catch {
+      // ignore
+    }
+  }, [selected]);
+
+  React.useEffect(() => {
+    refresh();
+    const onFocus = () => refresh();
+    if (typeof window !== 'undefined') window.addEventListener('focus', onFocus);
+    return () => {
+      if (typeof window !== 'undefined') window.removeEventListener('focus', onFocus);
+    };
+  }, [refresh]);
+
+  const endFlashSoon = () => window.setTimeout(() => setFlash(null), 1500);
+
+  const onSave = () => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setFlash('Enter a name first');
+      endFlashSoon();
+      return;
+    }
+    savePreset(trimmed, getState());
+    setName('');
+    setSelected(trimmed);
+    refresh();
+    setFlash('Preset saved');
+    endFlashSoon();
+  };
+
+  const onLoad = () => {
+    const trimmed = selected.trim();
+    if (!trimmed) return;
+    const data = loadPreset(trimmed);
+    if (data) {
+      applyPreset(data);
+      setFlash(`Loaded “${trimmed}”`);
+      endFlashSoon();
+    }
+  };
+
+  const onDelete = () => {
+    const trimmed = selected.trim();
+    if (!trimmed) return;
+    deletePreset(trimmed);
+    setFlash(`Deleted “${trimmed}”`);
+    endFlashSoon();
+    setSelected('');
+    refresh();
+  };
+
+  return (
+    <div className="rounded-2xl border border-purple-600/30 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <label className="flex-1">
+          <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Preset name</span>
+          <input
+            type="text"
+            placeholder="e.g. Mercari 30% margin"
+            className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </label>
+        <button type="button" className={PILL_CLASS} onClick={onSave}>
+          Save preset
+        </button>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <label className="flex-1">
+          <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Saved presets</span>
+          <select
+            className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+          >
+            {presets.length === 0 ? (
+              <option value="" className="text-black dark:text-white bg-white dark:bg-black">
+                (none yet)
+              </option>
+            ) : null}
+            {presets.map((p) => (
+              <option key={p.name} value={p.name} className="text-black dark:text-white bg-white dark:bg-black">
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="flex gap-2">
+          <button type="button" className={PILL_CLASS} onClick={onLoad} disabled={!selected}>
+            Load
+          </button>
+          <button
+            type="button"
+            className={PILL_CLASS}
+            onClick={onDelete}
+            disabled={!selected}
+            aria-label="Delete selected preset"
+            title="Delete selected preset"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+
+      {flash ? (
+        <div className="mt-3">
+          <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
+            {flash}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function ReverseCalcPage() {
   const [platform, setPlatform] = React.useState<PlatformKey>(PLATFORMS[0] ?? ('mercari' as PlatformKey));
 
@@ -293,11 +434,7 @@ export default function ReverseCalcPage() {
               Permalink copied!
             </span>
           ) : (
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className={PILL_CLASS}
-            >
+            <button type="button" onClick={handleCopyLink} className={PILL_CLASS}>
               Copy share link
             </button>
           )}
@@ -413,7 +550,7 @@ export default function ReverseCalcPage() {
 
       {/* Presets */}
       <section className="mt-6">
-        <PresetsControls getState={getPresetState} applyPreset={applyPreset} />
+        <LocalPresetsControls getState={getPresetState} applyPreset={applyPreset} />
       </section>
 
       {/* Results */}
