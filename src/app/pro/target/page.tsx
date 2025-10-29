@@ -12,6 +12,8 @@ import {
   type FeeRule,
 } from '@/data/fees';
 import SolvingForPill from './SolvingForPill';
+import PresetsControls from './PresetsControls';
+import type { TargetPreset } from '@/lib/presets';
 
 // --- helpers (mirror main calculator math) ---
 const pct = (n: number) => n / 100;
@@ -247,6 +249,31 @@ export default function ReverseCalcPage() {
     }
   };
 
+  // ---- Presets wiring ----
+  const getPresetState = React.useCallback((): TargetPreset => {
+    return {
+      platform,
+      targetProfit,
+      targetMarginPct,
+      cogs,
+      shipCost,
+      discountPct,
+      shipCharge,
+    };
+  }, [platform, targetProfit, targetMarginPct, cogs, shipCost, discountPct, shipCharge]);
+
+  const applyPreset = React.useCallback((p: TargetPreset) => {
+    if (p.platform && PLATFORMS.includes(p.platform as PlatformKey)) {
+      setPlatform(p.platform as PlatformKey);
+    }
+    if (typeof p.targetProfit === 'string') setTargetProfit(p.targetProfit);
+    if (typeof p.targetMarginPct === 'string') setTargetMarginPct(p.targetMarginPct);
+    if (typeof p.cogs === 'string') setCogs(p.cogs);
+    if (typeof p.shipCost === 'string') setShipCost(p.shipCost);
+    if (typeof p.discountPct === 'string') setDiscountPct(p.discountPct);
+    if (typeof p.shipCharge === 'string') setShipCharge(p.shipCharge);
+  }, []);
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       {/* Suspense boundary for useSearchParams() usage */}
@@ -259,7 +286,7 @@ export default function ReverseCalcPage() {
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           Set a target profit <i>or</i> margin — we’ll suggest the listing price.
         </p>
-        <div className="mt-3 flex items-center gap-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <SolvingForPill />
           {copied ? (
             <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
@@ -382,6 +409,11 @@ export default function ReverseCalcPage() {
             Back to Pro
           </Link>
         </div>
+      </section>
+
+      {/* Presets */}
+      <section className="mt-6">
+        <PresetsControls getState={getPresetState} applyPreset={applyPreset} />
       </section>
 
       {/* Results */}
