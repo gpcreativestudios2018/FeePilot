@@ -425,7 +425,11 @@ export default function ReverseCalcPage() {
           Set a target profit <i>or</i> margin — we’ll suggest the listing price.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <SolvingForPill />
+          {/* ✅ pass current inputs so the pill reflects state */}
+          <SolvingForPill
+            targetProfit={parseNum(targetProfit)}
+            targetMargin={parseNum(targetMarginPct)}
+          />
           {copied ? (
             <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
               Permalink copied!
