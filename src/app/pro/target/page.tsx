@@ -200,12 +200,12 @@ function QueryParamsInitializer(props: {
     const dc = searchParams.get('discountPct');      if (dc != null) vals.discountPct = dc;
     const sb = searchParams.get('shipCharge');       if (sb != null) vals.shipCharge = sb;
     props.onInit(vals);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return null;
 }
 
-/** Inlined presets controls (now with dev-only clear) */
+/** Inlined presets controls (with dev-only Clear) */
 function LocalPresetsControls(props: {
   getState: () => TargetPreset;
   applyPreset: (p: TargetPreset) => void;
@@ -366,12 +366,16 @@ export default function ReverseCalcPage() {
   const [copied, setCopied] = React.useState(false);
   const [copiedMsg, setCopiedMsg] = React.useState('Permalink copied!');
 
-  // ✅ Dev-tools flag: build-time env OR runtime query "devtools=1" on non-prod host
-  const DEV_TOOLS =
-    process.env.NEXT_PUBLIC_DEV_TOOLS === 'true' ||
-    (typeof window !== 'undefined' &&
-      window.location.hostname !== 'fee-pilot.vercel.app' &&
-      new URLSearchParams(window.location.search).get('devtools') === '1');
+  // ✅ Robust dev-tools flag: start with build-time env, then enable via query (?devtools=1) after mount on non-prod host
+  const [showDevTools, setShowDevTools] = React.useState(
+    process.env.NEXT_PUBLIC_DEV_TOOLS === 'true'
+  );
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isProdHost = window.location.hostname === 'fee-pilot.vercel.app';
+    const wantsDev = new URLSearchParams(window.location.search).get('devtools') === '1';
+    if (!isProdHost && wantsDev) setShowDevTools(true);
+  }, []);
 
   const handleInitFromQuery = React.useCallback((vals: {
     platform?: PlatformKey;
@@ -439,6 +443,7 @@ export default function ReverseCalcPage() {
     }
   };
 
+  // auto-name like: "Mercari – Profit $25" or "Mercari – Margin 30%"
   const generatePresetName = React.useCallback(() => {
     const nicePlatform = platform[0].toUpperCase() + platform.slice(1);
     const tProfit = parseNum(targetProfit);
@@ -626,7 +631,7 @@ export default function ReverseCalcPage() {
         <LocalPresetsControls
           getState={getPresetState}
           applyPreset={applyPreset}
-          devTools={DEV_TOOLS}
+          devTools={showDevTools}
         />
       </section>
 
