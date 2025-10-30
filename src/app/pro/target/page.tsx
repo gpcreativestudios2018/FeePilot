@@ -200,7 +200,7 @@ function QueryParamsInitializer(props: {
     const dc = searchParams.get('discountPct');      if (dc != null) vals.discountPct = dc;
     const sb = searchParams.get('shipCharge');       if (sb != null) vals.shipCharge = sb;
     props.onInit(vals);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return null;
 }
@@ -366,8 +366,12 @@ export default function ReverseCalcPage() {
   const [copied, setCopied] = React.useState(false);
   const [copiedMsg, setCopiedMsg] = React.useState('Permalink copied!');
 
-  // dev-only control, read at build time
-  const DEV_TOOLS = process.env.NEXT_PUBLIC_DEV_TOOLS === 'true';
+  // ✅ Dev-tools flag: build-time env OR runtime query "devtools=1" on non-prod host
+  const DEV_TOOLS =
+    process.env.NEXT_PUBLIC_DEV_TOOLS === 'true' ||
+    (typeof window !== 'undefined' &&
+      window.location.hostname !== 'fee-pilot.vercel.app' &&
+      new URLSearchParams(window.location.search).get('devtools') === '1');
 
   const handleInitFromQuery = React.useCallback((vals: {
     platform?: PlatformKey;
@@ -435,7 +439,6 @@ export default function ReverseCalcPage() {
     }
   };
 
-  // auto-name like: "Mercari – Profit $25" or "Mercari – Margin 30%"
   const generatePresetName = React.useCallback(() => {
     const nicePlatform = platform[0].toUpperCase() + platform.slice(1);
     const tProfit = parseNum(targetProfit);
