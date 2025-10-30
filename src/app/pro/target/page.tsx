@@ -337,7 +337,10 @@ export default function ReverseCalcPage() {
   const [shipCost, setShipCost] = React.useState<string>('5');
   const [discountPct, setDiscountPct] = React.useState<string>('0');
   const [shipCharge, setShipCharge] = React.useState<string>('0');
+
+  // feedback for link copy & save+copy
   const [copied, setCopied] = React.useState(false);
+  const [copiedMsg, setCopiedMsg] = React.useState('Permalink copied!');
 
   const handleInitFromQuery = React.useCallback((vals: {
     platform?: PlatformKey;
@@ -376,21 +379,27 @@ export default function ReverseCalcPage() {
 
   const { price, result } = solved;
 
+  const buildShareUrl = () => {
+    const url = new URL(window.location.href);
+    url.pathname = '/pro/target';
+    const ordered = new URL(url.origin + url.pathname);
+    ([
+      ['platform', platform],
+      ['targetProfit', targetProfit],
+      ['targetMarginPct', targetMarginPct],
+      ['cogs', cogs],
+      ['shipCost', shipCost],
+      ['discountPct', discountPct],
+      ['shipCharge', shipCharge],
+    ] as const).forEach(([k, v]) => ordered.searchParams.set(k, v));
+    return ordered.toString();
+  };
+
   const handleCopyLink = async () => {
     try {
-      const url = new URL(window.location.href);
-      url.pathname = '/pro/target';
-      const ordered = new URL(url.origin + url.pathname);
-      ([
-        ['platform', platform],
-        ['targetProfit', targetProfit],
-        ['targetMarginPct', targetMarginPct],
-        ['cogs', cogs],
-        ['shipCost', shipCost],
-        ['discountPct', discountPct],
-        ['shipCharge', shipCharge],
-      ] as const).forEach(([k, v]) => ordered.searchParams.set(k, v));
-      await navigator.clipboard.writeText(ordered.toString());
+      const link = buildShareUrl();
+      await navigator.clipboard.writeText(link);
+      setCopiedMsg('Permalink copied!');
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -398,6 +407,20 @@ export default function ReverseCalcPage() {
       alert('Unable to copy link');
     }
   };
+
+  // auto-name like: "Mercari – Profit $25" or "Mercari – Margin 30%"
+  const generatePresetName = React.useCallback(() => {
+    const nicePlatform = platform[0].toUpperCase() + platform.slice(1);
+    const tProfit = parseNum(targetProfit);
+    const tMargin = parseNum(targetMarginPct);
+    const primary =
+      tProfit > 0
+        ? `Profit $${tProfit}`
+        : tMargin > 0
+        ? `Margin ${tMargin}%`
+        : `Defaults`;
+    return `${nicePlatform} – ${primary}`;
+  }, [platform, targetProfit, targetMarginPct]);
 
   const getPresetState = React.useCallback((): TargetPreset => {
     return { platform, targetProfit, targetMarginPct, cogs, shipCost, discountPct, shipCharge };
@@ -413,6 +436,21 @@ export default function ReverseCalcPage() {
     if (typeof p.shipCharge === 'string') setShipCharge(p.shipCharge);
   }, []);
 
+  const handleSaveAndCopyLink = async () => {
+    try {
+      const name = generatePresetName();
+      savePreset(name, getPresetState());
+      const link = buildShareUrl();
+      await navigator.clipboard.writeText(link);
+      setCopiedMsg(`Saved “${name}” & copied link!`);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+      alert('Unable to save or copy link');
+    }
+  };
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <React.Suspense fallback={null}>
@@ -425,19 +463,23 @@ export default function ReverseCalcPage() {
           Set a target profit <i>or</i> margin — we’ll suggest the listing price.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          {/* ✅ pass current inputs so the pill reflects state */}
           <SolvingForPill
             targetProfit={parseNum(targetProfit)}
             targetMargin={parseNum(targetMarginPct)}
           />
           {copied ? (
             <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
-              Permalink copied!
+              {copiedMsg}
             </span>
           ) : (
-            <button type="button" onClick={handleCopyLink} className={PILL_CLASS}>
-              Copy share link
-            </button>
+            <>
+              <button type="button" onClick={handleCopyLink} className={PILL_CLASS}>
+                Copy share link
+              </button>
+              <button type="button" onClick={handleSaveAndCopyLink} className={PILL_CLASS}>
+                Save & copy link
+              </button>
+            </>
           )}
         </div>
       </header>
