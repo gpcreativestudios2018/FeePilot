@@ -75,6 +75,10 @@ function deletePreset(name: string): void {
   if (!trimmed) return;
   writeAll(readAll().filter((p) => p.name.toLowerCase() !== trimmed.toLowerCase()));
 }
+function clearAllPresets(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(PRESET_NS);
+}
 // --------------------------------------------------------------------
 
 // --- helpers (mirror main calculator math) ---
@@ -201,12 +205,13 @@ function QueryParamsInitializer(props: {
   return null;
 }
 
-/** Inlined presets controls */
+/** Inlined presets controls (with dev-only Clear) */
 function LocalPresetsControls(props: {
   getState: () => TargetPreset;
   applyPreset: (p: TargetPreset) => void;
+  devTools?: boolean;
 }) {
-  const { getState, applyPreset } = props;
+  const { getState, applyPreset, devTools } = props;
   const [name, setName] = React.useState('');
   const [presets, setPresets] = React.useState<NamedTargetPreset[]>([]);
   const [selected, setSelected] = React.useState<string>('');
@@ -263,6 +268,14 @@ function LocalPresetsControls(props: {
     refresh();
   };
 
+  const onClearAll = () => {
+    clearAllPresets();
+    refresh();
+    setSelected('');
+    setFlash('Cleared all presets');
+    endFlashSoon();
+  };
+
   return (
     <div className="rounded-2xl border border-purple-600/30 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -315,6 +328,17 @@ function LocalPresetsControls(props: {
           >
             Delete
           </button>
+          {devTools ? (
+            <button
+              type="button"
+              className={PILL_CLASS}
+              onClick={onClearAll}
+              aria-label="Dev: Clear all presets"
+              title="Dev-only: Clear all local presets"
+            >
+              Dev: Clear presets
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -341,6 +365,17 @@ export default function ReverseCalcPage() {
   // feedback for link copy & save+copy
   const [copied, setCopied] = React.useState(false);
   const [copiedMsg, setCopiedMsg] = React.useState('Permalink copied!');
+
+  // ✅ Robust dev-tools flag: start with build-time env, then enable via query (?devtools=1) after mount on non-prod host
+  const [showDevTools, setShowDevTools] = React.useState(
+    process.env.NEXT_PUBLIC_DEV_TOOLS === 'true'
+  );
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isProdHost = window.location.hostname === 'fee-pilot.vercel.app';
+    const wantsDev = new URLSearchParams(window.location.search).get('devtools') === '1';
+    if (!isProdHost && wantsDev) setShowDevTools(true);
+  }, []);
 
   const handleInitFromQuery = React.useCallback((vals: {
     platform?: PlatformKey;
@@ -596,6 +631,7 @@ export default function ReverseCalcPage() {
         <LocalPresetsControls
           getState={getPresetState}
           applyPreset={applyPreset}
+          devTools={showDevTools}
         />
       </section>
 
