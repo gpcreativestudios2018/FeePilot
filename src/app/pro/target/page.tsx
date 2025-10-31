@@ -366,7 +366,7 @@ export default function ReverseCalcPage() {
   const [copied, setCopied] = React.useState(false);
   const [copiedMsg, setCopiedMsg] = React.useState('Permalink copied!');
 
-  // ✅ Robust dev-tools flag: start with build-time env, then enable via query (?devtools=1) after mount on non-prod host
+  // Robust dev-tools flag
   const [showDevTools, setShowDevTools] = React.useState(
     process.env.NEXT_PUBLIC_DEV_TOOLS === 'true'
   );
@@ -486,6 +486,13 @@ export default function ReverseCalcPage() {
     }
   };
 
+  const solvingForText =
+    parseNum(targetProfit) > 0
+      ? 'Solving for: Profit'
+      : parseNum(targetMarginPct) > 0
+      ? 'Solving for: Margin'
+      : 'Solving for: —';
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <React.Suspense fallback={null}>
@@ -502,6 +509,11 @@ export default function ReverseCalcPage() {
             targetProfit={parseNum(targetProfit)}
             targetMargin={parseNum(targetMarginPct)}
           />
+          {/* NEW: explicit text for clarity & accessibility */}
+          <span className="text-xs text-gray-600 dark:text-gray-300" aria-live="polite" suppressHydrationWarning>
+            {solvingForText}
+          </span>
+
           {copied ? (
             <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
               {copiedMsg}
