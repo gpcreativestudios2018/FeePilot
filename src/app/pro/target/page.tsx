@@ -366,8 +366,9 @@ export default function ReverseCalcPage() {
   const [copied, setCopied] = React.useState(false);
   const [copiedMsg, setCopiedMsg] = React.useState('Permalink copied!');
 
-  // also track copying the price
+  // also track copying the price & breakdown
   const [copiedPrice, setCopiedPrice] = React.useState(false);
+  const [copiedBreakdown, setCopiedBreakdown] = React.useState(false);
 
   // Robust dev-tools flag
   const [showDevTools, setShowDevTools] = React.useState(
@@ -506,9 +507,10 @@ export default function ReverseCalcPage() {
     setShipCharge('0');
     setCopied(false);
     setCopiedPrice(false);
+    setCopiedBreakdown(false);
   };
 
-  // Copy just the computed price (as a plain number with 2 decimals)
+  // Copy just the computed price (e.g. "$42.50")
   const handleCopyPrice = async () => {
     try {
       const formatted = `$${formatMoney(price)}`;
@@ -518,6 +520,54 @@ export default function ReverseCalcPage() {
     } catch {
       setCopiedPrice(false);
       alert('Unable to copy price');
+    }
+  };
+
+  // NEW: Copy a single-line CSV with header for easy spreadsheet paste
+  const handleCopyBreakdownCsv = async () => {
+    // Header order matters for spreadsheets
+    const header = [
+      'Platform',
+      'Price',
+      'Profit',
+      'Margin%',
+      'MarketplaceFee',
+      'PaymentFee',
+      'ListingFee',
+      'TotalFees',
+      'COGS',
+      'ShipCost',
+      'Discount%',
+      'ShipCharge',
+      'TargetProfit',
+      'TargetMargin%'
+    ].join(',');
+
+    const row = [
+      platform,
+      formatMoney(price),
+      formatMoney(result.profit),
+      result.marginPct.toFixed(1),
+      formatMoney(result.marketplaceFee),
+      formatMoney(result.paymentFee),
+      formatMoney(result.listingFee),
+      formatMoney(result.totalFees),
+      cogs,
+      shipCost,
+      discountPct,
+      shipCharge,
+      targetProfit,
+      targetMarginPct
+    ].join(',');
+
+    const csv = `${header}\n${row}`;
+    try {
+      await navigator.clipboard.writeText(csv);
+      setCopiedBreakdown(true);
+      window.setTimeout(() => setCopiedBreakdown(false), 1600);
+    } catch {
+      setCopiedBreakdown(false);
+      alert('Unable to copy breakdown');
     }
   };
 
@@ -692,6 +742,15 @@ export default function ReverseCalcPage() {
           ) : (
             <button type="button" onClick={handleCopyPrice} className={PILL_CLASS} title="Copy suggested price">
               Copy price
+            </button>
+          )}
+          {copiedBreakdown ? (
+            <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
+              Breakdown copied!
+            </span>
+          ) : (
+            <button type="button" onClick={handleCopyBreakdownCsv} className={PILL_CLASS} title="Copy result as CSV">
+              Copy breakdown (CSV)
             </button>
           )}
         </div>
