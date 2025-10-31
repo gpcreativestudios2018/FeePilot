@@ -366,6 +366,9 @@ export default function ReverseCalcPage() {
   const [copied, setCopied] = React.useState(false);
   const [copiedMsg, setCopiedMsg] = React.useState('Permalink copied!');
 
+  // also track copying the price
+  const [copiedPrice, setCopiedPrice] = React.useState(false);
+
   // Robust dev-tools flag
   const [showDevTools, setShowDevTools] = React.useState(
     process.env.NEXT_PUBLIC_DEV_TOOLS === 'true'
@@ -493,7 +496,7 @@ export default function ReverseCalcPage() {
       ? 'Solving for: Margin'
       : 'Solving for: —';
 
-  // NEW: reset inputs to defaults (keeps current platform)
+  // Reset inputs to defaults (keeps current platform)
   const resetInputs = () => {
     setTargetProfit('25');
     setTargetMarginPct('0');
@@ -502,6 +505,20 @@ export default function ReverseCalcPage() {
     setDiscountPct('0');
     setShipCharge('0');
     setCopied(false);
+    setCopiedPrice(false);
+  };
+
+  // Copy just the computed price (as a plain number with 2 decimals)
+  const handleCopyPrice = async () => {
+    try {
+      const formatted = `$${formatMoney(price)}`;
+      await navigator.clipboard.writeText(formatted);
+      setCopiedPrice(true);
+      window.setTimeout(() => setCopiedPrice(false), 1600);
+    } catch {
+      setCopiedPrice(false);
+      alert('Unable to copy price');
+    }
   };
 
   return (
@@ -537,7 +554,6 @@ export default function ReverseCalcPage() {
               <button type="button" onClick={handleSaveAndCopyLink} className={PILL_CLASS}>
                 Save & copy link
               </button>
-              {/* NEW: Reset inputs */}
               <button type="button" onClick={resetInputs} className={PILL_CLASS} title="Reset inputs to defaults">
                 Reset inputs
               </button>
@@ -665,8 +681,19 @@ export default function ReverseCalcPage() {
       {/* Results */}
       <section className="mt-6 rounded-2xl border border-purple-600/30 p-6">
         <div className="text-base font-semibold">Suggested price</div>
-        <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
-          ${formatMoney(price)}
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <div className="text-3xl font-semibold" suppressHydrationWarning>
+            ${formatMoney(price)}
+          </div>
+          {copiedPrice ? (
+            <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
+              Price copied!
+            </span>
+          ) : (
+            <button type="button" onClick={handleCopyPrice} className={PILL_CLASS} title="Copy suggested price">
+              Copy price
+            </button>
+          )}
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
