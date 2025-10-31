@@ -493,6 +493,17 @@ export default function ReverseCalcPage() {
       ? 'Solving for: Margin'
       : 'Solving for: —';
 
+  // NEW: reset inputs to defaults (keeps current platform)
+  const resetInputs = () => {
+    setTargetProfit('25');
+    setTargetMarginPct('0');
+    setCogs('12');
+    setShipCost('5');
+    setDiscountPct('0');
+    setShipCharge('0');
+    setCopied(false);
+  };
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <React.Suspense fallback={null}>
@@ -509,7 +520,7 @@ export default function ReverseCalcPage() {
             targetProfit={parseNum(targetProfit)}
             targetMargin={parseNum(targetMarginPct)}
           />
-          {/* NEW: explicit text for clarity & accessibility */}
+          {/* explicit text for clarity & accessibility */}
           <span className="text-xs text-gray-600 dark:text-gray-300" aria-live="polite" suppressHydrationWarning>
             {solvingForText}
           </span>
@@ -525,6 +536,10 @@ export default function ReverseCalcPage() {
               </button>
               <button type="button" onClick={handleSaveAndCopyLink} className={PILL_CLASS}>
                 Save & copy link
+              </button>
+              {/* NEW: Reset inputs */}
+              <button type="button" onClick={resetInputs} className={PILL_CLASS} title="Reset inputs to defaults">
+                Reset inputs
               </button>
             </>
           )}
