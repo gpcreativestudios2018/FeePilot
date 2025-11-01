@@ -97,7 +97,10 @@ const getListingFixed = (rule: FeeRule): number => {
   return anyRule.listingFixed ?? 0;
 };
 
+// ==== FEE ENGINE ====
+// Given a price P and inputs, compute profit & margin with platform rule
 function computeAtPrice(opts: {
+  platform: PlatformKey;
   rule: FeeRule;
   price: number;
   discountPct: number;
@@ -105,8 +108,27 @@ function computeAtPrice(opts: {
   shipCost: number;
   cogs: number;
 }) {
-  const { rule, price, discountPct, shipCharge, shipCost, cogs } = opts;
+  const { platform, rule, price, discountPct, shipCharge, shipCost, cogs } = opts;
   const discounted = clamp(price * (1 - pct(discountPct)), 0);
+
+  // --- Poshmark (US) override ---
+  // $2.95 flat if discounted < $15, else 20% of discounted.
+  // Payment/listing = $0. Fee base = discounted item price only (exclude buyer-paid shipping).
+  if (platform === 'poshmark') {
+    const marketplaceFee = discounted < 15 ? 2.95 : discounted * 0.20;
+    const paymentFee = 0;
+    const listingFee = 0;
+    const totalFees = marketplaceFee + paymentFee + listingFee;
+
+    // Poshmark: buyer-paid shipping is NOT part of fee base nor item revenue;
+    // profit is discounted - fees - seller shipping cost - COGS.
+    const profit = discounted - totalFees - shipCost - cogs;
+    const marginPct = discounted > 0 ? (profit / discounted) * 100 : 0;
+
+    return { discounted, marketplaceFee, paymentFee, listingFee, totalFees, profit, marginPct };
+  }
+
+  // --- Default behavior (most marketplaces): fee on (discounted + buyer shipping)
   const base = discounted + shipCharge;
 
   const marketplaceFee =
@@ -123,7 +145,9 @@ function computeAtPrice(opts: {
   return { discounted, marketplaceFee, paymentFee, listingFee, totalFees, profit, marginPct };
 }
 
+// Binary-search a price to hit a target profit OR margin
 function solvePrice(opts: {
+  platform: PlatformKey;
   rule: FeeRule;
   targetProfit?: number;
   targetMarginPct?: number;
@@ -132,7 +156,7 @@ function solvePrice(opts: {
   shipCost: number;
   cogs: number;
 }) {
-  const { rule, targetProfit, targetMarginPct, discountPct, shipCharge, shipCost, cogs } = opts;
+  const { platform, rule, targetProfit, targetMarginPct, discountPct, shipCharge, shipCost, cogs } = opts;
 
   const mode: 'profit' | 'margin' | null =
     Number.isFinite(targetProfit as number) && (targetProfit as number) > 0
@@ -142,7 +166,7 @@ function solvePrice(opts: {
       : null;
 
   if (!mode) {
-    const result = computeAtPrice({ rule, price: 0, discountPct, shipCharge, shipCost, cogs });
+    const result = computeAtPrice({ platform, rule, price: 0, discountPct, shipCharge, shipCost, cogs });
     return { price: 0, result };
   }
 
@@ -151,21 +175,21 @@ function solvePrice(opts: {
 
   for (let i = 0; i < 20; i++) {
     const mid = (lo + hi) / 2;
-    const r = computeAtPrice({ rule, price: mid, discountPct, shipCharge, shipCost, cogs });
+    const r = computeAtPrice({ platform, rule, price: mid, discountPct, shipCharge, shipCost, cogs });
     const val = mode === 'profit' ? r.profit : r.marginPct;
     const tgt = mode === 'profit' ? (targetProfit as number) : (targetMarginPct as number);
     if (val < tgt) lo = mid; else hi = mid;
   }
   for (let i = 0; i < 60; i++) {
     const mid = (lo + hi) / 2;
-    const r = computeAtPrice({ rule, price: mid, discountPct, shipCharge, shipCost, cogs });
+    const r = computeAtPrice({ platform, rule, price: mid, discountPct, shipCharge, shipCost, cogs });
     const val = mode === 'profit' ? r.profit : r.marginPct;
     const tgt = mode === 'profit' ? (targetProfit as number) : (targetMarginPct as number);
     if (val < tgt) lo = mid; else hi = mid;
   }
 
   const price = Math.max(0, hi);
-  const result = computeAtPrice({ rule, price, discountPct, shipCharge, shipCost, cogs });
+  const result = computeAtPrice({ platform, rule, price, discountPct, shipCharge, shipCost, cogs });
   return { price, result };
 }
 
@@ -411,6 +435,7 @@ export default function ReverseCalcPage() {
     const tProfit = parseNum(targetProfit);
     const tMargin = parseNum(targetMarginPct);
     return solvePrice({
+      platform,
       rule,
       targetProfit: tProfit > 0 ? tProfit : undefined,
       targetMarginPct: tMargin > 0 ? tMargin : undefined,
@@ -857,7 +882,7 @@ export default function ReverseCalcPage() {
         </div>
 
         <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-          Now considers discount and buyer-paid shipping (both affect fee base).
+          Now considers discount and buyer-paid shipping (both affect fee base). For Poshmark, fees apply to item price only.
         </p>
       </section>
     </main>
