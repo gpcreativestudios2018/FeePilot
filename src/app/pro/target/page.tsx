@@ -362,15 +362,12 @@ export default function ReverseCalcPage() {
   const [discountPct, setDiscountPct] = React.useState<string>('0');
   const [shipCharge, setShipCharge] = React.useState<string>('0');
 
-  // feedback for link copy & save+copy
   const [copied, setCopied] = React.useState(false);
   const [copiedMsg, setCopiedMsg] = React.useState('Permalink copied!');
 
-  // also track copying the price & breakdown
   const [copiedPrice, setCopiedPrice] = React.useState(false);
   const [copiedBreakdown, setCopiedBreakdown] = React.useState(false);
 
-  // Robust dev-tools flag
   const [showDevTools, setShowDevTools] = React.useState(
     process.env.NEXT_PUBLIC_DEV_TOOLS === 'true'
   );
@@ -447,7 +444,6 @@ export default function ReverseCalcPage() {
     }
   };
 
-  // auto-name like: "Mercari – Profit $25" or "Mercari – Margin 30%"
   const generatePresetName = React.useCallback(() => {
     const nicePlatform = platform[0].toUpperCase() + platform.slice(1);
     const tProfit = parseNum(targetProfit);
@@ -497,7 +493,6 @@ export default function ReverseCalcPage() {
       ? 'Solving for: Margin'
       : 'Solving for: —';
 
-  // Reset inputs to defaults (keeps current platform)
   const resetInputs = () => {
     setTargetProfit('25');
     setTargetMarginPct('0');
@@ -510,7 +505,6 @@ export default function ReverseCalcPage() {
     setCopiedBreakdown(false);
   };
 
-  // Copy just the computed price (e.g. "$42.50")
   const handleCopyPrice = async () => {
     try {
       const formatted = `$${formatMoney(price)}`;
@@ -523,52 +517,144 @@ export default function ReverseCalcPage() {
     }
   };
 
-  // NEW: Copy a single-line CSV with header for easy spreadsheet paste
-  const handleCopyBreakdownCsv = async () => {
-    // Header order matters for spreadsheets
-    const header = [
-      'Platform',
-      'Price',
-      'Profit',
-      'Margin%',
-      'MarketplaceFee',
-      'PaymentFee',
-      'ListingFee',
-      'TotalFees',
-      'COGS',
-      'ShipCost',
-      'Discount%',
-      'ShipCharge',
-      'TargetProfit',
-      'TargetMargin%'
-    ].join(',');
-
-    const row = [
+  // CSV header/row (used for file download)
+  const csvHeader = React.useMemo(
+    () =>
+      [
+        'Platform',
+        'Price',
+        'Profit',
+        'Margin%',
+        'MarketplaceFee',
+        'PaymentFee',
+        'ListingFee',
+        'TotalFees',
+        'COGS',
+        'ShipCost',
+        'Discount%',
+        'ShipCharge',
+        'TargetProfit',
+        'TargetMargin%',
+      ].join(','),
+    []
+  );
+  const csvRow = React.useMemo(
+    () =>
+      [
+        platform,
+        formatMoney(price),
+        formatMoney(result.profit),
+        result.marginPct.toFixed(1),
+        formatMoney(result.marketplaceFee),
+        formatMoney(result.paymentFee),
+        formatMoney(result.listingFee),
+        formatMoney(result.totalFees),
+        cogs,
+        shipCost,
+        discountPct,
+        shipCharge,
+        targetProfit,
+        targetMarginPct,
+      ].join(','),
+    [
       platform,
-      formatMoney(price),
-      formatMoney(result.profit),
-      result.marginPct.toFixed(1),
-      formatMoney(result.marketplaceFee),
-      formatMoney(result.paymentFee),
-      formatMoney(result.listingFee),
-      formatMoney(result.totalFees),
+      price,
+      result.profit,
+      result.marginPct,
+      result.marketplaceFee,
+      result.paymentFee,
+      result.listingFee,
+      result.totalFees,
       cogs,
       shipCost,
       discountPct,
       shipCharge,
       targetProfit,
-      targetMarginPct
-    ].join(',');
+      targetMarginPct,
+    ]
+  );
 
-    const csv = `${header}\n${row}`;
+  // TSV header/row (used for clipboard paste → Excel/Sheets)
+  const tsvHeader = React.useMemo(
+    () =>
+      [
+        'Platform',
+        'Price',
+        'Profit',
+        'Margin%',
+        'MarketplaceFee',
+        'PaymentFee',
+        'ListingFee',
+        'TotalFees',
+        'COGS',
+        'ShipCost',
+        'Discount%',
+        'ShipCharge',
+        'TargetProfit',
+        'TargetMargin%',
+      ].join('\t'),
+    []
+  );
+  const tsvRow = React.useMemo(
+    () =>
+      [
+        platform,
+        formatMoney(price),
+        formatMoney(result.profit),
+        result.marginPct.toFixed(1),
+        formatMoney(result.marketplaceFee),
+        formatMoney(result.paymentFee),
+        formatMoney(result.listingFee),
+        formatMoney(result.totalFees),
+        cogs,
+        shipCost,
+        discountPct,
+        shipCharge,
+        targetProfit,
+        targetMarginPct,
+      ].join('\t'),
+    [
+      platform,
+      price,
+      result.profit,
+      result.marginPct,
+      result.marketplaceFee,
+      result.paymentFee,
+      result.listingFee,
+      result.totalFees,
+      cogs,
+      shipCost,
+      discountPct,
+      shipCharge,
+      targetProfit,
+      targetMarginPct,
+    ]
+  );
+
+  const handleCopyBreakdownTsv = async () => {
+    const tsv = `${tsvHeader}\n${tsvRow}`;
     try {
-      await navigator.clipboard.writeText(csv);
+      await navigator.clipboard.writeText(tsv);
       setCopiedBreakdown(true);
       window.setTimeout(() => setCopiedBreakdown(false), 1600);
     } catch {
       setCopiedBreakdown(false);
       alert('Unable to copy breakdown');
     }
+  };
+
+  const handleDownloadBreakdownCsv = () => {
+    const filename = `fee-pilot-${platform}-breakdown.csv`;
+    const csv = `${csvHeader}\n${csvRow}\n`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   return (
@@ -587,7 +673,6 @@ export default function ReverseCalcPage() {
             targetProfit={parseNum(targetProfit)}
             targetMargin={parseNum(targetMarginPct)}
           />
-          {/* explicit text for clarity & accessibility */}
           <span className="text-xs text-gray-600 dark:text-gray-300" aria-live="polite" suppressHydrationWarning>
             {solvingForText}
           </span>
@@ -749,9 +834,24 @@ export default function ReverseCalcPage() {
               Breakdown copied!
             </span>
           ) : (
-            <button type="button" onClick={handleCopyBreakdownCsv} className={PILL_CLASS} title="Copy result as CSV">
-              Copy breakdown (CSV)
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleCopyBreakdownTsv}
+                className={PILL_CLASS}
+                title="Copy result as tab-separated (best for paste)"
+              >
+                Copy breakdown (TSV)
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadBreakdownCsv}
+                className={PILL_CLASS}
+                title="Download result as CSV"
+              >
+                Download breakdown (CSV)
+              </button>
+            </>
           )}
         </div>
 
