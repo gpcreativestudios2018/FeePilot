@@ -12,6 +12,7 @@ import {
   type FeeRule,
 } from '@/data/fees';
 import SolvingForPill from './SolvingForPill';
+import FeeOverridesDev, { type FeeOverrides } from './FeeOverridesDev';
 
 // ------- Inline presets helpers (avoid '@/lib/presets' import) -------
 type TargetPreset = {
@@ -205,7 +206,6 @@ function QueryParamsInitializer(props: {
   return null;
 }
 
-/** Inlined presets controls (with dev-only Clear) */
 function LocalPresetsControls(props: {
   getState: () => TargetPreset;
   applyPreset: (p: TargetPreset) => void;
@@ -226,7 +226,7 @@ function LocalPresetsControls(props: {
   React.useEffect(() => {
     refresh();
     const onFocus = () => refresh();
-    if (typeof window !== 'undefined') window.addEventListener('focus', onFocus);
+    if (typeof window === 'undefined') window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, [refresh]);
 
@@ -355,16 +355,21 @@ function LocalPresetsControls(props: {
 
 export default function ReverseCalcPage() {
   const [platform, setPlatform] = React.useState<PlatformKey>(PLATFORMS[0] ?? ('mercari' as PlatformKey));
+  // targets
   const [targetProfit, setTargetProfit] = React.useState<string>('25');
   const [targetMarginPct, setTargetMarginPct] = React.useState<string>('0');
+  // costs
   const [cogs, setCogs] = React.useState<string>('12');
   const [shipCost, setShipCost] = React.useState<string>('5');
+  // price components that affect fees
   const [discountPct, setDiscountPct] = React.useState<string>('0');
   const [shipCharge, setShipCharge] = React.useState<string>('0');
 
+  // dev-only: fee overrides (not persisted)
+  const [overrides, setOverrides] = React.useState<FeeOverrides>({});
+
   const [copied, setCopied] = React.useState(false);
   const [copiedMsg, setCopiedMsg] = React.useState('Permalink copied!');
-
   const [copiedPrice, setCopiedPrice] = React.useState(false);
   const [copiedBreakdown, setCopiedBreakdown] = React.useState(false);
 
@@ -396,7 +401,8 @@ export default function ReverseCalcPage() {
     if (vals.shipCharge !== undefined) setShipCharge(vals.shipCharge);
   }, []);
 
-  const rule = RULES[platform];
+  const ruleBase = RULES[platform];
+  const rule = React.useMemo(() => ({ ...ruleBase, ...overrides }) as FeeRule, [ruleBase, overrides]);
 
   const solved = React.useMemo(() => {
     const tProfit = parseNum(targetProfit);
@@ -411,7 +417,7 @@ export default function ReverseCalcPage() {
       cogs: clamp(parseNum(cogs), 0),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [platform, targetProfit, targetMarginPct, discountPct, shipCharge, cogs, shipCost]);
+  }, [platform, targetProfit, targetMarginPct, discountPct, shipCharge, cogs, shipCost, rule]);
 
   const { price, result } = solved;
 
@@ -503,6 +509,7 @@ export default function ReverseCalcPage() {
     setCopied(false);
     setCopiedPrice(false);
     setCopiedBreakdown(false);
+    setOverrides({});
   };
 
   const handleCopyPrice = async () => {
@@ -517,7 +524,6 @@ export default function ReverseCalcPage() {
     }
   };
 
-  // CSV header/row used for copy AND for file download
   const csvHeader = React.useMemo(
     () =>
       [
@@ -648,7 +654,10 @@ export default function ReverseCalcPage() {
             <select
               className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
               value={platform}
-              onChange={(e) => setPlatform(e.target.value as PlatformKey)}
+              onChange={(e) => {
+                setPlatform(e.target.value as PlatformKey);
+                setOverrides({}); // clear overrides when switching platform
+              }}
             >
               {PLATFORMS.map((p) => (
                 <option key={p} value={p} className="text-black dark:text-white bg-white dark:bg-black">
@@ -746,6 +755,19 @@ export default function ReverseCalcPage() {
           </Link>
         </div>
       </section>
+
+      {/* Dev-only: Fee overrides */}
+      {showDevTools ? (
+        <section className="mt-6">
+          <FeeOverridesDev
+            platform={platform}
+            baseRule={ruleBase}
+            overrides={overrides}
+            onChange={setOverrides}
+            onClear={() => setOverrides({})}
+          />
+        </section>
+      ) : null}
 
       {/* Presets */}
       <section className="mt-6">
