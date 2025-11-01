@@ -517,7 +517,7 @@ export default function ReverseCalcPage() {
     }
   };
 
-  // CSV header/row (used for file download)
+  // CSV header/row used for copy AND for file download
   const csvHeader = React.useMemo(
     () =>
       [
@@ -574,67 +574,10 @@ export default function ReverseCalcPage() {
     ]
   );
 
-  // TSV header/row (used for clipboard paste → Excel/Sheets)
-  const tsvHeader = React.useMemo(
-    () =>
-      [
-        'Platform',
-        'Price',
-        'Profit',
-        'Margin%',
-        'MarketplaceFee',
-        'PaymentFee',
-        'ListingFee',
-        'TotalFees',
-        'COGS',
-        'ShipCost',
-        'Discount%',
-        'ShipCharge',
-        'TargetProfit',
-        'TargetMargin%',
-      ].join('\t'),
-    []
-  );
-  const tsvRow = React.useMemo(
-    () =>
-      [
-        platform,
-        formatMoney(price),
-        formatMoney(result.profit),
-        result.marginPct.toFixed(1),
-        formatMoney(result.marketplaceFee),
-        formatMoney(result.paymentFee),
-        formatMoney(result.listingFee),
-        formatMoney(result.totalFees),
-        cogs,
-        shipCost,
-        discountPct,
-        shipCharge,
-        targetProfit,
-        targetMarginPct,
-      ].join('\t'),
-    [
-      platform,
-      price,
-      result.profit,
-      result.marginPct,
-      result.marketplaceFee,
-      result.paymentFee,
-      result.listingFee,
-      result.totalFees,
-      cogs,
-      shipCost,
-      discountPct,
-      shipCharge,
-      targetProfit,
-      targetMarginPct,
-    ]
-  );
-
-  const handleCopyBreakdownTsv = async () => {
-    const tsv = `${tsvHeader}\n${tsvRow}`;
+  const handleCopyBreakdownCsv = async () => {
+    const csv = `${csvHeader}\n${csvRow}`;
     try {
-      await navigator.clipboard.writeText(tsv);
+      await navigator.clipboard.writeText(csv);
       setCopiedBreakdown(true);
       window.setTimeout(() => setCopiedBreakdown(false), 1600);
     } catch {
@@ -837,11 +780,11 @@ export default function ReverseCalcPage() {
             <>
               <button
                 type="button"
-                onClick={handleCopyBreakdownTsv}
+                onClick={handleCopyBreakdownCsv}
                 className={PILL_CLASS}
-                title="Copy result as tab-separated (best for paste)"
+                title="Copy result as comma-separated values"
               >
-                Copy breakdown (TSV)
+                Copy breakdown (CSV)
               </button>
               <button
                 type="button"
