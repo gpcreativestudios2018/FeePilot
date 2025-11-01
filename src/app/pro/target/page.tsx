@@ -226,8 +226,11 @@ function LocalPresetsControls(props: {
   React.useEffect(() => {
     refresh();
     const onFocus = () => refresh();
-    if (typeof window === 'undefined') window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', onFocus);
+      return () => window.removeEventListener('focus', onFocus);
+    }
+    return;
   }, [refresh]);
 
   const endFlashSoon = () => window.setTimeout(() => setFlash(null), 1500);
