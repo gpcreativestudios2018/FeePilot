@@ -98,7 +98,6 @@ const getListingFixed = (rule: FeeRule): number => {
 };
 
 // ==== FEE ENGINE ====
-// Given a price P and inputs, compute profit & margin with platform rule
 function computeAtPrice(opts: {
   platform: PlatformKey;
   rule: FeeRule;
@@ -112,16 +111,12 @@ function computeAtPrice(opts: {
   const discounted = clamp(price * (1 - pct(discountPct)), 0);
 
   // --- Poshmark (US) override ---
-  // $2.95 flat if discounted < $15, else 20% of discounted.
-  // Payment/listing = $0. Fee base = discounted item price only (exclude buyer-paid shipping).
   if (platform === 'poshmark') {
     const marketplaceFee = discounted < 15 ? 2.95 : discounted * 0.20;
     const paymentFee = 0;
     const listingFee = 0;
     const totalFees = marketplaceFee + paymentFee + listingFee;
 
-    // Poshmark: buyer-paid shipping is NOT part of fee base nor item revenue;
-    // profit is discounted - fees - seller shipping cost - COGS.
     const profit = discounted - totalFees - shipCost - cogs;
     const marginPct = discounted > 0 ? (profit / discounted) * 100 : 0;
 
@@ -407,7 +402,6 @@ export default function ReverseCalcPage() {
     if (typeof window === 'undefined') return;
     const wantsDev =
       new URLSearchParams(window.location.search).get('devtools') === '1';
-    // Allow devtools via env flag OR URL param (even on production host)
     if (wantsDev) setShowDevTools(true);
   }, []);
 
@@ -543,7 +537,6 @@ export default function ReverseCalcPage() {
 
   const handleCopyPrice = async () => {
     try {
-      // Copy a bare number (no currency), trim trailing .00 for nicer paste into spreadsheets/fields
       const bare = price.toFixed(2).replace(/\.00$/, '');
       await navigator.clipboard.writeText(bare);
       setCopiedPrice(true);
@@ -593,20 +586,20 @@ export default function ReverseCalcPage() {
         targetMarginPct,
       ].join(','),
     [
-        platform,
-        price,
-        result.profit,
-        result.marginPct,
-        result.marketplaceFee,
-        result.paymentFee,
-        result.listingFee,
-        result.totalFees,
-        cogs,
-        shipCost,
-        discountPct,
-        shipCharge,
-        targetProfit,
-        targetMarginPct,
+      platform,
+      price,
+      result.profit,
+      result.marginPct,
+      result.marketplaceFee,
+      result.paymentFee,
+      result.listingFee,
+      result.totalFees,
+      cogs,
+      shipCost,
+      discountPct,
+      shipCharge,
+      targetProfit,
+      targetMarginPct,
     ]
   );
 
@@ -812,9 +805,17 @@ export default function ReverseCalcPage() {
       <section className="mt-6 rounded-2xl border border-purple-600/30 p-6">
         <div className="text-base font-semibold">Suggested price</div>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <div className="text-3xl font-semibold" suppressHydrationWarning>
+          {/* Price is now clickable to copy */}
+          <button
+            type="button"
+            onClick={handleCopyPrice}
+            className="text-3xl font-semibold focus:outline-none"
+            title="Click to copy suggested price"
+            aria-label="Copy suggested price"
+          >
             ${formatMoney(price)}
-          </div>
+          </button>
+
           {copiedPrice ? (
             <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
               Price copied!
