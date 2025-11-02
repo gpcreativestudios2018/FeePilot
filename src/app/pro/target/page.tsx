@@ -543,8 +543,9 @@ export default function ReverseCalcPage() {
 
   const handleCopyPrice = async () => {
     try {
-      const formatted = `$${formatMoney(price)}`;
-      await navigator.clipboard.writeText(formatted);
+      // Copy a bare number (no currency), trim trailing .00 for nicer paste into spreadsheets/fields
+      const bare = price.toFixed(2).replace(/\.00$/, '');
+      await navigator.clipboard.writeText(bare);
       setCopiedPrice(true);
       window.setTimeout(() => setCopiedPrice(false), 1600);
     } catch {
@@ -592,20 +593,20 @@ export default function ReverseCalcPage() {
         targetMarginPct,
       ].join(','),
     [
-      platform,
-      price,
-      result.profit,
-      result.marginPct,
-      result.marketplaceFee,
-      result.paymentFee,
-      result.listingFee,
-      result.totalFees,
-      cogs,
-      shipCost,
-      discountPct,
-      shipCharge,
-      targetProfit,
-      targetMarginPct,
+        platform,
+        price,
+        result.profit,
+        result.marginPct,
+        result.marketplaceFee,
+        result.paymentFee,
+        result.listingFee,
+        result.totalFees,
+        cogs,
+        shipCost,
+        discountPct,
+        shipCharge,
+        targetProfit,
+        targetMarginPct,
     ]
   );
 
@@ -857,7 +858,7 @@ export default function ReverseCalcPage() {
             </div>
           </div>
 
-        <div className="rounded-xl border border-purple-600/20 p-4">
+          <div className="rounded-xl border border-purple-600/20 p-4">
             <div className="text-sm text-gray-500 dark:text-gray-400">Estimated margin</div>
             <div className="mt-2 text-xl font-semibold" suppressHydrationWarning>
               {result.marginPct.toFixed(1)}%
