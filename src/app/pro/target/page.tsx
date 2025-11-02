@@ -500,6 +500,8 @@ export default function ReverseCalcPage() {
     if (typeof p.shipCharge === 'string') setShipCharge(p.shipCharge);
   }, []);
 
+  const [copiedHint, setCopiedHint] = React.useState(false);
+
   const handleSaveAndCopyLink = async () => {
     try {
       const name = generatePresetName();
@@ -540,12 +542,31 @@ export default function ReverseCalcPage() {
       const bare = price.toFixed(2).replace(/\.00$/, '');
       await navigator.clipboard.writeText(bare);
       setCopiedPrice(true);
+      setCopiedHint(true);
       window.setTimeout(() => setCopiedPrice(false), 1600);
+      window.setTimeout(() => setCopiedHint(false), 1600);
     } catch {
       setCopiedPrice(false);
       alert('Unable to copy price');
     }
   };
+
+  // NEW: press "c" to copy price (ignored while typing in inputs)
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || (e as any).isComposing;
+      if (isTyping) return;
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        if (e.key.toLowerCase() === 'c') {
+          e.preventDefault();
+          handleCopyPrice();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handleCopyPrice]);
 
   const csvHeader = React.useMemo(
     () =>
@@ -805,7 +826,7 @@ export default function ReverseCalcPage() {
       <section className="mt-6 rounded-2xl border border-purple-600/30 p-6">
         <div className="text-base font-semibold">Suggested price</div>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          {/* Price is now clickable to copy */}
+          {/* Price is clickable to copy */}
           <button
             type="button"
             onClick={handleCopyPrice}
@@ -850,6 +871,10 @@ export default function ReverseCalcPage() {
             </>
           )}
         </div>
+
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400" aria-live="polite" suppressHydrationWarning>
+          Tip: press <kbd className="rounded border px-1">C</kbd> to copy the price.
+        </p>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-purple-600/20 p-4">
