@@ -405,9 +405,10 @@ export default function ReverseCalcPage() {
   );
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
-    const isProdHost = window.location.hostname === 'fee-pilot.vercel.app';
-    const wantsDev = new URLSearchParams(window.location.search).get('devtools') === '1';
-    if (!isProdHost && wantsDev) setShowDevTools(true);
+    const wantsDev =
+      new URLSearchParams(window.location.search).get('devtools') === '1';
+    // Allow devtools via env flag OR URL param (even on production host)
+    if (wantsDev) setShowDevTools(true);
   }, []);
 
   const handleInitFromQuery = React.useCallback((vals: {
@@ -856,7 +857,7 @@ export default function ReverseCalcPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-purple-600/20 p-4">
+        <div className="rounded-xl border border-purple-600/20 p-4">
             <div className="text-sm text-gray-500 dark:text-gray-400">Estimated margin</div>
             <div className="mt-2 text-xl font-semibold" suppressHydrationWarning>
               {result.marginPct.toFixed(1)}%
