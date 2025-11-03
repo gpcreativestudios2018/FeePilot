@@ -112,7 +112,7 @@ function computeAtPrice(opts: {
 
   // --- Poshmark (US) override ---
   if (platform === 'poshmark') {
-    const marketplaceFee = discounted < 15 ? 2.95 : discounted * 0.20;
+    const marketplaceFee = discounted < 15 ? 2.95 : discounted * 0.2;
     const paymentFee = 0;
     const listingFee = 0;
     const totalFees = marketplaceFee + paymentFee + listingFee;
@@ -220,8 +220,8 @@ function QueryParamsInitializer(props: {
     const dc = searchParams.get('discountPct');      if (dc != null) vals.discountPct = dc;
     const sb = searchParams.get('shipCharge');       if (sb != null) vals.shipCharge = sb;
     props.onInit(vals);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams, props]);
+
   return null;
 }
 
@@ -439,7 +439,6 @@ export default function ReverseCalcPage() {
       shipCost: clamp(parseNum(shipCost), 0),
       cogs: clamp(parseNum(cogs), 0),
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platform, targetProfit, targetMarginPct, discountPct, shipCharge, cogs, shipCost, rule]);
 
   const { price, result } = solved;
@@ -500,21 +499,6 @@ export default function ReverseCalcPage() {
     if (typeof p.shipCharge === 'string') setShipCharge(p.shipCharge);
   }, []);
 
-  const handleSaveAndCopyLink = async () => {
-    try {
-      const name = generatePresetName();
-      savePreset(name, getPresetState());
-      const link = buildShareUrl();
-      await navigator.clipboard.writeText(link);
-      setCopiedMsg(`Saved “${name}” & copied link!`);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
-      alert('Unable to save or copy link');
-    }
-  };
-
   const solvingForText =
     parseNum(targetProfit) > 0
       ? 'Solving for: Profit'
@@ -535,7 +519,8 @@ export default function ReverseCalcPage() {
     setOverrides({});
   };
 
-  const handleCopyPrice = async () => {
+  // Memoized so the keyboard effect has a stable dependency
+  const handleCopyPrice = React.useCallback(async () => {
     try {
       const bare = price.toFixed(2).replace(/\.00$/, '');
       await navigator.clipboard.writeText(bare);
@@ -545,7 +530,40 @@ export default function ReverseCalcPage() {
       setCopiedPrice(false);
       alert('Unable to copy price');
     }
-  };
+  }, [price]);
+
+  // Restore: Save preset & copy link
+  const handleSaveAndCopyLink = React.useCallback(async () => {
+    try {
+      const name = generatePresetName();
+      savePreset(name, getPresetState());
+      const link = buildShareUrl();
+      await navigator.clipboard.writeText(link);
+      setCopiedMsg(`Saved “${name}” & copied link!`);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+      alert('Unable to save or copy link');
+    }
+  }, [generatePresetName, getPresetState]);
+
+  // Press "c" to copy price (ignored while typing in inputs or editable elements)
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isInteractive =
+        tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable;
+      if (isInteractive) return;
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        void handleCopyPrice();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handleCopyPrice]);
 
   const csvHeader = React.useMemo(
     () =>
@@ -805,7 +823,7 @@ export default function ReverseCalcPage() {
       <section className="mt-6 rounded-2xl border border-purple-600/30 p-6">
         <div className="text-base font-semibold">Suggested price</div>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          {/* Price is now clickable to copy */}
+          {/* Price is clickable to copy */}
           <button
             type="button"
             onClick={handleCopyPrice}
@@ -850,6 +868,10 @@ export default function ReverseCalcPage() {
             </>
           )}
         </div>
+
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400" aria-live="polite" suppressHydrationWarning>
+          Tip: press <kbd className="rounded border px-1">C</kbd> to copy the price.
+        </p>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-purple-600/20 p-4">
