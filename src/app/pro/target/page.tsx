@@ -222,8 +222,8 @@ function QueryParamsInitializer(props: {
     const dc = searchParams.get('discountPct');      if (dc != null) vals.discountPct = dc;
     const sb = searchParams.get('shipCharge');       if (sb != null) vals.shipCharge = sb;
     props.onInit(vals);
-  }, [searchParams, props]);
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return null;
 }
 
@@ -378,8 +378,6 @@ function LocalPresetsControls(props: {
 }
 
 export default function ReverseCalcPage() {
-  const searchParams = useSearchParams();
-
   const [platform, setPlatform] = React.useState<PlatformKey>(PLATFORMS[0] ?? ('mercari' as PlatformKey));
   // targets
   const [targetProfit, setTargetProfit] = React.useState<string>('25');
@@ -409,18 +407,18 @@ export default function ReverseCalcPage() {
     if (wantsDev) setShowDevTools(true);
   }, []);
 
-  // --- NEW: restore last platform if no ?platform= is provided
+  // Restore last platform if no ?platform= is provided (no useSearchParams here)
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
-    const hasQP = searchParams.get('platform') != null;
+    const hasQP = new URLSearchParams(window.location.search).has('platform');
     if (hasQP) return;
     const saved = localStorage.getItem('feepilot:last-platform');
     if (saved && PLATFORMS.includes(saved as PlatformKey)) {
       setPlatform(saved as PlatformKey);
     }
-  }, [searchParams]);
+  }, []);
 
-  // --- NEW: persist platform on change
+  // Persist platform on change
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
