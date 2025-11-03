@@ -220,7 +220,7 @@ function QueryParamsInitializer(props: {
     const dc = searchParams.get('discountPct');      if (dc != null) vals.discountPct = dc;
     const sb = searchParams.get('shipCharge');       if (sb != null) vals.shipCharge = sb;
     props.onInit(vals);
-  }, [props, useSearchParams]); // props reference is stable for our use; Next's hook identity is stable
+  }, [searchParams, props]);
 
   return null;
 }
@@ -519,7 +519,7 @@ export default function ReverseCalcPage() {
     setOverrides({});
   };
 
-  // Memoize so the keyboard effect has a stable dependency
+  // Memoized so the keyboard effect has a stable dependency
   const handleCopyPrice = React.useCallback(async () => {
     try {
       const bare = price.toFixed(2).replace(/\.00$/, '');
@@ -531,6 +531,22 @@ export default function ReverseCalcPage() {
       alert('Unable to copy price');
     }
   }, [price]);
+
+  // Restore: Save preset & copy link
+  const handleSaveAndCopyLink = React.useCallback(async () => {
+    try {
+      const name = generatePresetName();
+      savePreset(name, getPresetState());
+      const link = buildShareUrl();
+      await navigator.clipboard.writeText(link);
+      setCopiedMsg(`Saved “${name}” & copied link!`);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+      alert('Unable to save or copy link');
+    }
+  }, [generatePresetName, getPresetState]);
 
   // Press "c" to copy price (ignored while typing in inputs or editable elements)
   React.useEffect(() => {
