@@ -11,6 +11,7 @@ import {
   type PlatformKey,
   type FeeRule,
 } from '@/data/fees';
+import { STATE_RATES, type USStateCode, formatPct } from '@/data/us-tax';
 import SolvingForPill from './SolvingForPill';
 import FeeOverridesDev, { type FeeOverrides } from './FeeOverridesDev';
 
@@ -23,6 +24,7 @@ type TargetPreset = {
   shipCost: string;
   discountPct: string;
   shipCharge: string;
+  taxPct?: string; // NEW (optional for now)
 };
 type NamedTargetPreset = { name: string; updatedAt: number; data: TargetPreset };
 
@@ -98,6 +100,7 @@ const getListingFixed = (rule: FeeRule): number => {
 };
 
 // ==== FEE ENGINE ====
+// (No tax applied in math yet on this page; this step only adds the selector & field.)
 function computeAtPrice(opts: {
   platform: PlatformKey;
   rule: FeeRule;
@@ -110,39 +113,29 @@ function computeAtPrice(opts: {
   const { platform, rule, price, discountPct, shipCharge, shipCost, cogs } = opts;
   const discounted = clamp(price * (1 - pct(discountPct)), 0);
 
-  // --- Poshmark (US) override ---
-  // $2.95 flat if discounted < $15, else 20% of discounted.
-  // Payment/listing = $0. Fee base = discounted item price only (exclude buyer-paid shipping).
   if (platform === 'poshmark') {
     const marketplaceFee = discounted < 15 ? 2.95 : discounted * 0.2;
     const paymentFee = 0;
     const listingFee = 0;
     const totalFees = marketplaceFee + paymentFee + listingFee;
-
     const profit = discounted - totalFees - shipCost - cogs;
     const marginPct = discounted > 0 ? (profit / discounted) * 100 : 0;
-
     return { discounted, marketplaceFee, paymentFee, listingFee, totalFees, profit, marginPct };
   }
 
-  // --- Default behavior (most marketplaces): fee on (discounted + buyer shipping)
   const base = discounted + shipCharge;
-
   const marketplaceFee =
     clamp(base * pct(rule.marketplacePct ?? 0)) + (rule.marketplaceFixed ?? 0);
   const paymentFee =
     clamp(base * pct(rule.paymentPct ?? 0)) + (rule.paymentFixed ?? 0);
   const listingFee = getListingFixed(rule);
-
   const totalFees = marketplaceFee + paymentFee + listingFee;
-
   const profit = discounted + shipCharge - totalFees - shipCost - cogs;
   const marginPct = discounted > 0 ? (profit / discounted) * 100 : 0;
 
   return { discounted, marketplaceFee, paymentFee, listingFee, totalFees, profit, marginPct };
 }
 
-// Binary-search a price to hit a target profit OR margin
 function solvePrice(opts: {
   platform: PlatformKey;
   rule: FeeRule;
@@ -200,6 +193,7 @@ function QueryParamsInitializer(props: {
     shipCost?: string;
     discountPct?: string;
     shipCharge?: string;
+    taxPct?: string;
   }) => void;
 }) {
   const searchParams = useSearchParams();
@@ -212,6 +206,7 @@ function QueryParamsInitializer(props: {
       shipCost?: string;
       discountPct?: string;
       shipCharge?: string;
+      taxPct?: string;
     } = {};
     const p = searchParams.get('platform');
     if (p && PLATFORMS.includes(p as PlatformKey)) vals.platform = p as PlatformKey;
@@ -221,6 +216,7 @@ function QueryParamsInitializer(props: {
     const sc = searchParams.get('shipCost');         if (sc != null) vals.shipCost = sc;
     const dc = searchParams.get('discountPct');      if (dc != null) vals.discountPct = dc;
     const sb = searchParams.get('shipCharge');       if (sb != null) vals.shipCharge = sb;
+    const tx = searchParams.get('taxPct');           if (tx != null) vals.taxPct = tx;
     props.onInit(vals);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -389,6 +385,10 @@ export default function ReverseCalcPage() {
   const [discountPct, setDiscountPct] = React.useState<string>('0');
   const [shipCharge, setShipCharge] = React.useState<string>('0');
 
+  // NEW: state-level sales tax (UI only for now)
+  const [taxPct, setTaxPct] = React.useState<string>('0');
+  const [taxState, setTaxState] = React.useState<USStateCode | ''>('');
+
   // dev-only: fee overrides (not persisted)
   const [overrides, setOverrides] = React.useState<FeeOverrides>({});
 
@@ -436,6 +436,7 @@ export default function ReverseCalcPage() {
     shipCost?: string;
     discountPct?: string;
     shipCharge?: string;
+    taxPct?: string;
   }) => {
     if (vals.platform) setPlatform(vals.platform);
     if (vals.targetProfit !== undefined) setTargetProfit(vals.targetProfit);
@@ -444,6 +445,7 @@ export default function ReverseCalcPage() {
     if (vals.shipCost !== undefined) setShipCost(vals.shipCost);
     if (vals.discountPct !== undefined) setDiscountPct(vals.discountPct);
     if (vals.shipCharge !== undefined) setShipCharge(vals.shipCharge);
+    if (vals.taxPct !== undefined) setTaxPct(vals.taxPct);
   }, []);
 
   const ruleBase = RULES[platform];
@@ -478,6 +480,7 @@ export default function ReverseCalcPage() {
       ['shipCost', shipCost],
       ['discountPct', discountPct],
       ['shipCharge', shipCharge],
+      ['taxPct', taxPct],
     ] as const).forEach(([k, v]) => ordered.searchParams.set(k, v));
     return ordered.toString();
   };
@@ -509,8 +512,8 @@ export default function ReverseCalcPage() {
   }, [platform, targetProfit, targetMarginPct]);
 
   const getPresetState = React.useCallback((): TargetPreset => {
-    return { platform, targetProfit, targetMarginPct, cogs, shipCost, discountPct, shipCharge };
-  }, [platform, targetProfit, targetMarginPct, cogs, shipCost, discountPct, shipCharge]);
+    return { platform, targetProfit, targetMarginPct, cogs, shipCost, discountPct, shipCharge, taxPct };
+  }, [platform, targetProfit, targetMarginPct, cogs, shipCost, discountPct, shipCharge, taxPct]);
 
   const applyPreset = React.useCallback((p: TargetPreset) => {
     if (p.platform && PLATFORMS.includes(p.platform as PlatformKey)) setPlatform(p.platform as PlatformKey);
@@ -520,6 +523,7 @@ export default function ReverseCalcPage() {
     if (typeof p.shipCost === 'string') setShipCost(p.shipCost);
     if (typeof p.discountPct === 'string') setDiscountPct(p.discountPct);
     if (typeof p.shipCharge === 'string') setShipCharge(p.shipCharge);
+    if (typeof p.taxPct === 'string') setTaxPct(p.taxPct);
   }, []);
 
   const solvingForText =
@@ -536,6 +540,8 @@ export default function ReverseCalcPage() {
     setShipCost('5');
     setDiscountPct('0');
     setShipCharge('0');
+    setTaxPct('0');
+    setTaxState('');
     setCopied(false);
     setCopiedPrice(false);
     setCopiedBreakdown(false);
@@ -609,6 +615,7 @@ export default function ReverseCalcPage() {
         'ShipCharge',
         'TargetProfit',
         'TargetMargin%',
+        'Tax%',
       ].join(','),
     []
   );
@@ -629,6 +636,7 @@ export default function ReverseCalcPage() {
         shipCharge,
         targetProfit,
         targetMarginPct,
+        taxPct,
       ].join(','),
     [
       platform,
@@ -645,6 +653,7 @@ export default function ReverseCalcPage() {
       shipCharge,
       targetProfit,
       targetMarginPct,
+      taxPct,
     ]
   );
 
@@ -672,6 +681,19 @@ export default function ReverseCalcPage() {
     link.click();
     document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
+  // --- State tax helper ---
+  const onSelectState = (code: string) => {
+    if (!code) {
+      setTaxState('');
+      return;
+    }
+    const c = code as USStateCode;
+    setTaxState(c);
+    const rate = STATE_RATES.find((s) => s.code === c)?.basePct ?? null;
+    const next = rate == null ? '0' : String(rate);
+    setTaxPct(next);
   };
 
   return (
@@ -814,6 +836,42 @@ export default function ReverseCalcPage() {
               value={shipCharge}
               onChange={(e) => setShipCharge(e.target.value)}
             />
+          </label>
+
+          {/* Sales tax (%) + State selector (UI-only for now) */}
+          <label className="block">
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Sales tax (%)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="e.g. 6"
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              value={taxPct}
+              onChange={(e) => setTaxPct(e.target.value)}
+            />
+            <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+              Helper only; tax is not applied to math on this page yet.
+            </span>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Select state</span>
+            <select
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              value={taxState}
+              onChange={(e) => onSelectState(e.target.value)}
+            >
+              <option value="" className="text-black dark:text-white bg-white dark:bg-black">(none)</option>
+              {STATE_RATES.map((s) => (
+                <option
+                  key={s.code}
+                  value={s.code}
+                  className="text-black dark:text-white bg-white dark:bg-black"
+                >
+                  {s.name} ({formatPct(s.basePct)})
+                </option>
+              ))}
+            </select>
           </label>
         </div>
 
