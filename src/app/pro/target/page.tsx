@@ -111,10 +111,12 @@ function computeAtPrice(opts: {
   const discounted = clamp(price * (1 - pct(discountPct)), 0);
 
   // --- Poshmark (US) override ---
+  // $2.95 flat if discounted < $15, else 20% of discounted.
+  // Payment/listing = $0. Fee base = discounted item price only (exclude buyer-paid shipping).
   if (platform === 'poshmark') {
     const marketplaceFee = discounted < 15 ? 2.95 : discounted * 0.2;
     const paymentFee = 0;
-    the const listingFee = 0;
+    const listingFee = 0;
     const totalFees = marketplaceFee + paymentFee + listingFee;
 
     const profit = discounted - totalFees - shipCost - cogs;
@@ -459,7 +461,7 @@ export default function ReverseCalcPage() {
     return ordered.toString();
   };
 
-  // Plain function to avoid hook dependency lint on buildShareUrl
+  // Plain function to avoid hook-deps lint around buildShareUrl
   const handleCopyLink = async () => {
     try {
       const link = buildShareUrl();
@@ -532,7 +534,6 @@ export default function ReverseCalcPage() {
     }
   }, [price]);
 
-  // NEW: Save preset & copy link (restored to fix build)
   const handleSaveAndCopyLink = React.useCallback(async () => {
     try {
       const name = generatePresetName();
