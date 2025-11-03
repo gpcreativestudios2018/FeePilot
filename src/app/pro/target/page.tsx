@@ -112,7 +112,7 @@ function computeAtPrice(opts: {
 
   // --- Poshmark (US) override ---
   if (platform === 'poshmark') {
-    const marketplaceFee = discounted < 15 ? 2.95 : discounted * 0.20;
+    const marketplaceFee = discounted < 15 ? 2.95 : discounted * 0.2;
     const paymentFee = 0;
     const listingFee = 0;
     const totalFees = marketplaceFee + paymentFee + listingFee;
@@ -220,8 +220,8 @@ function QueryParamsInitializer(props: {
     const dc = searchParams.get('discountPct');      if (dc != null) vals.discountPct = dc;
     const sb = searchParams.get('shipCharge');       if (sb != null) vals.shipCharge = sb;
     props.onInit(vals);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [props, useSearchParams]); // props reference is stable for our use; Next's hook identity is stable
+
   return null;
 }
 
@@ -439,7 +439,6 @@ export default function ReverseCalcPage() {
       shipCost: clamp(parseNum(shipCost), 0),
       cogs: clamp(parseNum(cogs), 0),
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platform, targetProfit, targetMarginPct, discountPct, shipCharge, cogs, shipCost, rule]);
 
   const { price, result } = solved;
@@ -500,23 +499,6 @@ export default function ReverseCalcPage() {
     if (typeof p.shipCharge === 'string') setShipCharge(p.shipCharge);
   }, []);
 
-  const [copiedHint, setCopiedHint] = React.useState(false);
-
-  const handleSaveAndCopyLink = async () => {
-    try {
-      const name = generatePresetName();
-      savePreset(name, getPresetState());
-      const link = buildShareUrl();
-      await navigator.clipboard.writeText(link);
-      setCopiedMsg(`Saved “${name}” & copied link!`);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
-      alert('Unable to save or copy link');
-    }
-  };
-
   const solvingForText =
     parseNum(targetProfit) > 0
       ? 'Solving for: Profit'
@@ -537,31 +519,30 @@ export default function ReverseCalcPage() {
     setOverrides({});
   };
 
-  const handleCopyPrice = async () => {
+  // Memoize so the keyboard effect has a stable dependency
+  const handleCopyPrice = React.useCallback(async () => {
     try {
       const bare = price.toFixed(2).replace(/\.00$/, '');
       await navigator.clipboard.writeText(bare);
       setCopiedPrice(true);
-      setCopiedHint(true);
       window.setTimeout(() => setCopiedPrice(false), 1600);
-      window.setTimeout(() => setCopiedHint(false), 1600);
     } catch {
       setCopiedPrice(false);
       alert('Unable to copy price');
     }
-  };
+  }, [price]);
 
-  // NEW: press "c" to copy price (ignored while typing in inputs)
+  // Press "c" to copy price (ignored while typing in inputs or editable elements)
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || (e as any).isComposing;
-      if (isTyping) return;
-      if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
-        if (e.key.toLowerCase() === 'c') {
-          e.preventDefault();
-          handleCopyPrice();
-        }
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isInteractive =
+        tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable;
+      if (isInteractive) return;
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        void handleCopyPrice();
       }
     };
     window.addEventListener('keydown', onKey);
