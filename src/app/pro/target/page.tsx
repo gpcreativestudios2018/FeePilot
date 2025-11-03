@@ -111,6 +111,8 @@ function computeAtPrice(opts: {
   const discounted = clamp(price * (1 - pct(discountPct)), 0);
 
   // --- Poshmark (US) override ---
+  // $2.95 flat if discounted < $15, else 20% of discounted.
+  // Payment/listing = $0. Fee base = discounted item price only (exclude buyer-paid shipping).
   if (platform === 'poshmark') {
     const marketplaceFee = discounted < 15 ? 2.95 : discounted * 0.2;
     const paymentFee = 0;
@@ -459,6 +461,7 @@ export default function ReverseCalcPage() {
     return ordered.toString();
   };
 
+  // Plain function to avoid hook-deps lint around buildShareUrl
   const handleCopyLink = async () => {
     try {
       const link = buildShareUrl();
@@ -519,7 +522,6 @@ export default function ReverseCalcPage() {
     setOverrides({});
   };
 
-  // Memoized so the keyboard effect has a stable dependency
   const handleCopyPrice = React.useCallback(async () => {
     try {
       const bare = price.toFixed(2).replace(/\.00$/, '');
@@ -532,7 +534,6 @@ export default function ReverseCalcPage() {
     }
   }, [price]);
 
-  // Restore: Save preset & copy link
   const handleSaveAndCopyLink = React.useCallback(async () => {
     try {
       const name = generatePresetName();
@@ -739,7 +740,7 @@ export default function ReverseCalcPage() {
 
           {/* COGS */}
           <label className="block">
-            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">COGS ($)</span>
+            <span className="mb-1 block text-sm text-gray-500 dark:text-gray-400">COGS ($)</span>
             <input
               type="number"
               inputMode="decimal"
@@ -827,7 +828,7 @@ export default function ReverseCalcPage() {
           <button
             type="button"
             onClick={handleCopyPrice}
-            className="text-3xl font-semibold focus:outline-none"
+            className="text-3xl font-semibold cursor-pointer hover:opacity-90 rounded-lg px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600/40"
             title="Click to copy suggested price"
             aria-label="Copy suggested price"
           >
