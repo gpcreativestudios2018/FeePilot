@@ -62,7 +62,7 @@ function savePreset(name: string, data: TargetPreset): void {
   const all = readAll();
   const idx = all.findIndex((p) => p.name.toLowerCase() === trimmed.toLowerCase());
   const item: NamedTargetPreset = { name: trimmed, updatedAt: Date.now(), data };
-  if (idx >= 0) all[idx] = item; else all.push(item;
+  if (idx >= 0) all[idx] = item; else all.push(item);
   writeAll(all);
 }
 function loadPreset(name: string): TargetPreset | null {
@@ -407,7 +407,7 @@ export default function ReverseCalcPage() {
     if (wantsDev) setShowDevTools(true);
   }, []);
 
-  // Restore last platform if no ?platform= is provided (no useSearchParams here)
+  // Restore last platform if no ?platform= is provided
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     const hasQP = new URLSearchParams(window.location.search).has('platform');
@@ -569,7 +569,7 @@ export default function ReverseCalcPage() {
     }
   }, [generatePresetName, getPresetState]);
 
-  // Press "c" to copy price; press "s" to save & copy link (ignored while typing)
+  // Keyboard shortcuts: "c" = copy price, "s" = save & copy link (ignored while typing)
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
