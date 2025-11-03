@@ -222,8 +222,8 @@ function QueryParamsInitializer(props: {
     const dc = searchParams.get('discountPct');      if (dc != null) vals.discountPct = dc;
     const sb = searchParams.get('shipCharge');       if (sb != null) vals.shipCharge = sb;
     props.onInit(vals);
-  }, [searchParams, props]);
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return null;
 }
 
@@ -407,6 +407,27 @@ export default function ReverseCalcPage() {
     if (wantsDev) setShowDevTools(true);
   }, []);
 
+  // Restore last platform if no ?platform= is provided (no useSearchParams here)
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hasQP = new URLSearchParams(window.location.search).has('platform');
+    if (hasQP) return;
+    const saved = localStorage.getItem('feepilot:last-platform');
+    if (saved && PLATFORMS.includes(saved as PlatformKey)) {
+      setPlatform(saved as PlatformKey);
+    }
+  }, []);
+
+  // Persist platform on change
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('feepilot:last-platform', platform);
+    } catch {
+      /* ignore */
+    }
+  }, [platform]);
+
   const handleInitFromQuery = React.useCallback((vals: {
     platform?: PlatformKey;
     targetProfit?: string;
@@ -461,7 +482,6 @@ export default function ReverseCalcPage() {
     return ordered.toString();
   };
 
-  // Plain function to avoid hook-deps lint around buildShareUrl
   const handleCopyLink = async () => {
     try {
       const link = buildShareUrl();
