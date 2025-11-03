@@ -407,7 +407,7 @@ export default function ReverseCalcPage() {
     if (wantsDev) setShowDevTools(true);
   }, []);
 
-  // Restore last platform if no ?platform= is provided (no useSearchParams here)
+  // Restore last platform if no ?platform= is provided
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     const hasQP = new URLSearchParams(window.location.search).has('platform');
@@ -569,7 +569,7 @@ export default function ReverseCalcPage() {
     }
   }, [generatePresetName, getPresetState]);
 
-  // Press "c" to copy price (ignored while typing in inputs or editable elements)
+  // Keyboard shortcuts: "c" = copy price, "s" = save & copy link (ignored while typing)
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -577,14 +577,20 @@ export default function ReverseCalcPage() {
       const isInteractive =
         tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable;
       if (isInteractive) return;
-      if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'c') {
-        e.preventDefault();
-        void handleCopyPrice();
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        const key = e.key.toLowerCase();
+        if (key === 'c') {
+          e.preventDefault();
+          void handleCopyPrice();
+        } else if (key === 's') {
+          e.preventDefault();
+          void handleSaveAndCopyLink();
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleCopyPrice]);
+  }, [handleCopyPrice, handleSaveAndCopyLink]);
 
   const csvHeader = React.useMemo(
     () =>
@@ -891,7 +897,7 @@ export default function ReverseCalcPage() {
         </div>
 
         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400" aria-live="polite" suppressHydrationWarning>
-          Tip: press <kbd className="rounded border px-1">C</kbd> to copy the price.
+          Tip: press <kbd className="rounded border px-1">C</kbd> to copy the price, or <kbd className="rounded border px-1">S</kbd> to save & copy the link.
         </p>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
