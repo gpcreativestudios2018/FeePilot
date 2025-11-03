@@ -114,7 +114,7 @@ function computeAtPrice(opts: {
   if (platform === 'poshmark') {
     const marketplaceFee = discounted < 15 ? 2.95 : discounted * 0.2;
     const paymentFee = 0;
-    const listingFee = 0;
+    the const listingFee = 0;
     const totalFees = marketplaceFee + paymentFee + listingFee;
 
     const profit = discounted - totalFees - shipCost - cogs;
@@ -459,7 +459,8 @@ export default function ReverseCalcPage() {
     return ordered.toString();
   };
 
-  const handleCopyLink = React.useCallback(async () => {
+  // Plain function to avoid hook dependency lint on buildShareUrl
+  const handleCopyLink = async () => {
     try {
       const link = buildShareUrl();
       await navigator.clipboard.writeText(link);
@@ -470,7 +471,7 @@ export default function ReverseCalcPage() {
       setCopied(false);
       alert('Unable to copy link');
     }
-  }, [/* buildShareUrl closure captures current state */]);
+  };
 
   const generatePresetName = React.useCallback(() => {
     const nicePlatform = platform[0].toUpperCase() + platform.slice(1);
@@ -530,6 +531,22 @@ export default function ReverseCalcPage() {
       alert('Unable to copy price');
     }
   }, [price]);
+
+  // NEW: Save preset & copy link (restored to fix build)
+  const handleSaveAndCopyLink = React.useCallback(async () => {
+    try {
+      const name = generatePresetName();
+      savePreset(name, getPresetState());
+      const link = buildShareUrl();
+      await navigator.clipboard.writeText(link);
+      setCopiedMsg(`Saved “${name}” & copied link!`);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+      alert('Unable to save or copy link');
+    }
+  }, [generatePresetName, getPresetState]);
 
   // Press "c" to copy price (ignored while typing in inputs or editable elements)
   React.useEffect(() => {
@@ -722,7 +739,7 @@ export default function ReverseCalcPage() {
 
           {/* COGS */}
           <label className="block">
-            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">COGS ($)</span>
+            <span className="mb-1 block text-sm text-gray-500 dark:text-gray-400">COGS ($)</span>
             <input
               type="number"
               inputMode="decimal"
