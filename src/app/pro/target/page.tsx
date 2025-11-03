@@ -378,6 +378,8 @@ function LocalPresetsControls(props: {
 }
 
 export default function ReverseCalcPage() {
+  const searchParams = useSearchParams();
+
   const [platform, setPlatform] = React.useState<PlatformKey>(PLATFORMS[0] ?? ('mercari' as PlatformKey));
   // targets
   const [targetProfit, setTargetProfit] = React.useState<string>('25');
@@ -406,6 +408,27 @@ export default function ReverseCalcPage() {
       new URLSearchParams(window.location.search).get('devtools') === '1';
     if (wantsDev) setShowDevTools(true);
   }, []);
+
+  // --- NEW: restore last platform if no ?platform= is provided
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hasQP = searchParams.get('platform') != null;
+    if (hasQP) return;
+    const saved = localStorage.getItem('feepilot:last-platform');
+    if (saved && PLATFORMS.includes(saved as PlatformKey)) {
+      setPlatform(saved as PlatformKey);
+    }
+  }, [searchParams]);
+
+  // --- NEW: persist platform on change
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('feepilot:last-platform', platform);
+    } catch {
+      /* ignore */
+    }
+  }, [platform]);
 
   const handleInitFromQuery = React.useCallback((vals: {
     platform?: PlatformKey;
@@ -461,7 +484,6 @@ export default function ReverseCalcPage() {
     return ordered.toString();
   };
 
-  // Plain function to avoid hook-deps lint around buildShareUrl
   const handleCopyLink = async () => {
     try {
       const link = buildShareUrl();
