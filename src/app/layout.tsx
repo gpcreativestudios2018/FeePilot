@@ -1,8 +1,6 @@
-'use client';
-
 import './globals.css';
-import React from 'react';
 import type { Metadata } from 'next';
+import React from 'react';
 
 const siteName = 'Fee Pilot';
 const siteDescription =
