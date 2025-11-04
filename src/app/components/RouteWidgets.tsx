@@ -39,8 +39,6 @@ function ClearSavedDataPill() {
           type="button"
           onClick={clearLocal}
           className={PILL_CLASS}
-          // Clean, non-dev tooltip:
-          title="Clear saved data"
           aria-label="Clear saved data"
         >
           Clear saved data
