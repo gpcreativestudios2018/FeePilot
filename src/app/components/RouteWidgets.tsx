@@ -2,55 +2,35 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { PILL_CLASS } from '@/lib/ui';
 
-function ClearSavedDataPill() {
-  const [flash, setFlash] = React.useState<string | null>(null);
-
-  const clearLocal = React.useCallback(() => {
-    try {
-      if (typeof window === 'undefined') return;
-      // Remove only Fee Pilot keys
-      const keys: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!k) continue;
-        if (k.startsWith('feepilot:') || k === 'feepilot:last-platform') {
-          keys.push(k);
-        }
-      }
-      keys.forEach((k) => localStorage.removeItem(k));
-      setFlash('Cleared!');
-      window.setTimeout(() => setFlash(null), 1500);
-    } catch {
-      setFlash('Failed');
-      window.setTimeout(() => setFlash(null), 1500);
-    }
-  }, []);
-
-  return (
-    <div className="fixed bottom-4 right-4 z-40">
-      {flash ? (
-        <span className={PILL_CLASS} aria-live="polite">
-          {flash}
-        </span>
-      ) : (
-        <button
-          type="button"
-          onClick={clearLocal}
-          className={PILL_CLASS}
-          aria-label="Clear saved data"
-        >
-          Clear saved data
-        </button>
-      )}
-    </div>
-  );
-}
-
+/**
+ * Home-only helper that:
+ * - Finds the legacy header "Clear saved data" button that used to have a "dev only" tooltip
+ * - Replaces its title/aria-label with a clean string
+ * - Renders nothing (so no bottom-right pill)
+ */
 export default function RouteWidgets() {
   const pathname = usePathname();
-  // Show only on the free home page
-  if (pathname !== '/') return null;
-  return <ClearSavedDataPill />;
+
+  React.useEffect(() => {
+    if (pathname !== '/') return;
+    try {
+      const candidates = Array.from(
+        document.querySelectorAll<HTMLElement>('button[title],a[title],*[title]')
+      );
+      for (const el of candidates) {
+        const title = (el.getAttribute('title') || '').toLowerCase();
+        // Match the old tooltip and clean it up
+        if (title.includes('dev') && title.includes('clear')) {
+          el.setAttribute('title', 'Clear saved data');
+          el.setAttribute('aria-label', 'Clear saved data');
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [pathname]);
+
+  // No UI — just patch the old tooltip and exit
+  return null;
 }
