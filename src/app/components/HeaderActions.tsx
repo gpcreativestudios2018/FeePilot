@@ -7,7 +7,15 @@ import Link from 'next/link';
 import ClearSavedDataButton from './ClearSavedDataButton';
 import { PILL_CLASS } from '@/lib/ui';
 
-export default function HeaderActions() {
+// Some places may still import HeaderActions with a Props that includes fields like `keys`.
+// Make everything optional so usage with `{}` compiles cleanly.
+type Props = {
+  isLight?: boolean;
+  onToggle?: () => void;
+  keys?: unknown;
+};
+
+export default function HeaderActions(_: Props) {
   const pathname = usePathname();
   const isHome = pathname === '/';
 
