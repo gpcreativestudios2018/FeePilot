@@ -7,7 +7,15 @@ import Link from 'next/link';
 import ClearSavedDataButton from './ClearSavedDataButton';
 import { PILL_CLASS } from '@/lib/ui';
 
-export default function HeaderActions() {
+/**
+ * HeaderActions renders:
+ * - (Home only) "Clear saved data" pill
+ * - Always-visible "Pro" pill
+ *
+ * NOTE: This component intentionally accepts NO props.
+ * Typing as React.FC ensures no external "Props" contract is required.
+ */
+const HeaderActions: React.FC = () => {
   const isHome = usePathname() === '/';
 
   return (
@@ -21,4 +29,6 @@ export default function HeaderActions() {
       </Link>
     </div>
   );
-}
+};
+
+export default HeaderActions;
