@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import React from 'react';
+import RouteWidgets from '@/app/components/RouteWidgets';
 
 const siteName = 'Fee Pilot';
 const siteDescription =
@@ -42,7 +43,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* Small global client widget(s). Shows “Clear saved data” only on / */}
+        <RouteWidgets />
+      </body>
     </html>
   );
 }
