@@ -117,7 +117,6 @@ function computeAtPrice(opts: {
     const marketplaceFee = discounted < 15 ? 2.95 : discounted * 0.2;
     const paymentFee = 0;
     const listingFee = 0;
-    the:
     const totalFees = marketplaceFee + paymentFee + listingFee;
     const profit = discounted - totalFees - shipCost - cogs;
     const marginPct = discounted > 0 ? (profit / discounted) * 100 : 0;
