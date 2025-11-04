@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { usePathname } from 'next/navigation';
 import { PILL_CLASS } from '@/lib/ui';
 
 function ClearSavedDataPill() {
@@ -9,6 +10,7 @@ function ClearSavedDataPill() {
   const clearLocal = React.useCallback(() => {
     try {
       if (typeof window === 'undefined') return;
+      // Remove only Fee Pilot keys
       const keys: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
@@ -37,7 +39,8 @@ function ClearSavedDataPill() {
           type="button"
           onClick={clearLocal}
           className={PILL_CLASS}
-          title="Clear saved data (local presets, last platform)"
+          // Clean, non-dev tooltip:
+          title="Clear saved data"
           aria-label="Clear saved data"
         >
           Clear saved data
@@ -48,6 +51,8 @@ function ClearSavedDataPill() {
 }
 
 export default function RouteWidgets() {
-  // TEMP: render everywhere to verify production bundle includes this widget.
+  const pathname = usePathname();
+  // Show only on the free home page
+  if (pathname !== '/') return null;
   return <ClearSavedDataPill />;
 }
