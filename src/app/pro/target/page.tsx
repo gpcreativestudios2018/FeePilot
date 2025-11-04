@@ -100,7 +100,7 @@ const getListingFixed = (rule: FeeRule): number => {
   return anyRule.listingFixed ?? 0;
 };
 
-// ==== FEE ENGINE (unchanged profit math; tax is for buyer total only) ====
+// ==== FEE ENGINE ==== (profit math unchanged; tax is reference-only for buyer total)
 function computeAtPrice(opts: {
   platform: PlatformKey;
   rule: FeeRule;
@@ -773,6 +773,188 @@ export default function ReverseCalcPage() {
         </div>
       </header>
 
+      {/* ✅ RESTORED: Input panel */}
+      <section className="rounded-2xl border border-purple-600/30 p-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Platform */}
+          <label className="block">
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Platform</span>
+            <select
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              value={platform}
+              onChange={(e) => {
+                setPlatform(e.target.value as PlatformKey);
+                setOverrides({}); // clear overrides when switching platform
+              }}
+            >
+              {PLATFORMS.map((p) => (
+                <option key={p} value={p} className="text-black dark:text-white bg-white dark:bg-black">
+                  {p[0].toUpperCase() + p.slice(1)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {/* Target profit */}
+          <label className="block">
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Target profit ($)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="e.g. 25"
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              value={targetProfit}
+              onChange={(e) => setTargetProfit(e.target.value)}
+            />
+            <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+              Set this OR margin; profit is used if both are set.
+            </span>
+          </label>
+
+          {/* Target margin */}
+          <label className="block">
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Target margin (%)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="e.g. 30"
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              value={targetMarginPct}
+              onChange={(e) => setTargetMarginPct(e.target.value)}
+            />
+          </label>
+
+          {/* COGS */}
+          <label className="block">
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">COGS ($)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="e.g. 12"
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              value={cogs}
+              onChange={(e) => setCogs(e.target.value)}
+            />
+          </label>
+
+          {/* Your shipping cost */}
+          <label className="block">
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Your shipping cost ($)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="e.g. 5"
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              value={shipCost}
+              onChange={(e) => setShipCost(e.target.value)}
+            />
+          </label>
+
+          {/* Discount (%) */}
+          <label className="block">
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Discount (%)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="e.g. 10"
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              value={discountPct}
+              onChange={(e) => setDiscountPct(e.target.value)}
+            />
+          </label>
+
+          {/* Shipping charged to buyer ($) */}
+          <label className="block">
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Shipping charged to buyer ($)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="e.g. 8"
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              value={shipCharge}
+              onChange={(e) => setShipCharge(e.target.value)}
+            />
+          </label>
+
+          {/* Include tax toggle */}
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={includeTax}
+              onChange={(e) => setIncludeTax(e.target.checked)}
+            />
+            <span className="text-sm text-gray-600 dark:text-gray-300">Include tax in Buyer total only</span>
+          </label>
+
+          {/* Tax state + % */}
+          <label className="block">
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">
+              State (fills base rate)
+            </span>
+            <select
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              value={taxState}
+              onChange={(e) => onSelectState(e.target.value)}
+            >
+              <option value="" className="text-black dark:text-white bg-white dark:bg-black">
+                — Select state —
+              </option>
+              {STATE_RATES.map((s) => (
+                <option key={s.code} value={s.code} className="text-black dark:text-white bg-white dark:bg-black">
+                  {s.code} — base {formatPct(s.basePct)}
+                  {s.minCombinedPct ? ` (min combined ${formatPct(s.minCombinedPct)})` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Sales tax (%)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="e.g. 7.25"
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              value={taxPct}
+              onChange={(e) => setTaxPct(e.target.value)}
+            />
+            <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+              Reference only — doesn’t change profit/fees (affects Buyer total).
+            </span>
+          </label>
+        </div>
+
+        <div className="mt-5 flex gap-3">
+          <Link href={'/pro' as Route} className={PILL_CLASS}>
+            Back to Pro
+          </Link>
+        </div>
+      </section>
+      {/* END inputs */}
+
+      {/* Presets */}
+      <section className="mt-6">
+        <LocalPresetsControls
+          getState={getPresetState}
+          applyPreset={applyPreset}
+          devTools={showDevTools}
+        />
+      </section>
+
+      {/* Dev-only: Fee overrides */}
+      {showDevTools ? (
+        <section className="mt-6">
+          <FeeOverridesDev
+            platform={platform}
+            baseRule={ruleBase}
+            overrides={overrides}
+            onChange={setOverrides}
+            onClear={() => setOverrides({})}
+          />
+        </section>
+      ) : null}
+
+      {/* Results */}
       <section className="mt-6 rounded-2xl border border-purple-600/30 p-6">
         <div className="text-base font-semibold">Suggested price</div>
         <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -786,6 +968,7 @@ export default function ReverseCalcPage() {
             ${formatMoney(price)}
           </button>
 
+        {/* Copy buttons */}
           {copiedPrice ? (
             <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
               Price copied!
