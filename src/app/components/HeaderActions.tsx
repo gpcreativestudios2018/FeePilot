@@ -7,13 +7,7 @@ import Link from 'next/link';
 import ClearSavedDataButton from './ClearSavedDataButton';
 import { PILL_CLASS } from '@/lib/ui';
 
-// Accept arbitrary props from parent without using `any`
-type Props = Record<string, unknown>;
-
-export default function HeaderActions(props: Props) {
-  // Mark props as intentionally unused to satisfy eslint
-  void props;
-
+export default function HeaderActions() {
   const isHome = usePathname() === '/';
 
   return (
