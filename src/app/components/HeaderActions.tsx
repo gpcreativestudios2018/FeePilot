@@ -7,8 +7,13 @@ import Link from 'next/link';
 import ClearSavedDataButton from './ClearSavedDataButton';
 import { PILL_CLASS } from '@/lib/ui';
 
-// Accept any props (some parents may pass `keys` or others). We ignore them.
-export default function HeaderActions(_props: any) {
+// Accept arbitrary props from parent without using `any`
+type Props = Record<string, unknown>;
+
+export default function HeaderActions(props: Props) {
+  // Mark props as intentionally unused to satisfy eslint
+  void props;
+
   const isHome = usePathname() === '/';
 
   return (
