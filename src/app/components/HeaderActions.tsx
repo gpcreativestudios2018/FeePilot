@@ -2,40 +2,31 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import ThemeToggle from './ThemeToggle';
-import ResetButton from './ResetButton';
-import CopiedToastHost from './CopiedToastHost';
-import CopiedToast from './CopiedToast';
-import ClearSavedDataButton from './ClearSavedDataButton';
 import Link from 'next/link';
+
+import ThemeToggle from './ThemeToggle';
+import ClearSavedDataButton from './ClearSavedDataButton';
 import { PILL_CLASS } from '@/lib/ui';
 
-export default function HeaderActions() {
+// Mirror the props ThemeToggle requires
+type Props = {
+  isLight: boolean;
+  onToggle: () => void;
+};
+
+export default function HeaderActions({ isLight, onToggle }: Props) {
   const pathname = usePathname();
   const isHome = pathname === '/';
 
   return (
     <div className="flex flex-wrap items-center gap-4">
-      {/* Theme */}
-      <ThemeToggle />
+      {/* Theme toggle (requires props) */}
+      <ThemeToggle isLight={isLight} onToggle={onToggle} />
 
-      {/* Home-only: restore Clear saved data in the header */}
+      {/* Home-only: Clear saved data pill back in the header */}
       {isHome ? <ClearSavedDataButton /> : null}
 
-      {/* Reset (home) */}
-      {isHome ? <ResetButton /> : null}
-
-      {/* Share + Copy exist on home */}
-      {isHome ? (
-        <>
-          <CopiedToastHost />
-          <CopiedToast />
-          {/* These two buttons are rendered by the home page; if they move in the future,
-             leaving the placeholders here is harmless */}
-        </>
-      ) : null}
-
-      {/* Pro link always available */}
+      {/* Pro link always visible */}
       <Link href="/pro" className={PILL_CLASS}>
         Pro
       </Link>
