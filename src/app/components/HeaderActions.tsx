@@ -3,6 +3,9 @@
 import React from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+
+import CopiedToastHost from './CopiedToastHost';
+import CopiedToast from './CopiedToast';
 import { PILL_CLASS } from '@/lib/ui';
 
 type HeaderActionsProps = {
@@ -15,6 +18,14 @@ export default function HeaderActions({ onShare, onCopy }: HeaderActionsProps) {
 
   return (
     <div className="flex flex-wrap items-center gap-4">
+      {/* Mount toast system on home so “Copied!” shows */}
+      {isHome ? (
+        <>
+          <CopiedToastHost />
+          <CopiedToast />
+        </>
+      ) : null}
+
       {/* Home-only: Share / Copy */}
       {isHome && onShare ? (
         <button type="button" onClick={onShare} className={PILL_CLASS}>
