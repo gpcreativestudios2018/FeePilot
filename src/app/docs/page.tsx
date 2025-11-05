@@ -16,9 +16,8 @@ export default function DocsPage() {
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">Overview</h2>
         <p>
-          Fee Pilot helps you quickly estimate marketplace fees and your
-          earnings with a clear breakdown. You can copy a shareable link
-          (with your current inputs) and export a CSV of the fee breakdown.
+          Fee Pilot helps you estimate marketplace fees and your earnings with a clear breakdown.
+          You can copy a shareable link (with your current inputs) and export a CSV of the fee breakdown.
         </p>
       </section>
 
@@ -38,21 +37,9 @@ export default function DocsPage() {
         </ul>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">More details</h2>
-        <p>
-          For power users, you can read the in-repo guide here:{' '}
-          <a
-            href="https://github.com/gpcreativestudios2018/FeePilot/blob/main/docs/command-palette.md"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-4"
-          >
-            command-palette.md on GitHub
-          </a>
-          .
-        </p>
-      </section>
+      <p className="opacity-70 text-sm">
+        Built with Next.js 15 / React 19. Aims to be fast, accessible, and privacy-friendly.
+      </p>
     </main>
   );
 }
