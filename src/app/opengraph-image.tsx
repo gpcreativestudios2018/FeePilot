@@ -1,11 +1,8 @@
-/* Generates https://fee-pilot.vercel.app/opengraph-image.png automatically */
+/* Generates https://fee-pilot.vercel.app/opengraph-image automatically */
 import { ImageResponse } from 'next/og';
 
-export const size = {
-  width: 1200,
-  height: 630,
-};
-
+export const runtime = 'edge'; // ensure Edge Runtime for fast responses
+export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
 export default function OpengraphImage() {
@@ -31,8 +28,6 @@ export default function OpengraphImage() {
         Fee&nbsp;Pilot
       </div>
     ),
-    {
-      ...size,
-    }
+    size
   );
 }
