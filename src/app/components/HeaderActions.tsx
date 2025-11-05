@@ -8,15 +8,19 @@ import ClearSavedDataButton from './ClearSavedDataButton';
 import { PILL_CLASS } from '@/lib/ui';
 
 const CLEAR_KEYS = [
-  // Home inputs + theme
   'feepilot:inputs',
   'feepilot:theme',
-  // Presets namespaces (home + pro/target)
   'feepilot:presets',
   'feepilot:target-presets',
 ];
 
-export default function HeaderActions() {
+// Accept the optional props the home page passes, even if we don't use them here.
+type HeaderActionsProps = {
+  onShare?: () => void | Promise<void>;
+  onCopy?: () => void | Promise<void>;
+};
+
+export default function HeaderActions(_props: HeaderActionsProps) {
   const isHome = usePathname() === '/';
 
   return (
