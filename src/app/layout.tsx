@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 const siteUrl = 'https://fee-pilot.vercel.app';
-const titleDefault = 'Fee Pilot – Poshmark Fee Calculator';
+const titleDefault = 'Fee Pilot – Marketplace Fee Calculator';
 const description =
-  'Fast, accurate Poshmark fee calculator and reverse calculator. Includes the $2.95 under-$15 rule, CSV export, and shareable links.';
+  'Fast, accurate marketplace fee calculator for Etsy, StockX, eBay, Depop, Mercari, and Poshmark. CSV export, shareable links, and Pro tools.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -14,10 +14,14 @@ export const metadata: Metadata = {
   },
   description,
   keywords: [
-    'Poshmark fees',
-    'Poshmark calculator',
-    'Poshmark reverse calculator',
     'marketplace fees',
+    'fee calculator',
+    'etsy fees',
+    'stockx fees',
+    'ebay fees',
+    'depop fees',
+    'mercari fees',
+    'poshmark fees',
     'seller tools',
   ],
   authors: [{ name: 'Fee Pilot' }],
@@ -35,7 +39,6 @@ export const metadata: Metadata = {
     title: titleDefault,
     description,
     images: [
-      // Uses the dynamic OG endpoint (no file extension)
       { url: '/opengraph-image', width: 1200, height: 630, alt: 'Fee Pilot' },
     ],
   },
@@ -43,18 +46,14 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: titleDefault,
     description,
-    // Use the same dynamic endpoint
     images: ['/opengraph-image'],
-    site: '@', // optional: your handle
-    creator: '@', // optional: your handle
   },
   robots: {
     index: true,
     follow: true,
   },
   icons: {
-    icon: '/favicon.ico', // optional if you already have one
-    // apple: '/apple-touch-icon.png', // optional, can add later
+    icon: '/favicon.ico',
   },
 };
 

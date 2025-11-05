@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import HomeClient from './HomeClient';
 
 export const metadata: Metadata = {
-  title: 'Poshmark Fee Calculator',
+  title: 'Marketplace Fee Calculator',
   description:
-    'Calculate Poshmark fees and seller earnings instantly. Includes the $2.95 flat fee under $15 and 20% otherwise.',
+    'Calculate marketplace fees and seller earnings for Etsy, StockX, eBay, Depop, Mercari, and Poshmark. Includes accurate rules and clear breakdowns.',
 };
 
 export default function Page() {
