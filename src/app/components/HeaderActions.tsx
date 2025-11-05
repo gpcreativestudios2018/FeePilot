@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { PILL_CLASS } from '@/lib/ui';
 
 type HeaderActionsProps = {
-  onShare?: () => void | Promise<void>; // (kept for compatibility; not used)
+  onShare?: () => void | Promise<void>; // kept for compat; not used
   onCopy?: () => void | Promise<void>;
 };
 
@@ -44,9 +44,7 @@ export default function HeaderActions({ onCopy }: HeaderActionsProps) {
     [flashCopied]
   );
 
-  // One-click copy for both buttons: "Share" (renamed behavior) and "Copy"
   const handleCopyClick = React.useCallback(async () => {
-    // Prefer page-provided copy logic if present
     if (onCopy) {
       try {
         await onCopy();
@@ -56,7 +54,6 @@ export default function HeaderActions({ onCopy }: HeaderActionsProps) {
         /* fall through */
       }
     }
-    // Fallback to copying current URL
     await safeCopy(window.location.href);
   }, [onCopy, safeCopy, flashCopied]);
 
@@ -64,12 +61,11 @@ export default function HeaderActions({ onCopy }: HeaderActionsProps) {
     <div className="flex flex-wrap items-center gap-4">
       {isHome && (
         <>
-          {/* Share now just copies the link (no Web Share, no spinner) */}
+          {/* Share now just copies the link (no Web Share/spinner) */}
           <button type="button" onClick={handleCopyClick} className={PILL_CLASS}>
             {copied ? 'Copied!' : 'Share'}
           </button>
-
-          {/* Copy keeps its original label but same behavior */}
+          {/* Copy keeps same behavior */}
           <button type="button" onClick={handleCopyClick} className={PILL_CLASS}>
             {copied ? 'Copied!' : 'Copy'}
           </button>

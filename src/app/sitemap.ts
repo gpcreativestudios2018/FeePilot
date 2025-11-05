@@ -1,8 +1,28 @@
 import type { MetadataRoute } from 'next';
 
+const siteUrl = 'https://fee-pilot.vercel.app';
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://example.com';
+  const now = new Date().toISOString();
+
   return [
-    { url: `${base}/`, changeFrequency: 'weekly', priority: 1.0 },
+    {
+      url: `${siteUrl}/`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 1,
+    },
+    {
+      url: `${siteUrl}/pro`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
+      url: `${siteUrl}/pro/target`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
   ];
 }
