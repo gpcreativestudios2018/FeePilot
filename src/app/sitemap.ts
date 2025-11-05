@@ -1,28 +1,40 @@
 import type { MetadataRoute } from 'next';
 
-const siteUrl = 'https://fee-pilot.vercel.app';
+const base = 'https://fee-pilot.vercel.app';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date().toISOString();
+  const lastModified = new Date();
 
   return [
     {
-      url: `${siteUrl}/`,
-      lastModified: now,
+      url: `${base}/`,
+      lastModified,
       changeFrequency: 'weekly',
       priority: 1,
     },
     {
-      url: `${siteUrl}/pro`,
-      lastModified: now,
+      url: `${base}/pro`,
+      lastModified,
       changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
-      url: `${siteUrl}/pro/target`,
-      lastModified: now,
+      url: `${base}/pro/target`,
+      lastModified,
       changeFrequency: 'weekly',
       priority: 0.9,
+    },
+    {
+      url: `${base}/about`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: `${base}/docs`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.6,
     },
   ];
 }
