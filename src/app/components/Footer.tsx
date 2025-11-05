@@ -23,7 +23,7 @@ export default function Footer() {
           Pro
         </Link>
         <span className="opacity-30">•</span>
-        {/* Point to /pro (overview), not directly to /pro/target */}
+        {/* Route Reverse calculator to /pro (Pro-only overview), not /pro/target */}
         <Link
           href={'/pro' as Route}
           className="opacity-80 hover:opacity-100 underline-offset-4 hover:underline"
@@ -37,9 +37,16 @@ export default function Footer() {
         >
           About
         </Link>
+        <span className="opacity-30">•</span>
+        <Link
+          href={'/docs' as Route}
+          className="opacity-80 hover:opacity-100 underline-offset-4 hover:underline"
+        >
+          Docs
+        </Link>
       </nav>
 
-      {/* Your existing content, unchanged */}
+      {/* Your existing content, kept (with docs now pointing to /docs above) */}
       <div className="flex flex-col items-center gap-2 text-sm text-neutral-400">
         <div className="text-center">
           FeePilot by GP Creative Studios{' '}

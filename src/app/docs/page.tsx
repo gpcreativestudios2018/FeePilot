@@ -1,0 +1,58 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Docs',
+  description:
+    'How to use Fee Pilot: calculator tips, sharing links, CSV export, and Pro features overview.',
+  alternates: { canonical: '/docs' },
+};
+
+export default function DocsPage() {
+  return (
+    <main className="mx-auto max-w-3xl p-6 space-y-6">
+      <h1 className="text-3xl font-semibold tracking-tight">Docs</h1>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">Overview</h2>
+        <p>
+          Fee Pilot helps you quickly estimate marketplace fees and your
+          earnings with a clear breakdown. You can copy a shareable link
+          (with your current inputs) and export a CSV of the fee breakdown.
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">Features</h2>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Calculator with summary cards and detailed breakdown</li>
+          <li>Copy a shareable link that captures your current inputs</li>
+          <li>CSV export</li>
+          <li>
+            <strong>Pro:</strong> Reverse calculator (see the{' '}
+            <Link href="/pro" className="underline underline-offset-4">
+              Pro page
+            </Link>
+            )
+          </li>
+        </ul>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">More details</h2>
+        <p>
+          For power users, you can read the in-repo guide here:{' '}
+          <a
+            href="https://github.com/gpcreativestudios2018/FeePilot/blob/main/docs/command-palette.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-4"
+          >
+            command-palette.md on GitHub
+          </a>
+          .
+        </p>
+      </section>
+    </main>
+  );
+}
