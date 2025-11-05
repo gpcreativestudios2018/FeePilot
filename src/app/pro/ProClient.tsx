@@ -4,18 +4,9 @@ import React from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 
-// If set at build time, this gets inlined into the client bundle.
+// Inlined at build time
 const checkoutUrl = process.env.NEXT_PUBLIC_PRO_CHECKOUT_URL;
 const hasCheckout = Boolean(checkoutUrl);
-
-/** Redirect to checkout if configured; otherwise show a friendly notice. */
-function handleGetPro() {
-  if (hasCheckout && typeof window !== 'undefined') {
-    window.location.href = checkoutUrl as string;
-    return;
-  }
-  alert('Checkout coming soon ✨');
-}
 
 export default function ProClient() {
   return (
@@ -23,8 +14,6 @@ export default function ProClient() {
       <header className="py-10">
         <h1 className="text-4xl font-semibold tracking-tight">FeePilot Pro</h1>
         <p className="mt-2 opacity-80">Unlock power features for sellers</p>
-
-        {/* Debug line: shows if the checkout URL was baked into this build */}
         <p className="mt-2 text-xs opacity-60">
           Checkout URL detected: <strong>{hasCheckout ? 'yes' : 'no'}</strong>
         </p>
@@ -62,14 +51,26 @@ export default function ProClient() {
           </ul>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={handleGetPro}
-              className="rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
-            >
-              Get Pro
-            </button>
+            {hasCheckout ? (
+              // Real link when checkout URL is available
+              <a
+                href={checkoutUrl as string}
+                className="rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
+              >
+                Get Pro
+              </a>
+            ) : (
+              // Fallback button when not configured
+              <button
+                type="button"
+                onClick={() => alert('Checkout coming soon ✨')}
+                className="rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
+              >
+                Get Pro
+              </button>
+            )}
 
+            {/* Pro page can link directly to the Pro tool */}
             <Link
               href={'/pro/target' as Route}
               className="rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
