@@ -22,15 +22,18 @@ export default function HeaderActions({ onShare, onCopy }: HeaderActionsProps) {
     return () => window.clearTimeout(t);
   }, []);
 
-  const safeCopy = React.useCallback(async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      flashCopied();
-      return true;
-    } catch {
-      return false;
-    }
-  }, [flashCopied]);
+  const safeCopy = React.useCallback(
+    async (text: string) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        flashCopied();
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [flashCopied]
+  );
 
   const handleCopyClick = React.useCallback(async () => {
     // Prefer the page’s copy handler (e.g. copying a breakdown) if it exists
@@ -52,16 +55,19 @@ export default function HeaderActions({ onShare, onCopy }: HeaderActionsProps) {
     const url = window.location.href;
     const title = document?.title ?? 'Fee Pilot';
 
-    // Use native Web Share if supported
+    // Use native Web Share if supported (type-safe without ts-expect-error)
     try {
-      // Some browsers may throw if user cancels — that’s fine, we’ll stop there.
-      if (typeof navigator !== 'undefined' && 'share' in navigator) {
-        // @ts-expect-error - TS doesn't know older NavigatorShareData
-        await navigator.share?.({ title, url });
-        return;
+      if (typeof navigator !== 'undefined') {
+        const nav = navigator as unknown as {
+          share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
+        };
+        if (typeof nav.share === 'function') {
+          await nav.share({ title, url });
+          return;
+        }
       }
     } catch {
-      // If native share throws, we’ll fall back to copy.
+      // If native share throws (e.g. user cancels), just fall back.
     }
 
     // Fallback: copy the link (never hang)
@@ -86,10 +92,6 @@ export default function HeaderActions({ onShare, onCopy }: HeaderActionsProps) {
       <Link href="/pro" className={PILL_CLASS}>
         Pro
       </Link>
-
-      {/* Home-only: Clear saved data is already rendered elsewhere;
-          if you intentionally want it in the header too, keep that rendering
-          in whichever one spot you prefer to avoid duplicates. */}
 
       {/* Lightweight local feedback so we don’t depend on a global toast host */}
       {copied ? (
