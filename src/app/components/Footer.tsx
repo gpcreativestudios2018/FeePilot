@@ -23,11 +23,12 @@ export default function Footer() {
           Pro
         </Link>
         <span className="opacity-30">•</span>
+        {/* Point to /pro (overview), not directly to /pro/target */}
         <Link
-          href={'/pro/target' as Route}
+          href={'/pro' as Route}
           className="opacity-80 hover:opacity-100 underline-offset-4 hover:underline"
         >
-          Reverse calculator
+          Reverse calculator <span className="rounded-full border px-2 py-0.5 text-[10px] align-middle opacity-70">Pro</span>
         </Link>
         <span className="opacity-30">•</span>
         <Link
