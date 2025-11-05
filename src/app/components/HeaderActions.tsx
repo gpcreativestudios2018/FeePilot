@@ -6,11 +6,57 @@ import Link from 'next/link';
 import { PILL_CLASS } from '@/lib/ui';
 
 type HeaderActionsProps = {
-  /** Optional page-provided handler; we’ll fall back if it fails or isn’t present */
   onShare?: () => void | Promise<void>;
-  /** Optional page-provided handler; we’ll fall back if it fails or isn’t present */
   onCopy?: () => void | Promise<void>;
 };
+
+/** Best-effort cleanup for any legacy/stuck share overlay */
+function killStuckShareOverlay() {
+  try {
+    // Common patterns we may have used previously
+    const candidates: Element[] = [];
+
+    // Known ids/classes you might have in older builds
+    const byId = ['share-overlay', 'share-dialog', 'dialog-root', 'modal-root'];
+    byId.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) candidates.push(el);
+    });
+
+    // Generic fixed fullscreen dialog/backdrop patterns
+    candidates.push(
+      ...document.querySelectorAll(
+        [
+          '[role="dialog"]',
+          '[aria-modal="true"]',
+          '.fixed.inset-0', // common shadcn dialog/backdrop
+          '.modal-backdrop',
+          '.dialog-backdrop',
+        ].join(',')
+      )
+    );
+
+    // Remove only those that look like backdrops/spinners
+    candidates.forEach((el) => {
+      // Avoid nuking legitimate content: check for spinner/backdrop hints
+      const looksLikeBackdrop =
+        el.className?.toString().includes('backdrop') ||
+        el.className?.toString().includes('inset-0') ||
+        el.getAttribute('aria-busy') === 'true' ||
+        el.querySelector('[aria-busy="true"], .animate-spin, [data-spinner]');
+
+      if (looksLikeBackdrop) {
+        el.remove();
+      }
+    });
+
+    // Restore scrolling if it was blocked
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+  } catch {
+    // noop
+  }
+}
 
 export default function HeaderActions({ onShare, onCopy }: HeaderActionsProps) {
   const isHome = usePathname() === '/';
@@ -36,47 +82,53 @@ export default function HeaderActions({ onShare, onCopy }: HeaderActionsProps) {
   );
 
   const handleCopyClick = React.useCallback(async () => {
-    // Prefer the page’s copy handler (e.g. copying a breakdown) if it exists
+    // Try page-specific copy first
     if (onCopy) {
       try {
         await onCopy();
         flashCopied();
         return;
       } catch {
-        // fall through to URL copy
+        // fall through
       }
     }
-    // Fallback: copy the shareable URL
-    const url = window.location.href;
-    await safeCopy(url);
+    // Fallback to copying current URL
+    await safeCopy(window.location.href);
   }, [onCopy, safeCopy, flashCopied]);
 
   const handleShareClick = React.useCallback(async () => {
+    // Proactively clear any previous overlay before starting
+    killStuckShareOverlay();
+
     const url = window.location.href;
     const title = document?.title ?? 'Fee Pilot';
 
-    // Use native Web Share if supported (type-safe without ts-expect-error)
     try {
-      if (typeof navigator !== 'undefined') {
-        const nav = navigator as unknown as {
-          share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
-        };
-        if (typeof nav.share === 'function') {
-          await nav.share({ title, url });
-          return;
-        }
+      const nav = navigator as unknown as {
+        share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
+      };
+      if (typeof nav.share === 'function') {
+        await nav.share({ title, url });
+        return;
       }
     } catch {
-      // If native share throws (e.g. user cancels), just fall back.
+      // ignore and fall back
     }
 
-    // Fallback: copy the link (never hang)
+    // Fallback: just copy the link and show feedback
     await safeCopy(url);
+
+    // Double-check a moment later in case something else mounted a spinner
+    window.setTimeout(killStuckShareOverlay, 300);
   }, [safeCopy]);
+
+  // Safety net: on mount, clean up any stuck overlay from prior navigations
+  React.useEffect(() => {
+    killStuckShareOverlay();
+  }, []);
 
   return (
     <div className="flex flex-wrap items-center gap-4">
-      {/* Home-only actions */}
       {isHome && (
         <>
           <button type="button" onClick={handleShareClick} className={PILL_CLASS}>
@@ -88,12 +140,10 @@ export default function HeaderActions({ onShare, onCopy }: HeaderActionsProps) {
         </>
       )}
 
-      {/* Pro link always visible */}
       <Link href="/pro" className={PILL_CLASS}>
         Pro
       </Link>
 
-      {/* Lightweight local feedback so we don’t depend on a global toast host */}
       {copied ? (
         <span className={PILL_CLASS} aria-live="polite">
           Copied!
