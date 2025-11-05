@@ -4,13 +4,14 @@ import React from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 
-// If set in Vercel env, the button will redirect to this URL.
+// If set at build time, this gets inlined into the client bundle.
 const checkoutUrl = process.env.NEXT_PUBLIC_PRO_CHECKOUT_URL;
+const hasCheckout = Boolean(checkoutUrl);
 
 /** Redirect to checkout if configured; otherwise show a friendly notice. */
 function handleGetPro() {
-  if (checkoutUrl && typeof window !== 'undefined') {
-    window.location.href = checkoutUrl;
+  if (hasCheckout && typeof window !== 'undefined') {
+    window.location.href = checkoutUrl as string;
     return;
   }
   alert('Checkout coming soon ✨');
@@ -22,6 +23,11 @@ export default function ProClient() {
       <header className="py-10">
         <h1 className="text-4xl font-semibold tracking-tight">FeePilot Pro</h1>
         <p className="mt-2 opacity-80">Unlock power features for sellers</p>
+
+        {/* Debug line: shows if the checkout URL was baked into this build */}
+        <p className="mt-2 text-xs opacity-60">
+          Checkout URL detected: <strong>{hasCheckout ? 'yes' : 'no'}</strong>
+        </p>
       </header>
 
       <section className="grid gap-6 sm:grid-cols-2">
@@ -64,7 +70,6 @@ export default function ProClient() {
               Get Pro
             </button>
 
-            {/* Pro page can link directly to the Pro tool */}
             <Link
               href={'/pro/target' as Route}
               className="rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
@@ -73,10 +78,10 @@ export default function ProClient() {
             </Link>
           </div>
 
-          {!checkoutUrl && (
+          {!hasCheckout && (
             <p className="mt-3 text-xs opacity-60">
-              Tip: set <code>NEXT_PUBLIC_PRO_CHECKOUT_URL</code> in your Vercel
-              Project Env to enable checkout.
+              Tip: set <code>NEXT_PUBLIC_PRO_CHECKOUT_URL</code> in Vercel (Preview &amp; Production)
+              and redeploy so this page detects it.
             </p>
           )}
         </div>
