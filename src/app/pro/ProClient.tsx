@@ -52,7 +52,6 @@ export default function ProClient() {
 
           <div className="mt-6 flex flex-wrap gap-3">
             {hasCheckout ? (
-              // Real link when checkout URL is available
               <a
                 href={checkoutUrl as string}
                 className="rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
@@ -60,7 +59,6 @@ export default function ProClient() {
                 Get Pro
               </a>
             ) : (
-              // Fallback button when not configured
               <button
                 type="button"
                 onClick={() => alert('Checkout coming soon ✨')}
@@ -70,19 +68,31 @@ export default function ProClient() {
               </button>
             )}
 
-            {/* Pro page can link directly to the Pro tool */}
-            <Link
-              href={'/pro/target' as Route}
-              className="rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
-            >
-              Reverse calculator (beta)
-            </Link>
+            {/* Reverse calculator button: NEVER link directly to /pro/target */}
+            {hasCheckout ? (
+              <a
+                href={checkoutUrl as string}
+                className="rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
+              >
+                Reverse calculator (Pro)
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  alert('Reverse calculator is a Pro feature.')
+                }
+                className="rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
+              >
+                Reverse calculator (Pro)
+              </button>
+            )}
           </div>
 
           {!hasCheckout && (
             <p className="mt-3 text-xs opacity-60">
               Tip: set <code>NEXT_PUBLIC_PRO_CHECKOUT_URL</code> in Vercel (Preview &amp; Production)
-              and redeploy so this page detects it.
+              and redeploy so these buttons go to checkout.
             </p>
           )}
         </div>
