@@ -35,15 +35,16 @@ export const metadata: Metadata = {
     title: titleDefault,
     description,
     images: [
-      // Uses the dynamic OG endpoint you just added
-      { url: '/opengraph-image.png', width: 1200, height: 630, alt: 'Fee Pilot' },
+      // Uses the dynamic OG endpoint (no file extension)
+      { url: '/opengraph-image', width: 1200, height: 630, alt: 'Fee Pilot' },
     ],
   },
   twitter: {
     card: 'summary_large_image',
     title: titleDefault,
     description,
-    images: ['/opengraph-image.png'],
+    // Use the same dynamic endpoint
+    images: ['/opengraph-image'],
     site: '@', // optional: your handle
     creator: '@', // optional: your handle
   },
