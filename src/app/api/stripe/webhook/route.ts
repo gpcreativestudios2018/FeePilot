@@ -1,0 +1,52 @@
+﻿import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
+
+// Use Node runtime (Stripe needs it)
+export const runtime = 'nodejs';
+
+// IMPORTANT: set this in Vercel later
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2024-06-20',
+});
+
+/**
+ * Stripe sends a raw body. In the App Router we can read it as text(),
+ * then verify the signature header.
+ */
+export async function POST(req: NextRequest) {
+  let event: Stripe.Event;
+
+  try {
+    const raw = await req.text();
+    const signature = req.headers.get('stripe-signature') as string;
+
+    if (!webhookSecret) {
+      console.warn('[stripe] Missing STRIPE_WEBHOOK_SECRET; accepting event without verify (dev only)');
+      event = JSON.parse(raw) as Stripe.Event;
+    } else {
+      event = stripe.webhooks.constructEvent(raw, signature, webhookSecret);
+    }
+  } catch (err: any) {
+    console.error('[stripe] Webhook signature verification failed:', err?.message || err);
+    return new NextResponse('Invalid signature', { status: 400 });
+  }
+
+  // Minimal handler for now — just log what we’d act on later.
+  switch (event.type) {
+    case 'checkout.session.completed':
+    case 'invoice.paid':
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated':
+    case 'customer.subscription.deleted':
+    case 'invoice.payment_failed':
+      console.log('[stripe] event:', event.type, { id: event.id });
+      break;
+    default:
+      // Ignore other events for now
+      break;
+  }
+
+  return NextResponse.json({ received: true });
+}
