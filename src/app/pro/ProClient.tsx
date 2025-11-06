@@ -14,9 +14,6 @@ export default function ProClient() {
       <header className="py-10">
         <h1 className="text-4xl font-semibold tracking-tight">FeePilot Pro</h1>
         <p className="mt-2 opacity-80">Unlock power features for sellers</p>
-        <p className="mt-2 text-xs opacity-60">
-          Checkout URL detected: <strong>{hasCheckout ? 'yes' : 'no'}</strong>
-        </p>
       </header>
 
       <section className="grid gap-6 sm:grid-cols-2">
@@ -46,6 +43,7 @@ export default function ProClient() {
           <ul className="mt-4 list-disc space-y-2 pl-5 opacity-90">
             <li><strong>Custom fee rules</strong> per platform</li>
             <li>Saved presets (name &amp; quick-load)</li>
+            <li>Reverse calculator (target payout)</li>
             <li>CSV export of comparisons</li>
             <li>Priority updates to fee rules</li>
           </ul>
@@ -67,32 +65,12 @@ export default function ProClient() {
                 Get Pro
               </button>
             )}
-
-            {/* Reverse calculator button: NEVER link directly to /pro/target */}
-            {hasCheckout ? (
-              <a
-                href={checkoutUrl as string}
-                className="rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
-              >
-                Reverse calculator (Pro)
-              </a>
-            ) : (
-              <button
-                type="button"
-                onClick={() =>
-                  alert('Reverse calculator is a Pro feature.')
-                }
-                className="rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
-              >
-                Reverse calculator (Pro)
-              </button>
-            )}
           </div>
 
           {!hasCheckout && (
             <p className="mt-3 text-xs opacity-60">
               Tip: set <code>NEXT_PUBLIC_PRO_CHECKOUT_URL</code> in Vercel (Preview &amp; Production)
-              and redeploy so these buttons go to checkout.
+              and redeploy so this button goes to checkout.
             </p>
           )}
         </div>
