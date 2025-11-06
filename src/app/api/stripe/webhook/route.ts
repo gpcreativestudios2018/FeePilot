@@ -23,13 +23,15 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get('stripe-signature') as string;
 
     if (!webhookSecret) {
+      // Dev-only fallback if the secret isn't configured
       console.warn('[stripe] Missing STRIPE_WEBHOOK_SECRET; accepting event without verify (dev only)');
       event = JSON.parse(raw) as Stripe.Event;
     } else {
       event = stripe.webhooks.constructEvent(raw, signature, webhookSecret);
     }
-  } catch (err: any) {
-    console.error('[stripe] Webhook signature verification failed:', err?.message || err);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[stripe] Webhook signature verification failed:', message);
     return new NextResponse('Invalid signature', { status: 400 });
   }
 
