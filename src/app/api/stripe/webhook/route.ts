@@ -4,12 +4,12 @@ import Stripe from 'stripe';
 // Use Node runtime (Stripe needs it)
 export const runtime = 'nodejs';
 
-// IMPORTANT: set this in Vercel later
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+// Avoid static generation for this route
+export const dynamic = 'force-dynamic';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-06-20',
-});
+// Read secrets (may be undefined at build time; that's OK)
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const secretKey = process.env.STRIPE_SECRET_KEY;
 
 /**
  * Stripe sends a raw body. In the App Router we can read it as text(),
@@ -22,14 +22,20 @@ export async function POST(req: NextRequest) {
     const raw = await req.text();
     const signature = req.headers.get('stripe-signature') as string;
 
-    if (!webhookSecret) {
-      console.warn('[stripe] Missing STRIPE_WEBHOOK_SECRET; accepting event without verify (dev only)');
-      event = JSON.parse(raw) as Stripe.Event;
-    } else {
+    if (webhookSecret && secretKey) {
+      // Construct the Stripe client lazily at request-time (not module scope)
+      const stripe = new Stripe(secretKey);
       event = stripe.webhooks.constructEvent(raw, signature, webhookSecret);
+    } else {
+      // Dev/preview fallback: accept without verify if secrets are missing
+      console.warn(
+        '[stripe] Missing STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET; accepting event without verify (dev/preview only)'
+      );
+      event = JSON.parse(raw) as Stripe.Event;
     }
-  } catch (err: any) {
-    console.error('[stripe] Webhook signature verification failed:', err?.message || err);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[stripe] Webhook signature verification failed:', message);
     return new NextResponse('Invalid signature', { status: 400 });
   }
 
