@@ -4,12 +4,9 @@ import Stripe from 'stripe';
 // Use Node runtime (Stripe needs it)
 export const runtime = 'nodejs';
 
-// IMPORTANT: set this in Vercel later
+// IMPORTANT: set these in Vercel later (we'll wire real handling next)
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-06-20',
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || ''); // omit apiVersion to satisfy types
 
 /**
  * Stripe sends a raw body. In the App Router we can read it as text(),
