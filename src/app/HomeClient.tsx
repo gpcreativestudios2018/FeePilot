@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
+import Link from 'next/link';
 import HeaderActions from './components/HeaderActions';
 import Footer from './components/Footer';
 import ResetButton from './components/ResetButton';
@@ -263,10 +264,12 @@ export default function HomeClient() {
           <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight">
             {/* accent dot */}
             <span aria-hidden className="inline-block h-3 w-3 rounded-full bg-purple-500 ring-2 ring-purple-400/50" />
-            FeePilot
+            <Link href={'/' as Route} className="outline-none focus:underline">
+              FeePilot
+            </Link>
           </h1>
 
-        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <ThemeToggle isLight={isLight} onToggle={toggleTheme} />
             <ResetButton onClick={resetInputs} />
             {/* Share / Copy / Pro */}
@@ -495,3 +498,6 @@ export default function HomeClient() {
     </div>
   );
 }
+
+// Typed route helper for Link
+type Route = '/' | '/pro' | '/pro/target' | '/about' | '/docs';
