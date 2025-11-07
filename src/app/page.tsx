@@ -1,4 +1,4 @@
-﻿// src/app/page.tsx
+// src/app/page.tsx
 import type { Metadata } from 'next';
 import HomeClient from './HomeClient';
 
@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      indexifembedded: true,
+      noimageindex: true,
+    },
   },
 };
 
