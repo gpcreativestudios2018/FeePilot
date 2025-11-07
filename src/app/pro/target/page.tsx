@@ -1,6 +1,7 @@
 // src/app/pro/target/page.tsx
 import type { Metadata } from 'next';
 import TargetClient from './TargetClient';
+import TargetGate from './TargetGate';
 
 export const metadata: Metadata = {
   title: 'Reverse Calculator (beta) — Fee Pilot Pro',
@@ -24,5 +25,9 @@ export const metadata: Metadata = {
 };
 
 export default function TargetPage() {
-  return <TargetClient />;
+  return (
+    <TargetGate>
+      <TargetClient />
+    </TargetGate>
+  );
 }
