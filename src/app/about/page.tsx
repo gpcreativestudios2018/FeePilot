@@ -1,70 +1,83 @@
+// src/app/about/page.tsx
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import type { Route } from 'next';
 
 export const metadata: Metadata = {
   title: 'About Fee Pilot',
   description:
-    'What Fee Pilot does and how fees are calculated. Free calculator with CSV export and shareable links. Pro adds the reverse calculator.',
-  alternates: { canonical: '/about' },
+    'Learn what Fee Pilot does, why it exists, and how to use it to estimate platform and payment processor fees. Includes links to Pro features and documentation.',
+  alternates: {
+    canonical: '/about',
+  },
+  openGraph: {
+    title: 'About Fee Pilot',
+    description:
+      'What Fee Pilot is, how it works, and where to learn more. Built with Next.js 15 / React 19.',
+    url: '/about',
+    siteName: 'Fee Pilot',
+    type: 'website',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function AboutPage() {
   return (
-    <main className="mx-auto max-w-3xl p-6 space-y-6">
+    <main className="mx-auto max-w-3xl px-4 py-10">
       <h1 className="text-3xl font-semibold tracking-tight">About Fee Pilot</h1>
 
-      <p>
-        Fee Pilot is a fast, accurate <strong>marketplace fee calculator</strong> for
-        popular platforms including Etsy, StockX, eBay, Depop, Mercari, and Poshmark.
-        It provides clear fee breakdowns and estimated earnings using each marketplace’s
-        current rules.
+      <p className="mt-4 text-base text-gray-700" suppressHydrationWarning>
+        Fee Pilot helps you quickly estimate platform and processor fees, compare options, and share
+        results. It’s fast, privacy-friendly, and built for clarity.
       </p>
 
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">What’s included (Free)</h2>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>Main calculator with fee breakdown and summary cards</li>
-          <li>CSV export</li>
-          <li>Shareable links (copy URL with current inputs)</li>
-          <li>Local presets</li>
+      <section className="mt-8 space-y-4">
+        <h2 className="text-xl font-medium">What&apos;s included</h2>
+        <ul className="list-disc pl-6 text-gray-700">
+          <li>Main calculator with summary cards</li>
+          <li>CSV export and shareable links</li>
+          <li>
+            Pro tools like the{' '}
+            <Link href={'/pro/target' as Route} className="underline">
+              Reverse Calculator (beta)
+            </Link>
+          </li>
+          <li>SEO-friendly sitemap and dynamic OG image</li>
+          <li>Docs and examples to get you started</li>
         </ul>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Pro features</h2>
-        <ul className="list-disc pl-5 space-y-1">
-          <li className="flex items-center gap-2">
-            <span>Reverse calculator to hit a target payout</span>
-            <span className="rounded-full border px-2 py-0.5 text-xs opacity-70">Pro</span>
+      <section className="mt-8 space-y-4">
+        <h2 className="text-xl font-medium">Learn more</h2>
+        <ul className="list-disc pl-6 text-gray-700">
+          <li>
+            Read the <Link href={'/docs' as Route} className="underline">Docs</Link>
+          </li>
+          <li>
+            Explore <Link href={'/pro' as Route} className="underline">Pro</Link>
+          </li>
+          <li>
+            Try the <Link href={'/' as Route} className="underline">Calculator</Link>
           </li>
         </ul>
-        {/* Link to the Pro overview, not directly to the Pro-only tool */}
-        <p className="text-sm opacity-80">
-          Learn more on the{' '}
-          <Link
-            href={'/pro' as Route}
-            className="underline underline-offset-4 hover:opacity-100"
-          >
-            Pro page
-          </Link>
-          .
-        </p>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Notes on accuracy</h2>
+      <section className="mt-8 text-sm text-gray-600">
         <p>
-          Fee calculations follow platform-specific rules. For example, Poshmark fees
-          are based on the discounted item price only: a flat <strong>$2.95</strong> if the
-          discounted price is <strong>under $15</strong>, otherwise <strong>20%</strong>. Buyer-paid
-          shipping is not part of the fee base.
+          Built with Next.js 15, React 19, and TypeScript. Deployed on Vercel. If you have feedback,
+          we&apos;d love to hear it.
         </p>
       </section>
-
-      <p className="opacity-70 text-sm">
-        Built with Next.js 15 / React 19. Aims to be fast, accessible, and privacy-friendly.
-      </p>
     </main>
   );
 }
+
+// Typed route helper
+type Route =
+  | '/'
+  | '/about'
+  | '/docs'
+  | '/pro'
+  | '/pro/target';
