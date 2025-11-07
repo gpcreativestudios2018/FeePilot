@@ -53,6 +53,9 @@ export default function TargetGate({ children }: { children: React.ReactNode }) 
 
   if (hasPro) return <>{children}</>;
 
+  const pill =
+    'rounded-full border px-4 py-2 outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-purple-400/60';
+
   return (
     <main className="mx-auto max-w-3xl p-6">
       <div className="rounded-2xl border border-white/10 p-6">
@@ -64,7 +67,7 @@ export default function TargetGate({ children }: { children: React.ReactNode }) 
         <div className="mt-6 flex flex-wrap gap-3">
           <a
             href={CHECKOUT_URL}
-            className="rounded-full border border-purple-600/50 px-4 py-2 hover:bg-white/5"
+            className={`${pill} border-purple-600/50`}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -73,12 +76,13 @@ export default function TargetGate({ children }: { children: React.ReactNode }) 
 
           <button
             type="button"
-            className="rounded-full border border-purple-600/50 px-4 py-2 hover:bg-white/5"
+            className={`${pill} border-purple-600/50`}
             onClick={() => {
               try {
                 window.localStorage.setItem(PRO_KEY, '1');
               } catch {}
-              window.location.reload();
+              // Unlock without a full reload
+              setHasPro(true);
             }}
           >
             I already purchased
@@ -86,7 +90,7 @@ export default function TargetGate({ children }: { children: React.ReactNode }) 
 
           <Link
             href={'/pro' as Route}
-            className="rounded-full border border-white/10 px-4 py-2 hover:bg-white/5"
+            className={`${pill} border-purple-600/50`}
           >
             Back to Pro overview
           </Link>
