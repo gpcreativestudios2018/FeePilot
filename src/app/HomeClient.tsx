@@ -263,7 +263,7 @@ export default function HomeClient() {
         <div className="flex items-center justify-between">
           <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight">
             {/* accent dot */}
-            <span aria-hidden className="inline-block h-3 w-3 rounded-full bg-purple-500 ring-2 ring-purple-400/50" />
+            <span aria-hidden="true" className="inline-block h-3 w-3 rounded-full bg-purple-500 ring-2 ring-purple-400/50" />
             <Link href={'/' as Route} className="outline-none focus:underline">
               FeePilot
             </Link>
