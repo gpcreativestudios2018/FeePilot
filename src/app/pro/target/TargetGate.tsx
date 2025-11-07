@@ -54,7 +54,7 @@ export default function TargetGate({ children }: { children: React.ReactNode }) 
   if (hasPro) return <>{children}</>;
 
   const pill =
-    'rounded-full border px-4 py-2 outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-purple-400/60';
+    'rounded-full border px-4 py-2 outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-purple-400/60 border-purple-600/50';
 
   return (
     <main className="mx-auto max-w-3xl p-6">
@@ -67,7 +67,7 @@ export default function TargetGate({ children }: { children: React.ReactNode }) 
         <div className="mt-6 flex flex-wrap gap-3">
           <a
             href={CHECKOUT_URL}
-            className={`${pill} border-purple-600/50`}
+            className={pill}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -76,7 +76,7 @@ export default function TargetGate({ children }: { children: React.ReactNode }) 
 
           <button
             type="button"
-            className={`${pill} border-purple-600/50`}
+            className={pill}
             onClick={() => {
               try {
                 window.localStorage.setItem(PRO_KEY, '1');
@@ -88,10 +88,7 @@ export default function TargetGate({ children }: { children: React.ReactNode }) 
             I already purchased
           </button>
 
-          <Link
-            href={'/pro' as Route}
-            className={`${pill} border-purple-600/50`}
-          >
+          <Link href={'/pro' as Route} className={pill}>
             Back to Pro overview
           </Link>
         </div>
