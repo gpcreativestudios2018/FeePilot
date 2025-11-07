@@ -1,8 +1,9 @@
+﻿// src/app/layout.tsx
 import type { Metadata } from 'next';
 import './globals.css';
 
 const siteUrl = 'https://fee-pilot.vercel.app';
-const titleDefault = 'Fee Pilot – Marketplace Fee Calculator';
+const titleDefault = 'Fee Pilot — Marketplace Fee Calculator';
 const description =
   'Fast, accurate marketplace fee calculator for Etsy, StockX, eBay, Depop, Mercari, and Poshmark. CSV export, shareable links, and Pro tools.';
 
@@ -55,6 +56,10 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.ico',
   },
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b1220' },
+  ],
 };
 
 export default function RootLayout({
