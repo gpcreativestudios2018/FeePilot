@@ -1,13 +1,28 @@
+// src/app/pro/target/page.tsx
 import type { Metadata } from 'next';
 import TargetClient from './TargetClient';
 
 export const metadata: Metadata = {
-  title: 'Reverse Poshmark Calculator (Target Payout)',
+  title: 'Reverse Calculator (beta) — Fee Pilot Pro',
   description:
-    'Enter your desired payout and get the exact listing price for Poshmark, with the $2.95 under-$15 flat fee and 20% otherwise handled automatically.',
-  alternates: { canonical: '/pro/target' },
+    'Work backward from a target payout to find the required gross amount, accounting for platform and processor fees. Part of Fee Pilot Pro.',
+  alternates: {
+    canonical: '/pro/target',
+  },
+  openGraph: {
+    title: 'Reverse Calculator (beta) — Fee Pilot Pro',
+    description:
+      'Start with a target payout and calculate the gross needed after fees. Great for quoting and planning.',
+    url: '/pro/target',
+    siteName: 'Fee Pilot',
+    type: 'article',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
-export default function Page() {
+export default function TargetPage() {
   return <TargetClient />;
 }
