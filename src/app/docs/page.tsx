@@ -1,45 +1,94 @@
+// src/app/docs/page.tsx
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Docs',
+  title: 'Docs — Fee Pilot',
   description:
-    'How to use Fee Pilot: calculator tips, sharing links, CSV export, and Pro features overview.',
-  alternates: { canonical: '/docs' },
+    'Documentation for Fee Pilot: how to use the calculator, export CSV, share results, and explore Pro tools like the Reverse Calculator.',
+  alternates: {
+    canonical: '/docs',
+  },
+  openGraph: {
+    title: 'Fee Pilot Docs',
+    description:
+      'Learn how to use Fee Pilot to estimate fees, compare outcomes, and share results. Includes notes on Pro features.',
+    url: '/docs',
+    siteName: 'Fee Pilot',
+    type: 'article',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function DocsPage() {
   return (
-    <main className="mx-auto max-w-3xl p-6 space-y-6">
-      <h1 className="text-3xl font-semibold tracking-tight">Docs</h1>
+    <main className="mx-auto max-w-3xl px-4 py-10">
+      <h1 className="text-3xl font-semibold tracking-tight">Fee Pilot Docs</h1>
 
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Overview</h2>
-        <p>
-          Fee Pilot helps you estimate marketplace fees and your earnings with a clear breakdown.
-          You can copy a shareable link (with your current inputs) and export a CSV of the fee breakdown.
-        </p>
-      </section>
+      <p className="mt-4 text-base text-gray-700" suppressHydrationWarning>
+        This guide covers the core calculator, CSV export, sharing, and Pro features. If you’re new,
+        start with the calculator, then explore Pro for advanced workflows.
+      </p>
 
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Features</h2>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>Calculator with summary cards and detailed breakdown</li>
-          <li>Copy a shareable link that captures your current inputs</li>
-          <li>CSV export</li>
+      <section className="mt-8 space-y-4">
+        <h2 className="text-xl font-medium">Core features</h2>
+        <ul className="list-disc pl-6 text-gray-700">
           <li>
-            <strong>Pro:</strong> Reverse calculator (see the{' '}
-            <Link href="/pro" className="underline underline-offset-4">
-              Pro page
+            <strong>Calculator:</strong>{' '}
+            <Link href={'/' as Route} className="underline">
+              Enter amounts and see fee breakdowns
             </Link>
-            )
+            .
+          </li>
+          <li>
+            <strong>Share:</strong> Generate shareable links to revisit or send to teammates.
+          </li>
+          <li>
+            <strong>CSV Export:</strong> Download results for spreadsheets and audits.
           </li>
         </ul>
       </section>
 
-      <p className="opacity-70 text-sm">
-        Built with Next.js 15 / React 19. Aims to be fast, accessible, and privacy-friendly.
-      </p>
+      <section className="mt-8 space-y-4">
+        <h2 className="text-xl font-medium">Pro tools</h2>
+        <ul className="list-disc pl-6 text-gray-700">
+          <li>
+            <strong>Overview:</strong>{' '}
+            <Link href={'/pro' as Route} className="underline">
+              See what’s in Pro
+            </Link>
+            .
+          </li>
+          <li>
+            <strong>Reverse Calculator (beta):</strong>{' '}
+            <Link href={'/pro/target' as Route} className="underline">
+              Work backward from a target payout
+            </Link>
+            .
+          </li>
+        </ul>
+      </section>
+
+      <section className="mt-8 space-y-4">
+        <h2 className="text-xl font-medium">FAQ</h2>
+        <ul className="list-disc pl-6 text-gray-700">
+          <li>Does Fee Pilot store my data? No—calculations run in your browser.</li>
+          <li>Can I override fees? Pro-ready overrides are planned.</li>
+          <li>Where can I give feedback? Reach out via the About page.</li>
+        </ul>
+      </section>
+
+      <section className="mt-8 text-sm text-gray-600">
+        <p>
+          Built with Next.js 15 and React 19. Deployed on Vercel. Privacy-friendly by design.
+        </p>
+      </section>
     </main>
   );
 }
+
+// Typed route helper
+type Route = '/' | '/about' | '/docs' | '/pro' | '/pro/target';
