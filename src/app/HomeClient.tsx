@@ -20,6 +20,18 @@ import { cx, formatMoneyWithParens } from '../lib/format';
 import copyWithToast from '../lib/copyWithToast';
 import ComparisonTableSection from './components/ComparisonTableSection';
 
+/* -------------------------------- analytics -------------------------------- */
+declare global {
+  interface Window {
+    plausible?: (event: string, opts?: { props?: Record<string, unknown> }) => void;
+  }
+}
+const track = (event: string, props?: Record<string, unknown>) => {
+  try {
+    window.plausible?.(event, props ? { props } : undefined);
+  } catch {}
+};
+
 /* ---------------------------------- types --------------------------------- */
 type Inputs = {
   platform: PlatformKey;
@@ -211,10 +223,13 @@ export default function HomeClient() {
   // Share / Copy use permalink with current inputs
   const shareLink = async (): Promise<void> => {
     const url = buildPermalinkUrl(inputs);
+    track('Share', { platform: inputs.platform });
     if (navigator.share) {
       try {
         await navigator.share({ title: 'FeePilot', url });
-      } catch { /* user canceled */ }
+      } catch {
+        // user canceled
+      }
     } else {
       await copyWithToast(url); // fallback copies + shows toast
     }
@@ -222,6 +237,7 @@ export default function HomeClient() {
   const copyLink = async (): Promise<void> => {
     const url = buildPermalinkUrl(inputs);
     await copyWithToast(url); // copies + shows toast
+    track('Copy Link', { platform: inputs.platform });
   };
 
   const resetInputs = () => {
