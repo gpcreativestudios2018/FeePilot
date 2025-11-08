@@ -2,28 +2,80 @@
 
 import * as React from 'react';
 import type { FC } from 'react';
-
-// Reuse the same analytics helper already wired for "Share" and "Copy Link"
 import { track } from '@/lib/analytics';
 
-// If your table row type lives elsewhere, align this with your actual shape.
-// These fields are typical for a fee comparison table.
+type Inputs = {
+  price: number;
+  shipCharge: number;
+  shipCost: number;
+  cogs: number;
+  discountPct: number;
+  tax: number;
+};
+
 export type ComparisonRow = {
   marketplace: string;
-  listingPrice: number;    // user-entered price
-  fees: number;            // total fees for this marketplace
-  net: number;             // payout after fees
-  notes?: string;          // optional
+  listingPrice: number;
+  fees: number;
+  net: number;
+  notes?: string;
+};
+
+type ComparisonEntry = {
+  platform: string;         // e.g., 'etsy'
+  displayName?: string;     // optional pretty name
+  listingPrice?: number;    // optional per-platform listing price
+  fees?: number;            // total fees for this platform
+  totalFees?: number;       // alt name often used
+  net?: number;             // payout after fees
+  payout?: number;          // alt name often used
+  notes?: string;
 };
 
 export type ComparisonTableSectionProps = {
-  rows: ComparisonRow[];
-  heading?: string;
   className?: string;
+  heading?: string;
+
+  /** Props used by HomeClient */
+  isLight?: boolean;
+  inputs?: Inputs;
+  comparison?: ComparisonEntry[];
+
+  /** Back-compat: direct rows (older call sites) */
+  rows?: ComparisonRow[];
 };
 
 const numberToMoney = (n: number) =>
-  Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(n);
+  Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(n ?? 0);
+
+const coalesceRows = (props: ComparisonTableSectionProps): ComparisonRow[] => {
+  if (props.rows && props.rows.length) return props.rows;
+
+  const { comparison = [], inputs } = props;
+  const baseListing = inputs?.price ?? 0;
+
+  return comparison.map((c) => {
+    const marketplace = c.displayName ?? c.platform ?? '—';
+    const listingPrice = c.listingPrice ?? baseListing;
+
+    // prefer explicit fields, fall back to alternates / simple math
+    const fees = (typeof c.fees === 'number' ? c.fees : undefined)
+      ?? (typeof c.totalFees === 'number' ? c.totalFees : undefined)
+      ?? 0;
+
+    const net = (typeof c.net === 'number' ? c.net : undefined)
+      ?? (typeof c.payout === 'number' ? c.payout : undefined)
+      ?? (listingPrice - fees);
+
+    return {
+      marketplace,
+      listingPrice,
+      fees,
+      net,
+      notes: c.notes,
+    };
+  });
+};
 
 const buildCsv = (rows: ComparisonRow[]) => {
   const header = [
@@ -47,10 +99,7 @@ const buildCsv = (rows: ComparisonRow[]) => {
       cols
         .map((c) => {
           const s = String(c);
-          // Minimal CSV escaping (wrap if contains comma, quote, newline)
-          if (/[",\n]/.test(s)) {
-            return `"${s.replace(/"/g, '""')}"`;
-          }
+          if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
           return s;
         })
         .join(',')
@@ -73,23 +122,20 @@ const downloadTextFile = (filename: string, contents: string) => {
 };
 
 export const ComparisonTableSection: FC<ComparisonTableSectionProps> = ({
-  rows,
-  heading = 'Comparison',
   className,
+  heading = 'Comparison',
+  ...rest
 }) => {
-  const hasRows = rows && rows.length > 0;
+  const derivedRows = React.useMemo(() => coalesceRows(rest), [rest]);
+  const hasRows = derivedRows.length > 0;
 
   const handleDownloadCsv = React.useCallback(() => {
-    // 🔔 Analytics: Track CSV download (prod only if Plausible domain is set)
-    // Keep the event name EXACT to make dashboards consistent.
-    track('Download CSV', {
-      rows: rows.length,
-    });
+    track('Download CSV', { rows: derivedRows.length });
 
-    const csv = buildCsv(rows);
+    const csv = buildCsv(derivedRows);
     const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     downloadTextFile(`fee-pilot-comparison-${timestamp}.csv`, csv);
-  }, [rows]);
+  }, [derivedRows]);
 
   return (
     <section className={className} suppressHydrationWarning>
@@ -121,7 +167,7 @@ export const ComparisonTableSection: FC<ComparisonTableSectionProps> = ({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, idx) => (
+            {derivedRows.map((r, idx) => (
               <tr key={`${r.marketplace}-${idx}`} className="border-t">
                 <td className="px-3 py-2">{r.marketplace}</td>
                 <td className="px-3 py-2 text-right">{numberToMoney(r.listingPrice)}</td>
