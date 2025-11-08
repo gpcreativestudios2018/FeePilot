@@ -1,10 +1,12 @@
 'use client';
 
-import * as React from 'react';
-import type { FC } from 'react';
-import { track } from '@/lib/analytics';
+import React from 'react';
+import CurrentInputs from './CurrentInputs';
+import { cx, formatMoneyWithParens } from '../../lib/format';
+import { downloadCsv } from '@/lib/csv';
+import type { PlatformKey } from '@/data/fees';
 
-type Inputs = {
+type InputsLite = {
   price: number;
   shipCharge: number;
   shipCost: number;
@@ -13,181 +15,175 @@ type Inputs = {
   tax: number;
 };
 
-export type ComparisonRow = {
-  marketplace: string;
-  listingPrice: number;
-  fees: number;
-  net: number;
-  notes?: string;
+type Row = {
+  platform: PlatformKey;
+  profit: number;
+  marginPct: number;
+  marketplaceFee: number;
+  paymentFee: number;
+  listingFee: number;
+  totalFees: number;
 };
 
-type ComparisonEntry = {
-  platform: string;         // e.g., 'etsy'
-  displayName?: string;     // optional pretty name
-  listingPrice?: number;    // optional per-platform listing price
-  fees?: number;            // total fees for this platform
-  totalFees?: number;       // alt name often used
-  net?: number;             // payout after fees
-  payout?: number;          // alt name often used
-  notes?: string;
-};
-
-export type ComparisonTableSectionProps = {
-  className?: string;
-  heading?: string;
-
-  /** Props used by HomeClient */
-  isLight?: boolean;
-  inputs?: Inputs;
-  comparison?: ComparisonEntry[];
-
-  /** Back-compat: direct rows (older call sites) */
-  rows?: ComparisonRow[];
-};
-
-const numberToMoney = (n: number) =>
-  Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(n ?? 0);
-
-const coalesceRows = (props: ComparisonTableSectionProps): ComparisonRow[] => {
-  if (props.rows && props.rows.length) return props.rows;
-
-  const { comparison = [], inputs } = props;
-  const baseListing = inputs?.price ?? 0;
-
-  return comparison.map((c) => {
-    const marketplace = c.displayName ?? c.platform ?? '—';
-    const listingPrice = c.listingPrice ?? baseListing;
-
-    // prefer explicit fields, fall back to alternates / simple math
-    const fees = (typeof c.fees === 'number' ? c.fees : undefined)
-      ?? (typeof c.totalFees === 'number' ? c.totalFees : undefined)
-      ?? 0;
-
-    const net = (typeof c.net === 'number' ? c.net : undefined)
-      ?? (typeof c.payout === 'number' ? c.payout : undefined)
-      ?? (listingPrice - fees);
-
-    return {
-      marketplace,
-      listingPrice,
-      fees,
-      net,
-      notes: c.notes,
-    };
-  });
-};
-
-const buildCsv = (rows: ComparisonRow[]) => {
-  const header = [
-    'Marketplace',
-    'Listing Price (USD)',
-    'Fees (USD)',
-    'Net (USD)',
-    'Notes',
-  ];
-
-  const lines = rows.map((r) => [
-    r.marketplace,
-    r.listingPrice.toFixed(2),
-    r.fees.toFixed(2),
-    r.net.toFixed(2),
-    r.notes ?? '',
-  ]);
-
-  const all = [header, ...lines]
-    .map((cols) =>
-      cols
-        .map((c) => {
-          const s = String(c);
-          if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-          return s;
-        })
-        .join(',')
-    )
-    .join('\n');
-
-  return all;
-};
-
-const downloadTextFile = (filename: string, contents: string) => {
-  const blob = new Blob([contents], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-};
-
-export const ComparisonTableSection: FC<ComparisonTableSectionProps> = ({
+export default function ComparisonTableSection({
   className,
-  heading = 'Comparison',
-  ...rest
-}) => {
-  const derivedRows = React.useMemo(() => coalesceRows(rest), [rest]);
-  const hasRows = derivedRows.length > 0;
+  isLight,
+  inputs,
+  comparison,
+}: {
+  className?: string;
+  isLight: boolean;
+  inputs: InputsLite;
+  comparison: Row[];
+}) {
+  const border = isLight ? 'border-purple-800/70' : 'border-white/10';
+  const headText = isLight ? 'text-gray-800' : 'text-gray-200';
+  const bodyText = isLight ? 'text-gray-800' : 'text-gray-200';
+  const subtle = isLight ? 'text-gray-600' : 'text-gray-400';
 
-  const handleDownloadCsv = React.useCallback(() => {
-    track('Download CSV', { rows: derivedRows.length });
+  // Gate dynamic classes to avoid SSR/client className mismatches
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
 
-    const csv = buildCsv(derivedRows);
-    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    downloadTextFile(`fee-pilot-comparison-${timestamp}.csv`, csv);
-  }, [derivedRows]);
+  const onExportCsv = React.useCallback(() => {
+    const rows: (string | number)[][] = [
+      [
+        'Platform',
+        'Marketplace fee',
+        'Payment fee',
+        'Listing fee',
+        'Total fees',
+        'Profit',
+        'Margin %',
+      ],
+      ...comparison.map((r) => [
+        r.platform[0].toUpperCase() + r.platform.slice(1),
+        r.marketplaceFee.toFixed(2),
+        r.paymentFee.toFixed(2),
+        r.listingFee.toFixed(2),
+        r.totalFees.toFixed(2),
+        r.profit.toFixed(2),
+        r.marginPct.toFixed(1),
+      ]),
+    ];
+
+    const nameBits = [
+      `price-${inputs.price}`,
+      `shipCharge-${inputs.shipCharge}`,
+      `shipCost-${inputs.shipCost}`,
+      `cogs-${inputs.cogs}`,
+      `disc-${inputs.discountPct}`,
+      `tax-${inputs.tax}`,
+    ].join('_');
+
+    downloadCsv(`feepilot_comparison_${nameBits}.csv`, rows);
+  }, [comparison, inputs]);
 
   return (
-    <section className={className} suppressHydrationWarning>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold">{heading}</h2>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleDownloadCsv}
-            disabled={!hasRows}
-            className="rounded px-3 py-1.5 text-sm border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
-            aria-disabled={!hasRows}
-            title={hasRows ? 'Download CSV' : 'No data to export'}
-          >
-            Download CSV
-          </button>
-        </div>
+    <section className={cx('rounded-2xl p-4 sm:p-6', className)}>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <CurrentInputs
+          isLight={isLight}
+          className="mb-0"
+          price={inputs.price}
+          shipCharge={inputs.shipCharge}
+          shipCost={inputs.shipCost}
+          cogs={inputs.cogs}
+          discountPct={inputs.discountPct}
+          tax={inputs.tax}
+        />
+
+        {/* Export CSV */}
+        <button
+          type="button"
+          onClick={onExportCsv}
+          className={cx(
+            'shrink-0 rounded-full px-4 py-2 text-base select-none border',
+            isLight
+              ? 'border-purple-800/70 text-black hover:bg-purple-50'
+              : 'border-purple-600/50 text-white hover:bg-white/5'
+          )}
+          aria-label="Export comparison as CSV"
+          title="Export comparison as CSV"
+        >
+          Export CSV
+        </button>
       </div>
 
-      <div className="overflow-x-auto rounded border border-neutral-200">
-        <table className="min-w-full text-sm">
-          <thead className="bg-neutral-50">
-            <tr>
-              <th className="text-left px-3 py-2">Marketplace</th>
-              <th className="text-right px-3 py-2">Listing Price</th>
-              <th className="text-right px-3 py-2">Fees</th>
-              <th className="text-right px-3 py-2">Net</th>
-              <th className="text-left px-3 py-2">Notes</th>
+      <div className="overflow-x-auto rounded-2xl">
+        <table className={cx('w-full text-sm', bodyText)}>
+          <thead className={cx(subtle, headText)}>
+            <tr className="text-left">
+              <th className="py-2 pr-4">Platform</th>
+              <th className="py-2 pr-4">Marketplace fee</th>
+              <th className="py-2 pr-4">Payment fee</th>
+              <th className="py-2 pr-4">Listing fee</th>
+              <th className="py-2 pr-4">Total fees</th>
+              <th className="py-2 pr-4">Profit</th>
+              <th className="py-2 pr-0">Margin</th>
             </tr>
           </thead>
-          <tbody>
-            {derivedRows.map((r, idx) => (
-              <tr key={`${r.marketplace}-${idx}`} className="border-t">
-                <td className="px-3 py-2">{r.marketplace}</td>
-                <td className="px-3 py-2 text-right">{numberToMoney(r.listingPrice)}</td>
-                <td className="px-3 py-2 text-right">{numberToMoney(r.fees)}</td>
-                <td className="px-3 py-2 text-right">{numberToMoney(r.net)}</td>
-                <td className="px-3 py-2">{r.notes ?? ''}</td>
-              </tr>
-            ))}
-            {!hasRows && (
-              <tr>
-                <td className="px-3 py-6 text-neutral-500" colSpan={5}>
-                  No data yet — adjust inputs to see marketplace comparisons.
+
+          <tbody className={cx('border-t', border)}>
+            {comparison.map((row) => (
+              <tr key={row.platform} className="border-t first:border-0">
+                <td className="py-2 pr-4">
+                  <span className="inline-flex items-center gap-2">
+                    <span className={cx('rounded-lg border px-2 py-1', border)}>
+                      {row.platform.slice(0, 1).toUpperCase() + row.platform.slice(1)}
+                    </span>
+                  </span>
+                </td>
+
+                <td className="py-2 pr-4">
+                  <span suppressHydrationWarning>
+                    {formatMoneyWithParens(row.marketplaceFee)}
+                  </span>
+                </td>
+                <td className="py-2 pr-4">
+                  <span suppressHydrationWarning>
+                    {formatMoneyWithParens(row.paymentFee)}
+                  </span>
+                </td>
+                <td className="py-2 pr-4">
+                  <span suppressHydrationWarning>
+                    {formatMoneyWithParens(row.listingFee)}
+                  </span>
+                </td>
+                <td className="py-2 pr-4">
+                  <span suppressHydrationWarning>
+                    {formatMoneyWithParens(row.totalFees)}
+                  </span>
+                </td>
+
+                <td
+                  className={cx(
+                    'py-2 pr-4',
+                    mounted && (row.profit < 0 ? 'text-red-500' : isLight ? 'text-emerald-700' : 'text-emerald-300')
+                  )}
+                >
+                  <span suppressHydrationWarning>
+                    {formatMoneyWithParens(row.profit)}
+                  </span>
+                </td>
+
+                <td className="py-2 pr-0">
+                  <span
+                    className={cx(mounted && row.marginPct < 0 && 'text-red-500')}
+                    suppressHydrationWarning
+                  >
+                    {row.marginPct.toFixed(1)}%
+                  </span>
                 </td>
               </tr>
-            )}
+            ))}
           </tbody>
         </table>
+
+        <div className={cx('mt-2 text-xs', subtle)}>
+          Values are estimates based on current inputs.
+        </div>
       </div>
     </section>
   );
-};
-
-export default ComparisonTableSection;
+}
