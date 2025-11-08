@@ -13,6 +13,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b1220' },
+  ],
 };
 
 export const metadata: Metadata = {
@@ -64,10 +68,6 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.ico',
   },
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0b1220' },
-  ],
 };
 
 export default function RootLayout({
@@ -75,10 +75,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Read env at build-time. If NEXT_PUBLIC_PLAUSIBLE_DOMAIN is set and we're in Production,
-  // we’ll inject the Plausible script. (Set on Vercel as NEXT_PUBLIC_PLAUSIBLE_DOMAIN=fee-pilot.vercel.app)
+  // If NEXT_PUBLIC_PLAUSIBLE_DOMAIN is set and we're in production, inject Plausible.
   const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
-  const isProd = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+  const isProd =
+    process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
+    process.env.NODE_ENV === 'production';
 
   return (
     <html lang="en" suppressHydrationWarning>
