@@ -290,24 +290,54 @@ export default function HomeClient() {
   // Show dev tools (like "Clear saved data") in dev OR when the preview flag is set
   const showDevTools = process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_DEV_TOOLS === '1';
 
-  // ---- CSV analytics with zero UI change ----
+  // ---- CSV + Get Pro analytics with zero UI change ----
   useEffect(() => {
+    const proCheckoutUrl = process.env.NEXT_PUBLIC_PRO_CHECKOUT_URL || '';
+
+    const findAnchor = (el: HTMLElement | null): HTMLAnchorElement | null => {
+      let cur: HTMLElement | null = el;
+      while (cur) {
+        if (cur.tagName === 'A') return cur as HTMLAnchorElement;
+        cur = cur.parentElement;
+      }
+      return null;
+    };
+
     const onClick = (e: MouseEvent) => {
       const t = e.target as HTMLElement | null;
       if (!t) return;
 
-      // Match common labels/aria/titles used for the CSV button
-      const text = (t.textContent || '').trim().toLowerCase();
-      const title = (t.getAttribute && t.getAttribute('title'))?.toLowerCase() || '';
+      const anchor = findAnchor(t);
+      const text = ((anchor?.textContent || t.textContent) || '').trim().toLowerCase();
+      const title = (anchor?.getAttribute('title') || t.getAttribute?.('title') || '').toLowerCase();
+      const href = anchor?.getAttribute('href') || '';
 
-      const looksLikeCsvButton =
+      // CSV export button(s)
+      const isCsv =
         text.includes('export csv') ||
         text.includes('download csv') ||
         title.includes('export csv') ||
         title.includes('download csv');
 
-      if (looksLikeCsvButton) {
+      if (isCsv) {
         track('Download CSV', { rows: tableComparison.length });
+        return;
+      }
+
+      // Get Pro CTA (link to /pro, text says get pro/upgrade, or Stripe Checkout URL)
+      const isGetPro =
+        text.includes('get pro') ||
+        text.includes('upgrade') ||
+        title.includes('get pro') ||
+        title.includes('upgrade') ||
+        href.includes('/pro') ||
+        (!!proCheckoutUrl && href.includes(proCheckoutUrl));
+
+      if (isGetPro) {
+        track('Get Pro Click', {
+          href: href || null,
+          location: 'document', // generic (works in header/footer/elsewhere)
+        });
       }
     };
 
