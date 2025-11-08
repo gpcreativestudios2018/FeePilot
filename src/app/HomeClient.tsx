@@ -294,10 +294,10 @@ export default function HomeClient() {
   useEffect(() => {
     const proCheckoutUrl = process.env.NEXT_PUBLIC_PRO_CHECKOUT_URL || '';
 
-    const findAnchor = (el: HTMLElement | null): HTMLAnchorElement | null => {
+    const findInteractive = (el: HTMLElement | null): HTMLElement | null => {
       let cur: HTMLElement | null = el;
       while (cur) {
-        if (cur.tagName === 'A') return cur as HTMLAnchorElement;
+        if (cur.tagName === 'A' || cur.tagName === 'BUTTON') return cur;
         cur = cur.parentElement;
       }
       return null;
@@ -307,9 +307,12 @@ export default function HomeClient() {
       const t = e.target as HTMLElement | null;
       if (!t) return;
 
-      const anchor = findAnchor(t);
-      const text = ((anchor?.textContent || t.textContent) || '').trim().toLowerCase();
-      const title = (anchor?.getAttribute('title') || t.getAttribute?.('title') || '').toLowerCase();
+      const node = findInteractive(t);
+      const anchor = node && node.tagName === 'A' ? (node as HTMLAnchorElement) : null;
+
+      const text = ((node?.textContent || t.textContent) || '').trim().toLowerCase();
+      const title = (node?.getAttribute('title') || '').toLowerCase();
+      const aria = (node?.getAttribute('aria-label') || '').toLowerCase();
       const href = anchor?.getAttribute('href') || '';
 
       // CSV export button(s)
@@ -317,26 +320,35 @@ export default function HomeClient() {
         text.includes('export csv') ||
         text.includes('download csv') ||
         title.includes('export csv') ||
-        title.includes('download csv');
+        title.includes('download csv') ||
+        aria.includes('export csv') ||
+        aria.includes('download csv');
 
       if (isCsv) {
         track('Download CSV', { rows: tableComparison.length });
         return;
       }
 
-      // Get Pro CTA (link to /pro, text says get pro/upgrade, or Stripe Checkout URL)
-      const isGetPro =
+      // Get Pro CTA: match text, aria/title, /pro links, Stripe checkout links, or configured checkout URL
+      const isStripeHref =
+        href.includes('checkout.stripe.com') ||
+        href.includes('stripe.com/pay') ||
+        (!!proCheckoutUrl && href.includes(proCheckoutUrl));
+
+      const isProText =
         text.includes('get pro') ||
         text.includes('upgrade') ||
         title.includes('get pro') ||
         title.includes('upgrade') ||
-        href.includes('/pro') ||
-        (!!proCheckoutUrl && href.includes(proCheckoutUrl));
+        aria.includes('get pro') ||
+        aria.includes('upgrade');
 
-      if (isGetPro) {
+      const isProPath = href.includes('/pro');
+
+      if (isProText || isProPath || isStripeHref) {
         track('Get Pro Click', {
           href: href || null,
-          location: 'document', // generic (works in header/footer/elsewhere)
+          where: node?.tagName?.toLowerCase() || 'unknown',
         });
       }
     };
@@ -357,7 +369,7 @@ export default function HomeClient() {
             </Link>
           </h1>
 
-          <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
             <ThemeToggle isLight={isLight} onToggle={toggleTheme} />
             <ResetButton onClick={resetInputs} />
             {/* Share / Copy / Pro */}
