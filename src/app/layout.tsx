@@ -1,5 +1,6 @@
 ﻿// src/app/layout.tsx
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import './globals.css';
 
 const siteUrl = 'https://fee-pilot.vercel.app';
@@ -74,8 +75,22 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Read env at build-time. If NEXT_PUBLIC_PLAUSIBLE_DOMAIN is set and we're in Production,
+  // we’ll inject the Plausible script. (Set on Vercel as NEXT_PUBLIC_PLAUSIBLE_DOMAIN=fee-pilot.vercel.app)
+  const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
+  const isProd = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {plausibleDomain && isProd && (
+          <Script
+            defer
+            data-domain={plausibleDomain}
+            src="https://plausible.io/js/script.js"
+          />
+        )}
+      </head>
       <body>{children}</body>
     </html>
   );
