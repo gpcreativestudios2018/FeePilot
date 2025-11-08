@@ -255,6 +255,23 @@ export default function HomeClient() {
   const rule = RULES[inputs.platform];
   const current = useMemo(() => calcFor(rule, inputs), [rule, inputs]);
 
+  // derive the comparison rows once so we can reference .length for analytics
+  const tableComparison = useMemo(() => {
+    return PLATFORMS.map((p) => {
+      const r = RULES[p];
+      const c = calcFor(r, inputs);
+      return {
+        platform: p,
+        profit: c.profit,
+        marginPct: c.marginPct,
+        marketplaceFee: c.marketplaceFee,
+        paymentFee: c.paymentFee,
+        listingFee: c.listingFee,
+        totalFees: c.totalFees,
+      };
+    });
+  }, [inputs]);
+
   // theme helpers
   const pageBgText = isLight ? 'bg-white text-black' : 'bg-black text-white';
   const subtleText = isLight ? 'text-gray-700' : 'text-gray-300';
@@ -272,6 +289,31 @@ export default function HomeClient() {
 
   // Show dev tools (like "Clear saved data") in dev OR when the preview flag is set
   const showDevTools = process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_DEV_TOOLS === '1';
+
+  // ---- CSV analytics with zero UI change ----
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+
+      // Match common labels/aria/titles used for the CSV button
+      const text = (t.textContent || '').trim().toLowerCase();
+      const title = (t.getAttribute && t.getAttribute('title'))?.toLowerCase() || '';
+
+      const looksLikeCsvButton =
+        text.includes('export csv') ||
+        text.includes('download csv') ||
+        title.includes('export csv') ||
+        title.includes('download csv');
+
+      if (looksLikeCsvButton) {
+        track('Download CSV', { rows: tableComparison.length });
+      }
+    };
+
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [tableComparison.length]);
 
   return (
     <div className={cx('min-h-dvh', pageBgText)}>
@@ -492,19 +534,7 @@ export default function HomeClient() {
             discountPct: inputs.discountPct,
             tax: inputs.tax,
           }}
-          comparison={PLATFORMS.map((p) => {
-            const r = RULES[p];
-            const c = calcFor(r, inputs);
-            return {
-              platform: p,
-              profit: c.profit,
-              marginPct: c.marginPct,
-              marketplaceFee: c.marketplaceFee,
-              paymentFee: c.paymentFee,
-              listingFee: c.listingFee,
-              totalFees: c.totalFees,
-            };
-          })}
+          comparison={tableComparison}
         />
 
         <div className="mt-10">
