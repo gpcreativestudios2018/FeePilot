@@ -59,7 +59,9 @@ function AnalyticsProvider() {
             page_path: `${pathname}${search}`,
           });
         }
-      } catch {}
+      } catch {
+        // no-op
+      }
 
       const sendPv = () => {
         if (window.gtag && typeof window.gtag === 'function' && GA_ID) {
@@ -69,19 +71,22 @@ function AnalyticsProvider() {
         }
       };
 
-      const _pushState = history.pushState;
-      const _replaceState = history.replaceState;
+      // Safely wrap history methods without TS suppressions
+      const originalPushState = history.pushState.bind(history);
+      const originalReplaceState = history.replaceState.bind(history);
 
-      history.pushState = function (...args) {
-        // @ts-expect-error variadic
-        _pushState.apply(this, args);
-        sendPv();
-      };
-      history.replaceState = function (...args) {
-        // @ts-expect-error variadic
-        _replaceState.apply(this, args);
-        sendPv();
-      };
+      (history as unknown as { pushState: (...args: any[]) => void }).pushState =
+        (...args: any[]) => {
+          originalPushState(...args);
+          sendPv();
+        };
+
+      (history as unknown as { replaceState: (...args: any[]) => void }).replaceState =
+        (...args: any[]) => {
+          originalReplaceState(...args);
+          sendPv();
+        };
+
       window.addEventListener('popstate', sendPv);
     });
   }
@@ -129,6 +134,7 @@ export default function RootLayout({
                   function gtag(){ dataLayer.push(arguments); }
                   window.gtag = gtag;
                   gtag('js', new Date());
+                  // Avoid double-counting; we send page_view manually.
                   gtag('config', '${GA_ID}', { send_page_view: false });
                 `,
               }}
