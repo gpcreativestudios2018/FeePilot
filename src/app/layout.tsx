@@ -71,21 +71,30 @@ function AnalyticsProvider() {
         }
       };
 
-      // Safely wrap history methods without TS suppressions
-      const originalPushState = history.pushState.bind(history);
-      const originalReplaceState = history.replaceState.bind(history);
+      // Strictly-typed wrappers for history methods (no `any`)
+      const push = history.pushState.bind(history) as typeof history.pushState;
+      const replace = history.replaceState.bind(history) as typeof history.replaceState;
 
-      (history as unknown as { pushState: (...args: any[]) => void }).pushState =
-        (...args: any[]) => {
-          originalPushState(...args);
-          sendPv();
-        };
+      const patchedPushState: typeof history.pushState = (
+        data: unknown,
+        title: string,
+        url?: string | URL | null
+      ) => {
+        push(data as unknown, title, url);
+        sendPv();
+      };
 
-      (history as unknown as { replaceState: (...args: any[]) => void }).replaceState =
-        (...args: any[]) => {
-          originalReplaceState(...args);
-          sendPv();
-        };
+      const patchedReplaceState: typeof history.replaceState = (
+        data: unknown,
+        title: string,
+        url?: string | URL | null
+      ) => {
+        replace(data as unknown, title, url);
+        sendPv();
+      };
+
+      history.pushState = patchedPushState;
+      history.replaceState = patchedReplaceState;
 
       window.addEventListener('popstate', sendPv);
     });
