@@ -82,7 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body>
         {children}
-        {/* Footer is conditionally hidden on "/" to avoid duplicates */}
+        {/* Footer is conditionally hidden on "/" via ClientFooter to avoid duplicates */}
         <ClientFooter />
 
         {/* Plausible (prod only) */}

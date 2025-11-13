@@ -1,102 +1,69 @@
-// src/app/pro/target/TargetGate.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { track as trackEvent } from '@/lib/analytics';
 
-const REQUIRE = process.env.NEXT_PUBLIC_REQUIRE_PRO === '1';
-const CHECKOUT_URL = process.env.NEXT_PUBLIC_PRO_CHECKOUT_URL || '/pro';
+const REQUIRE_PRO = (process.env.NEXT_PUBLIC_REQUIRE_PRO || '') === '1';
+const CHECKOUT_URL = process.env.NEXT_PUBLIC_PRO_CHECKOUT_URL || '';
 
-// Simple, non-secure local flag for demos. Replace with real auth later.
-const PRO_KEY = 'feepilot:pro';
-
-type Route = '/' | '/about' | '/docs' | '/pro' | '/pro/target';
+type Route =
+  | '/'
+  | '/about'
+  | '/docs'
+  | '/pro'
+  | '/pro/target';
 
 export default function TargetGate({ children }: { children: React.ReactNode }) {
-  const [ready, setReady] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
+  const params = useSearchParams();
+  const unlockedViaQuery = useMemo(() => params?.get('pro') === '1', [params]);
 
-  useEffect(() => {
-    if (!REQUIRE) {
-      setHasPro(true);
-      setReady(true);
-      return;
-    }
+  // Gate logic:
+  // - If NOT requiring Pro (env off), allow.
+  // - If query provides ?pro=1, allow.
+  // - Otherwise, block and show upsell.
+  const allow = !REQUIRE_PRO || unlockedViaQuery;
 
-    try {
-      const url = new URL(window.location.href);
-      if (url.searchParams.get('pro') === '1') {
-        window.localStorage.setItem(PRO_KEY, '1');
-        setHasPro(true);
-        setReady(true);
-        url.searchParams.delete('pro');
-        window.history.replaceState({}, '', url.toString());
-        return;
-      }
-
-      const stored = window.localStorage.getItem(PRO_KEY) === '1';
-      setHasPro(stored);
-    } catch {
-      setHasPro(false);
-    } finally {
-      setReady(true);
-    }
-  }, []);
-
-  if (!ready) {
-    return (
-      <div className="mx-auto max-w-3xl p-6 text-sm opacity-70" suppressHydrationWarning>
-        Loading…
-      </div>
-    );
-  }
-
-  if (hasPro) return <>{children}</>;
-
-  const pill =
-    'rounded-full border px-4 py-2 outline-none hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-purple-400/60 border-purple-600/50';
+  if (allow) return <>{children}</>;
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
-      <div className="rounded-2xl border border-white/10 p-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Reverse Calculator (Pro)</h1>
-        <p className="mt-3 opacity-80">
-          This tool is part of Fee Pilot Pro. Get access to work backward from a target payout.
-        </p>
+    <div className="mx-auto max-w-2xl px-4 py-12">
+      <h1 className="text-2xl font-semibold tracking-tight">Reverse Calculator (Pro)</h1>
+      <p className="mt-3 text-gray-700">
+        This feature is part of <strong>Fee Pilot Pro</strong>. Unlock it to work backward from a target take-home and
+        instantly compute the required listing price.
+      </p>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+      <div className="mt-6 flex flex-wrap gap-3">
+        {CHECKOUT_URL ? (
           <a
             href={CHECKOUT_URL}
-            className={pill}
             target="_blank"
             rel="noopener noreferrer"
+            className="inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium shadow-sm bg-black text-white hover:opacity-90"
+            onClick={() => trackEvent('Get Pro Click')}
           >
             Get Pro
           </a>
+        ) : null}
 
-          <button
-            type="button"
-            className={pill}
-            onClick={() => {
-              try {
-                window.localStorage.setItem(PRO_KEY, '1');
-              } catch {}
-              // Unlock without a full reload
-              setHasPro(true);
-            }}
-          >
-            I already purchased
-          </button>
+        {/* IMPORTANT: Do NOT unlock. This guides legitimate buyers without bypassing. */}
+        <Link
+          href={'/pro' as Route}
+          className="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium border border-gray-300 hover:bg-gray-50"
+          onClick={() => trackEvent('Support Click')}
+        >
+          I already purchased
+        </Link>
+      </div>
 
-          <Link href={'/pro' as Route} className={pill}>
-            Back to Pro overview
-          </Link>
-        </div>
-
-        <p className="mt-4 text-xs opacity-60">
-          Note: This is a temporary, client-side gate for demos. Replace with real auth + webhooks later.
+      <div className="mt-6 text-sm text-gray-600" suppressHydrationWarning>
+        <p>
+          Already purchased? Open your <strong>Pro access link</strong> (it includes <code>?pro=1</code>) or contact
+          support from the Pro page. For privacy, we don’t auto-detect purchases here.
         </p>
       </div>
-    </main>
+    </div>
   );
 }
