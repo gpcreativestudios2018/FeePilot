@@ -1,4 +1,4 @@
-﻿import './globals.css';
+import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import ClientFooter from './components/ClientFooter';
@@ -35,10 +35,8 @@ export const viewport: Viewport = {
 };
 
 function AnalyticsProvider() {
-  const pathname =
-    typeof window !== 'undefined' ? window.location.pathname : '';
-  const search =
-    typeof window !== 'undefined' ? window.location.search : '';
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  const search = typeof window !== 'undefined' ? window.location.search : '';
 
   if (typeof window !== 'undefined') {
     queueMicrotask(() => {
