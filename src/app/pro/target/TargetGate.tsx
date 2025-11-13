@@ -14,9 +14,7 @@ export default function TargetGate({ children }: { children: React.ReactNode }) 
   const unlockedViaQuery = useMemo(() => params?.get('pro') === '1', [params]);
   const [showHelp, setShowHelp] = useState(false);
 
-  // Allow if the env gate is off OR the query provides ?pro=1
   const allow = !REQUIRE_PRO || unlockedViaQuery;
-
   if (allow) return <>{children}</>;
 
   return (
@@ -41,7 +39,6 @@ export default function TargetGate({ children }: { children: React.ReactNode }) 
             </a>
           ) : null}
 
-          {/* Do NOT navigate; keep the gate closed */}
           <button
             type="button"
             className="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium border border-gray-500/60 hover:bg-white/5"
