@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import TargetClient from './TargetClient';
 import TargetGate from './TargetGate';
 
@@ -15,11 +16,12 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  // Enforce soft gate at the route level.
-  // TargetGate unlocks with ?pro=1 and respects NEXT_PUBLIC_REQUIRE_PRO.
+  // Wrap client hooks (useSearchParams inside TargetGate) with Suspense per Next.js guidance.
   return (
-    <TargetGate>
-      <TargetClient />
-    </TargetGate>
+    <Suspense fallback={null}>
+      <TargetGate>
+        <TargetClient />
+      </TargetGate>
+    </Suspense>
   );
 }
