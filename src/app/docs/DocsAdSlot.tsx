@@ -7,6 +7,8 @@ import { useEffect, useRef } from 'react';
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || '';
 const ADSENSE_SLOT = process.env.NEXT_PUBLIC_ADSENSE_SLOT || '';
 
+type AdsArray = unknown[] & { requestNonPersonalizedAds?: number };
+
 /**
  * Lightweight AdSense box intended for docs pages only.
  * Renders nothing if required env vars are missing.
@@ -16,8 +18,9 @@ export default function DocsAdSlot() {
 
   useEffect(() => {
     if (!ADSENSE_CLIENT || !ADSENSE_SLOT) return;
-    // @ts-expect-error adsbygoogle injected by the AdSense script
-    (window.adsbygoogle = window.adsbygoogle || []).push({});
+    const w = window as unknown as { adsbygoogle?: AdsArray };
+    w.adsbygoogle = w.adsbygoogle || ([] as unknown as AdsArray);
+    w.adsbygoogle.push({});
   }, []);
 
   if (!ADSENSE_CLIENT || !ADSENSE_SLOT) {
