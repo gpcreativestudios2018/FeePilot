@@ -1,4 +1,4 @@
-﻿import './globals.css';
+import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import ClientFooter from './components/ClientFooter';
@@ -35,10 +35,8 @@ export const viewport: Viewport = {
 };
 
 function AnalyticsProvider() {
-  const pathname =
-    typeof window !== 'undefined' ? window.location.pathname : '';
-  const search =
-    typeof window !== 'undefined' ? window.location.search : '';
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  const search = typeof window !== 'undefined' ? window.location.search : '';
 
   if (typeof window !== 'undefined') {
     queueMicrotask(() => {
@@ -84,7 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body>
         {children}
-        {/* Footer is conditionally hidden on "/" to avoid duplicates */}
+        {/* Footer hidden on "/" via ClientFooter to avoid duplicates */}
         <ClientFooter />
 
         {/* Plausible (prod only) */}
