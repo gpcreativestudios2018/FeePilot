@@ -1,35 +1,38 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-// Reads from env so you don’t hardcode values.
-// Add NEXT_PUBLIC_ADSENSE_SLOT in Vercel (Production) with your ad unit’s slot ID.
+// Vercel (Production): NEXT_PUBLIC_ADSENSE_CLIENT + NEXT_PUBLIC_ADSENSE_SLOT
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || '';
 const ADSENSE_SLOT = process.env.NEXT_PUBLIC_ADSENSE_SLOT || '';
 
 type AdsArray = unknown[] & { requestNonPersonalizedAds?: number };
 
-/**
- * Lightweight AdSense box intended for docs pages only.
- * Renders nothing if required env vars are missing.
- */
 export default function DocsAdSlot() {
   const ref = useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (!ADSENSE_CLIENT || !ADSENSE_SLOT) return;
     const w = window as unknown as { adsbygoogle?: AdsArray };
     w.adsbygoogle = w.adsbygoogle || ([] as unknown as AdsArray);
-    w.adsbygoogle.push({});
+    try {
+      w.adsbygoogle.push({});
+    } catch {}
   }, []);
 
   if (!ADSENSE_CLIENT || !ADSENSE_SLOT) {
-    // Silent no-op in environments without ads configured.
     return null;
   }
 
   return (
-    <div ref={ref} style={{ margin: '24px 0' }} suppressHydrationWarning>
+    <div
+      ref={ref}
+      className="my-8 rounded-md border border-gray-800/60"
+      style={{ padding: '12px', minHeight: mounted ? '120px' : '0px' }}
+      suppressHydrationWarning
+    >
       <ins
         className="adsbygoogle"
         style={{ display: 'block' }}

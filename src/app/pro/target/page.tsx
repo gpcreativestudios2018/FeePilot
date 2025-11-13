@@ -16,7 +16,6 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  // Wrap client hooks (useSearchParams inside TargetGate) with Suspense.
   return (
     <Suspense fallback={null}>
       <TargetGate>
