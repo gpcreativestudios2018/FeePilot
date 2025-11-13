@@ -3,8 +3,16 @@
 import React from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
+import { track } from '@/lib/analytics';
 
 export default function Footer() {
+  const supportUrl =
+    process.env.NEXT_PUBLIC_SUPPORT_URL || 'https://www.buymeacoffee.com/';
+
+  const onSupportClick = () => {
+    track('Support Click', { href: supportUrl });
+  };
+
   return (
     <footer className="mx-auto max-w-6xl px-4 py-10">
       {/* Simple nav row with typed routes, including About */}
@@ -44,6 +52,18 @@ export default function Footer() {
         >
           Docs
         </Link>
+        <span className="opacity-30">•</span>
+        <a
+          href={supportUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onSupportClick}
+          className="opacity-80 hover:opacity-100 underline-offset-4 hover:underline"
+          title="Support the project"
+          aria-label="Support the project"
+        >
+          Support the project
+        </a>
       </nav>
 
       {/* Your existing content, kept (with docs now pointing to /docs above) */}

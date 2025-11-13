@@ -255,6 +255,23 @@ export default function HomeClient() {
   const rule = RULES[inputs.platform];
   const current = useMemo(() => calcFor(rule, inputs), [rule, inputs]);
 
+  // derive the comparison rows once so we can reference .length for analytics
+  const tableComparison = useMemo(() => {
+    return PLATFORMS.map((p) => {
+      const r = RULES[p];
+      const c = calcFor(r, inputs);
+      return {
+        platform: p,
+        profit: c.profit,
+        marginPct: c.marginPct,
+        marketplaceFee: c.marketplaceFee,
+        paymentFee: c.paymentFee,
+        listingFee: c.listingFee,
+        totalFees: c.totalFees,
+      };
+    });
+  }, [inputs]);
+
   // theme helpers
   const pageBgText = isLight ? 'bg-white text-black' : 'bg-black text-white';
   const subtleText = isLight ? 'text-gray-700' : 'text-gray-300';
@@ -273,6 +290,73 @@ export default function HomeClient() {
   // Show dev tools (like "Clear saved data") in dev OR when the preview flag is set
   const showDevTools = process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_DEV_TOOLS === '1';
 
+  // ---- CSV + Get Pro analytics with zero UI change ----
+  useEffect(() => {
+    const proCheckoutUrl = process.env.NEXT_PUBLIC_PRO_CHECKOUT_URL || '';
+
+    const findInteractive = (el: HTMLElement | null): HTMLElement | null => {
+      let cur: HTMLElement | null = el;
+      while (cur) {
+        if (cur.tagName === 'A' || cur.tagName === 'BUTTON') return cur;
+        cur = cur.parentElement;
+      }
+      return null;
+    };
+
+    const onClick = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+
+      const node = findInteractive(t);
+      const anchor = node && node.tagName === 'A' ? (node as HTMLAnchorElement) : null;
+
+      const text = ((node?.textContent || t.textContent) || '').trim().toLowerCase();
+      const title = (node?.getAttribute('title') || '').toLowerCase();
+      const aria = (node?.getAttribute('aria-label') || '').toLowerCase();
+      const href = anchor?.getAttribute('href') || '';
+
+      // CSV export button(s)
+      const isCsv =
+        text.includes('export csv') ||
+        text.includes('download csv') ||
+        title.includes('export csv') ||
+        title.includes('download csv') ||
+        aria.includes('export csv') ||
+        aria.includes('download csv');
+
+      if (isCsv) {
+        track('Download CSV', { rows: tableComparison.length });
+        return;
+      }
+
+      // Get Pro CTA: match text, aria/title, /pro links, Stripe checkout links, or configured checkout URL
+      const isStripeHref =
+        href.includes('checkout.stripe.com') ||
+        href.includes('stripe.com/pay') ||
+        (!!proCheckoutUrl && href.includes(proCheckoutUrl));
+
+      const isProText =
+        text.includes('get pro') ||
+        text.includes('upgrade') ||
+        title.includes('get pro') ||
+        title.includes('upgrade') ||
+        aria.includes('get pro') ||
+        aria.includes('upgrade');
+
+      const isProPath = href.includes('/pro');
+
+      if (isProText || isProPath || isStripeHref) {
+        track('Get Pro Click', {
+          href: href || null,
+          where: node?.tagName?.toLowerCase() || 'unknown',
+        });
+      }
+    };
+
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [tableComparison.length]);
+
   return (
     <div className={cx('min-h-dvh', pageBgText)}>
       <header className="mx-auto max-w-6xl px-4 py-6">
@@ -285,7 +369,7 @@ export default function HomeClient() {
             </Link>
           </h1>
 
-          <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
             <ThemeToggle isLight={isLight} onToggle={toggleTheme} />
             <ResetButton onClick={resetInputs} />
             {/* Share / Copy / Pro */}
@@ -492,19 +576,7 @@ export default function HomeClient() {
             discountPct: inputs.discountPct,
             tax: inputs.tax,
           }}
-          comparison={PLATFORMS.map((p) => {
-            const r = RULES[p];
-            const c = calcFor(r, inputs);
-            return {
-              platform: p,
-              profit: c.profit,
-              marginPct: c.marginPct,
-              marketplaceFee: c.marketplaceFee,
-              paymentFee: c.paymentFee,
-              listingFee: c.listingFee,
-              totalFees: c.totalFees,
-            };
-          })}
+          comparison={tableComparison}
         />
 
         <div className="mt-10">
