@@ -127,7 +127,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </>
         ) : null}
 
-        {/* Google AdSense (prod only). Slots will be added only on /docs in next step. */}
+        {/* Google AdSense (prod only). Slots will be added only on /docs. */}
         {isProd && ADSENSE_CLIENT ? (
           <>
             <Script
