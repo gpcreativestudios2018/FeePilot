@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { track as trackEvent, Events } from '@/lib/analytics';
+import { track as trackEvent } from '@/lib/analytics';
 
 const REQUIRE_PRO = (process.env.NEXT_PUBLIC_REQUIRE_PRO || '') === '1';
 const CHECKOUT_URL = process.env.NEXT_PUBLIC_PRO_CHECKOUT_URL || '';
@@ -42,7 +42,7 @@ export default function TargetGate({ children }: { children: React.ReactNode }) 
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium shadow-sm bg-black text-white hover:opacity-90"
-            onClick={() => trackEvent(Events.GetProClick)}
+            onClick={() => trackEvent('Get Pro Click')}
           >
             Get Pro
           </a>
@@ -52,7 +52,7 @@ export default function TargetGate({ children }: { children: React.ReactNode }) 
         <Link
           href={'/pro' as Route}
           className="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium border border-gray-300 hover:bg-gray-50"
-          onClick={() => trackEvent(Events.SupportClick)}
+          onClick={() => trackEvent('Support Click')}
         >
           I already purchased
         </Link>
