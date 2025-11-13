@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import TargetClient from './TargetClient';
 import TargetGate from './TargetGate';
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  // Wrap client hooks (useSearchParams inside TargetGate) with Suspense per Next.js guidance.
+  // Wrap client hooks (useSearchParams inside TargetGate) with Suspense.
   return (
     <Suspense fallback={null}>
       <TargetGate>
