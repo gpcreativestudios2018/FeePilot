@@ -9,34 +9,22 @@ const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || '';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://fee-pilot.vercel.app'),
-  title: {
-    default: 'Fee Pilot — Marketplace Fee Calculator',
-    template: '%s — Fee Pilot',
-  },
+  title: { default: 'Fee Pilot — Marketplace Fee Calculator', template: '%s — Fee Pilot' },
   description:
     'Fast, accurate marketplace fee calculator. Export CSV, share links, and estimate net profit. Reverse (Pro): target take-home calculator.',
-  alternates: {
-    canonical: '/',
-  },
-  robots: {
-    googleBot: {
-      index: true,
-      follow: true,
-    },
-  },
+  alternates: { canonical: '/' },
+  robots: { googleBot: { index: true, follow: true } },
   openGraph: {
     type: 'website',
     url: 'https://fee-pilot.vercel.app',
     title: 'Fee Pilot — Marketplace Fee Calculator',
-    description:
-      'Fast, accurate marketplace fee calculator with CSV export and shareable links.',
+    description: 'Fast, accurate marketplace fee calculator with CSV export and shareable links.',
     siteName: 'Fee Pilot',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Fee Pilot — Marketplace Fee Calculator',
-    description:
-      'Fast, accurate marketplace fee calculator with CSV export and shareable links.',
+    description: 'Fast, accurate marketplace fee calculator with CSV export and shareable links.',
   },
 };
 
@@ -47,18 +35,14 @@ export const viewport: Viewport = {
 };
 
 function AnalyticsProvider() {
-  const pathname =
-    typeof window !== 'undefined' ? window.location.pathname : '';
-  const search =
-    typeof window !== 'undefined' ? window.location.search : '';
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  const search = typeof window !== 'undefined' ? window.location.search : '';
 
   if (typeof window !== 'undefined') {
     queueMicrotask(() => {
       try {
         if (window.gtag && typeof window.gtag === 'function' && GA_ID) {
-          window.gtag('event', 'page_view', {
-            page_path: `${pathname}${search}`,
-          });
+          window.gtag('event', 'page_view', { page_path: `${pathname}${search}` });
         }
       } catch {
         // no-op
@@ -103,11 +87,7 @@ function AnalyticsProvider() {
   return null;
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   const isProd = process.env.NODE_ENV === 'production';
 
   return (
@@ -126,14 +106,10 @@ export default function RootLayout({
           />
         ) : null}
 
-        {/* Google Analytics 4 (optional via NEXT_PUBLIC_GA_ID) */}
+        {/* Google Analytics 4 (prod only via NEXT_PUBLIC_GA_ID) */}
         {isProd && GA_ID ? (
           <>
-            <Script
-              id="ga4-src"
-              strategy="afterInteractive"
-              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-            />
+            <Script id="ga4-src" strategy="afterInteractive" src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
             <Script
               id="ga4-init"
               strategy="afterInteractive"
@@ -143,7 +119,6 @@ export default function RootLayout({
                   function gtag(){ dataLayer.push(arguments); }
                   window.gtag = gtag;
                   gtag('js', new Date());
-                  // Avoid double-counting; we send page_view manually.
                   gtag('config', '${GA_ID}', { send_page_view: false });
                 `,
               }}
@@ -152,8 +127,7 @@ export default function RootLayout({
           </>
         ) : null}
 
-        {/* Google AdSense (prod only). Script load is safe globally;
-            we'll render slots ONLY on docs pages in a follow-up step. */}
+        {/* Google AdSense (prod only). Slots will be added only on /docs in next step. */}
         {isProd && ADSENSE_CLIENT ? (
           <>
             <Script
@@ -164,17 +138,19 @@ export default function RootLayout({
               )}`}
               crossOrigin="anonymous"
             />
-            {/* Default to non-personalized ads, and also respect Do Not Track */}
             <Script
               id="adsense-npa"
               strategy="afterInteractive"
+              // No global type augmentation; compute DNT inline and default to NPA=1
               dangerouslySetInnerHTML={{
                 __html: `
                   try {
-                    const dnt = (navigator as any)?.doNotTrack === '1' || (window as any)?.doNotTrack === '1';
-                    (window as any).adsbygoogle = (window as any).adsbygoogle || [];
-                    (window as any).adsbygoogle.requestNonPersonalizedAds = 1; // default NPA=1
-                    if (dnt) (window as any).adsbygoogle.requestNonPersonalizedAds = 1;
+                    var w = window;
+                    var n = navigator;
+                    var dnt = (n && (n.doNotTrack === '1' || (n as any).msDoNotTrack === '1')) || (w as any).doNotTrack === '1';
+                    (w as any).adsbygoogle = (w as any).adsbygoogle || [];
+                    (w as any).adsbygoogle.requestNonPersonalizedAds = 1;
+                    if (dnt) (w as any).adsbygoogle.requestNonPersonalizedAds = 1;
                   } catch {}
                 `,
               }}
@@ -186,14 +162,11 @@ export default function RootLayout({
   );
 }
 
+// Narrow window typings only (no Navigator augmentation to avoid lib clashes)
 declare global {
   interface Window {
     plausible?: (eventName: string, options?: { props?: Record<string, unknown> }) => void;
     gtag?: (...args: unknown[]) => void;
     adsbygoogle?: (unknown[] & { requestNonPersonalizedAds?: number });
-    doNotTrack?: string;
-  }
-  interface Navigator {
-    doNotTrack?: string;
   }
 }
