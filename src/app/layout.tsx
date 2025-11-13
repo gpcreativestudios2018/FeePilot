@@ -1,4 +1,4 @@
-﻿import './globals.css';
+import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import Footer from './components/Footer';
@@ -141,13 +141,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Script
               id="adsense-npa"
               strategy="afterInteractive"
-              // No global type augmentation; compute DNT inline and default to NPA=1
+              // Inline DNT check; default to non-personalized ads
               dangerouslySetInnerHTML={{
                 __html: `
                   try {
                     var w = window;
                     var n = navigator;
-                    var dnt = (n && (n.doNotTrack === '1' || (n as any).msDoNotTrack === '1')) || (w as any).doNotTrack === '1';
+                    var dnt = (n && (n.doNotTrack === '1' || (n).msDoNotTrack === '1')) || (w).doNotTrack === '1';
                     (w as any).adsbygoogle = (w as any).adsbygoogle || [];
                     (w as any).adsbygoogle.requestNonPersonalizedAds = 1;
                     if (dnt) (w as any).adsbygoogle.requestNonPersonalizedAds = 1;
@@ -162,7 +162,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   );
 }
 
-// Narrow window typings only (no Navigator augmentation to avoid lib clashes)
+// Narrow window typings only
 declare global {
   interface Window {
     plausible?: (eventName: string, options?: { props?: Record<string, unknown> }) => void;
