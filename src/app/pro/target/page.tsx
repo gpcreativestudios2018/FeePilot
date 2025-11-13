@@ -1,34 +1,22 @@
-﻿// src/app/pro/target/page.tsx
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
 import TargetClient from './TargetClient';
 import TargetGate from './TargetGate';
 
 export const metadata: Metadata = {
-  title: 'Reverse Calculator (beta) — Fee Pilot Pro',
+  title: 'Reverse Calculator (Pro)',
   description:
-    'Work backward from a target payout to find the required gross amount, accounting for platform and processor fees. Part of Fee Pilot Pro.',
-  alternates: {
-    canonical: '/pro/target',
-  },
-  openGraph: {
-    title: 'Reverse Calculator (beta) — Fee Pilot Pro',
-    description:
-      'Start with a target payout and calculate the gross needed after fees. Great for quoting and planning.',
-    url: '/pro/target',
-    siteName: 'Fee Pilot',
-    type: 'article',
-  },
+    'Set a target take-home and instantly compute the required listing price (Pro feature).',
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      indexifembedded: true,
-      noimageindex: true,
-    },
+    googleBot: { index: true, follow: true, noimageindex: true },
   },
+  alternates: { canonical: '/pro/target' },
 };
 
-export default function TargetPage() {
+export default function Page() {
+  // Enforce soft gate at the route level.
+  // TargetGate unlocks with ?pro=1 and respects NEXT_PUBLIC_REQUIRE_PRO.
   return (
     <TargetGate>
       <TargetClient />
