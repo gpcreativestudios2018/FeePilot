@@ -1,7 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
-import Footer from './components/Footer';
+import ClientFooter from './components/ClientFooter';
 
 const PLAUSIBLE_DOMAIN = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || '';
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || '';
@@ -44,9 +44,7 @@ function AnalyticsProvider() {
         if (window.gtag && typeof window.gtag === 'function' && GA_ID) {
           window.gtag('event', 'page_view', { page_path: `${pathname}${search}` });
         }
-      } catch {
-        // no-op
-      }
+      } catch {}
 
       const sendPv = () => {
         if (window.gtag && typeof window.gtag === 'function' && GA_ID) {
@@ -59,27 +57,17 @@ function AnalyticsProvider() {
       const push = history.pushState.bind(history) as typeof history.pushState;
       const replace = history.replaceState.bind(history) as typeof history.replaceState;
 
-      const patchedPushState: typeof history.pushState = (
-        data: unknown,
-        title: string,
-        url?: string | URL | null
-      ) => {
+      const patchedPushState: typeof history.pushState = (data: unknown, title: string, url?: string | URL | null) => {
         push(data as unknown, title, url);
         sendPv();
       };
-
-      const patchedReplaceState: typeof history.replaceState = (
-        data: unknown,
-        title: string,
-        url?: string | URL | null
-      ) => {
+      const patchedReplaceState: typeof history.replaceState = (data: unknown, title: string, url?: string | URL | null) => {
         replace(data as unknown, title, url);
         sendPv();
       };
 
       history.pushState = patchedPushState;
       history.replaceState = patchedReplaceState;
-
       window.addEventListener('popstate', sendPv);
     });
   }
@@ -94,7 +82,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body>
         {children}
-        <Footer />
+        {/* Footer is conditionally hidden on "/" to avoid duplicates */}
+        <ClientFooter />
 
         {/* Plausible (prod only) */}
         {isProd && PLAUSIBLE_DOMAIN ? (
@@ -127,7 +116,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </>
         ) : null}
 
-        {/* Google AdSense (prod only). Slots will be added only on /docs. */}
+        {/* Google AdSense (prod only) */}
         {isProd && ADSENSE_CLIENT ? (
           <>
             <Script
@@ -141,7 +130,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Script
               id="adsense-npa"
               strategy="afterInteractive"
-              // Inline DNT check; default to non-personalized ads
               dangerouslySetInnerHTML={{
                 __html: `
                   try {
@@ -162,7 +150,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   );
 }
 
-// Narrow window typings only
+// Window types (no Navigator augmentation)
 declare global {
   interface Window {
     plausible?: (eventName: string, options?: { props?: Record<string, unknown> }) => void;

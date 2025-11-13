@@ -1,32 +1,15 @@
-// src/app/page.tsx
 import type { Metadata } from 'next';
 import HomeClient from './HomeClient';
 
 export const metadata: Metadata = {
-  title: 'Fee Pilot — Fast fee calculator',
+  title: 'Marketplace Fee Calculator',
   description:
-    'Estimate platform and payment processor fees, compare outcomes, export CSV, and share results. Free and privacy-friendly.',
-  alternates: {
-    canonical: '/',
-  },
-  openGraph: {
-    title: 'Fee Pilot — Fast fee calculator',
-    description:
-      'Quickly estimate fees, export CSV, and share results. Pro includes the Reverse Calculator (beta).',
-    url: '/',
-    siteName: 'Fee Pilot',
-    type: 'website',
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      indexifembedded: true,
-      noimageindex: true,
-    },
-  },
+    'Fast, accurate marketplace fee calculator. Export CSV, share links, and estimate net profit.',
+  alternates: { canonical: '/' },
 };
 
-export default function HomePage() {
+export default function Page() {
+  // NOTE: The global <Footer /> is already rendered in layout.tsx.
+  // Do not render a footer here to avoid duplicates.
   return <HomeClient />;
 }
