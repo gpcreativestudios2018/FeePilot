@@ -1,7 +1,7 @@
 ﻿import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
-import Footer from './components/Footer';
+import ClientFooter from './components/ClientFooter';
 
 const PLAUSIBLE_DOMAIN = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || '';
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || '';
@@ -35,8 +35,10 @@ export const viewport: Viewport = {
 };
 
 function AnalyticsProvider() {
-  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
-  const search = typeof window !== 'undefined' ? window.location.search : '';
+  const pathname =
+    typeof window !== 'undefined' ? window.location.pathname : '';
+  const search =
+    typeof window !== 'undefined' ? window.location.search : '';
 
   if (typeof window !== 'undefined') {
     queueMicrotask(() => {
@@ -44,9 +46,7 @@ function AnalyticsProvider() {
         if (window.gtag && typeof window.gtag === 'function' && GA_ID) {
           window.gtag('event', 'page_view', { page_path: `${pathname}${search}` });
         }
-      } catch {
-        // no-op
-      }
+      } catch {}
 
       const sendPv = () => {
         if (window.gtag && typeof window.gtag === 'function' && GA_ID) {
@@ -59,27 +59,17 @@ function AnalyticsProvider() {
       const push = history.pushState.bind(history) as typeof history.pushState;
       const replace = history.replaceState.bind(history) as typeof history.replaceState;
 
-      const patchedPushState: typeof history.pushState = (
-        data: unknown,
-        title: string,
-        url?: string | URL | null
-      ) => {
+      const patchedPushState: typeof history.pushState = (data: unknown, title: string, url?: string | URL | null) => {
         push(data as unknown, title, url);
         sendPv();
       };
-
-      const patchedReplaceState: typeof history.replaceState = (
-        data: unknown,
-        title: string,
-        url?: string | URL | null
-      ) => {
+      const patchedReplaceState: typeof history.replaceState = (data: unknown, title: string, url?: string | URL | null) => {
         replace(data as unknown, title, url);
         sendPv();
       };
 
       history.pushState = patchedPushState;
       history.replaceState = patchedReplaceState;
-
       window.addEventListener('popstate', sendPv);
     });
   }
@@ -94,7 +84,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body>
         {children}
-        <Footer />
+        {/* Footer is conditionally hidden on "/" to avoid duplicates */}
+        <ClientFooter />
 
         {/* Plausible (prod only) */}
         {isProd && PLAUSIBLE_DOMAIN ? (
@@ -127,7 +118,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </>
         ) : null}
 
-        {/* Google AdSense (prod only). Slots will be added only on /docs in next step. */}
+        {/* Google AdSense (prod only) */}
         {isProd && ADSENSE_CLIENT ? (
           <>
             <Script
@@ -141,13 +132,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Script
               id="adsense-npa"
               strategy="afterInteractive"
-              // No global type augmentation; compute DNT inline and default to NPA=1
               dangerouslySetInnerHTML={{
                 __html: `
                   try {
                     var w = window;
                     var n = navigator;
-                    var dnt = (n && (n.doNotTrack === '1' || (n as any).msDoNotTrack === '1')) || (w as any).doNotTrack === '1';
+                    var dnt = (n && (n.doNotTrack === '1' || (n).msDoNotTrack === '1')) || (w).doNotTrack === '1';
                     (w as any).adsbygoogle = (w as any).adsbygoogle || [];
                     (w as any).adsbygoogle.requestNonPersonalizedAds = 1;
                     if (dnt) (w as any).adsbygoogle.requestNonPersonalizedAds = 1;
@@ -162,7 +152,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   );
 }
 
-// Narrow window typings only (no Navigator augmentation to avoid lib clashes)
+// Window types (no Navigator augmentation)
 declare global {
   interface Window {
     plausible?: (eventName: string, options?: { props?: Record<string, unknown> }) => void;
