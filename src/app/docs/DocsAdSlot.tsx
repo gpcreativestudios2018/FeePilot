@@ -17,14 +17,10 @@ export default function DocsAdSlot() {
     if (!ADSENSE_CLIENT || !ADSENSE_SLOT) return;
     const w = window as unknown as { adsbygoogle?: AdsArray };
     w.adsbygoogle = w.adsbygoogle || ([] as unknown as AdsArray);
-    try {
-      w.adsbygoogle.push({});
-    } catch {}
+    try { w.adsbygoogle.push({}); } catch {}
   }, []);
 
-  if (!ADSENSE_CLIENT || !ADSENSE_SLOT) {
-    return null;
-  }
+  if (!ADSENSE_CLIENT || !ADSENSE_SLOT) return null;
 
   return (
     <div
