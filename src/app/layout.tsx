@@ -1,98 +1,164 @@
-﻿// src/app/layout.tsx
+﻿import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
-import './globals.css';
+import Footer from './components/Footer';
 
-const siteUrl = 'https://fee-pilot.vercel.app';
-const titleDefault = 'Fee Pilot — Marketplace Fee Calculator';
-const description =
-  'Fast, accurate marketplace fee calculator for Etsy, StockX, eBay, Depop, Mercari, and Poshmark. CSV export, shareable links, and Pro tools.';
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 5,
-  viewportFit: 'cover',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0b1220' },
-  ],
-};
+const PLAUSIBLE_DOMAIN = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || '';
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID || '';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL('https://fee-pilot.vercel.app'),
   title: {
-    default: titleDefault,
-    template: '%s · Fee Pilot',
+    default: 'Fee Pilot — Marketplace Fee Calculator',
+    template: '%s — Fee Pilot',
   },
-  description,
-  keywords: [
-    'marketplace fees',
-    'fee calculator',
-    'etsy fees',
-    'stockx fees',
-    'ebay fees',
-    'depop fees',
-    'mercari fees',
-    'poshmark fees',
-    'seller tools',
-  ],
-  authors: [{ name: 'Fee Pilot' }],
-  creator: 'Fee Pilot',
+  description:
+    'Fast, accurate marketplace fee calculator. Export CSV, share links, and estimate net profit. Reverse (Pro): target take-home calculator.',
   alternates: {
     canonical: '/',
-    languages: {
-      'en-US': '/',
+  },
+  robots: {
+    googleBot: {
+      index: true,
+      follow: true,
     },
   },
   openGraph: {
     type: 'website',
-    url: siteUrl,
+    url: 'https://fee-pilot.vercel.app',
+    title: 'Fee Pilot — Marketplace Fee Calculator',
+    description:
+      'Fast, accurate marketplace fee calculator with CSV export and shareable links.',
     siteName: 'Fee Pilot',
-    title: titleDefault,
-    description,
-    images: [
-      { url: '/opengraph-image', width: 1200, height: 630, alt: 'Fee Pilot' },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: titleDefault,
-    description,
-    images: ['/opengraph-image'],
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-  icons: {
-    icon: '/favicon.ico',
+    title: 'Fee Pilot — Marketplace Fee Calculator',
+    description:
+      'Fast, accurate marketplace fee calculator with CSV export and shareable links.',
   },
 };
+
+export const viewport: Viewport = {
+  themeColor: '#0b0f19',
+  width: 'device-width',
+  initialScale: 1,
+};
+
+function AnalyticsProvider() {
+  const pathname =
+    typeof window !== 'undefined' ? window.location.pathname : '';
+  const search =
+    typeof window !== 'undefined' ? window.location.search : '';
+
+  if (typeof window !== 'undefined') {
+    queueMicrotask(() => {
+      try {
+        if (window.gtag && typeof window.gtag === 'function' && GA_ID) {
+          window.gtag('event', 'page_view', {
+            page_path: `${pathname}${search}`,
+          });
+        }
+      } catch {
+        // no-op
+      }
+
+      const sendPv = () => {
+        if (window.gtag && typeof window.gtag === 'function' && GA_ID) {
+          window.gtag('event', 'page_view', {
+            page_path: `${window.location.pathname}${window.location.search}`,
+          });
+        }
+      };
+
+      // Strictly-typed wrappers for history methods (no `any`)
+      const push = history.pushState.bind(history) as typeof history.pushState;
+      const replace = history.replaceState.bind(history) as typeof history.replaceState;
+
+      const patchedPushState: typeof history.pushState = (
+        data: unknown,
+        title: string,
+        url?: string | URL | null
+      ) => {
+        push(data as unknown, title, url);
+        sendPv();
+      };
+
+      const patchedReplaceState: typeof history.replaceState = (
+        data: unknown,
+        title: string,
+        url?: string | URL | null
+      ) => {
+        replace(data as unknown, title, url);
+        sendPv();
+      };
+
+      history.pushState = patchedPushState;
+      history.replaceState = patchedReplaceState;
+
+      window.addEventListener('popstate', sendPv);
+    });
+  }
+
+  return null;
+}
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // If NEXT_PUBLIC_PLAUSIBLE_DOMAIN is set and we're in production, inject Plausible.
-  const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
-  const isProd =
-    process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
-    process.env.NODE_ENV === 'production';
+  const isProd = process.env.NODE_ENV === 'production';
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        {plausibleDomain && isProd && (
+      <body>
+        {children}
+        <Footer />
+
+        {/* Plausible (prod only) */}
+        {isProd && PLAUSIBLE_DOMAIN ? (
           <Script
-            defer
-            data-domain={plausibleDomain}
+            id="plausible"
+            strategy="afterInteractive"
+            data-domain={PLAUSIBLE_DOMAIN}
             src="https://plausible.io/js/script.js"
           />
-        )}
-      </head>
-      <body>{children}</body>
+        ) : null}
+
+        {/* Google Analytics 4 (optional via NEXT_PUBLIC_GA_ID) */}
+        {isProd && GA_ID ? (
+          <>
+            <Script
+              id="ga4-src"
+              strategy="afterInteractive"
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+            />
+            <Script
+              id="ga4-init"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){ dataLayer.push(arguments); }
+                  window.gtag = gtag;
+                  gtag('js', new Date());
+                  // Avoid double-counting; we send page_view manually.
+                  gtag('config', '${GA_ID}', { send_page_view: false });
+                `,
+              }}
+            />
+            <AnalyticsProvider />
+          </>
+        ) : null}
+      </body>
     </html>
   );
+}
+
+declare global {
+  interface Window {
+    plausible?: (eventName: string, options?: { props?: Record<string, unknown> }) => void;
+    gtag?: (...args: unknown[]) => void;
+  }
 }
