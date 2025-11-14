@@ -1,13 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'Docs — Fee Pilot',
   description:
     'Documentation for Fee Pilot: how to use the calculator, export CSV, share results, and explore Pro tools like the Reverse Calculator.',
-  alternates: {
-    canonical: '/docs',
-  },
+  alternates: { canonical: '/docs' },
   openGraph: {
     title: 'Fee Pilot Docs',
     description:
@@ -19,16 +18,63 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      indexifembedded: true,
-      noimageindex: true,
-    },
+    googleBot: { indexifembedded: true, noimageindex: true },
   },
+};
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Does Fee Pilot store my data?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text:
+          'No. Calculations run in your browser. We do not store the numbers you enter.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Can I export results?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text:
+          'Yes. Use “Download CSV” to export fee breakdowns for spreadsheets and audits.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'How do I share results?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text:
+          'Click “Copy link” to generate a shareable URL with your current calculator inputs.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'What is Fee Pilot Pro?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text:
+          'Pro adds the Reverse Calculator so you can work backward from a target payout.',
+      },
+    },
+  ],
 };
 
 export default function DocsPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
+      {/* FAQ JSON-LD for rich results */}
+      <Script
+        id="faq-docs"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+
       <h1 className="text-3xl font-semibold tracking-tight">Fee Pilot Docs</h1>
 
       <p className="mt-4 text-base text-gray-700" suppressHydrationWarning>
@@ -75,7 +121,7 @@ export default function DocsPage() {
         </ul>
       </section>
 
-      {/* New: Marketplace guides for SEO */}
+      {/* Marketplace guides for SEO */}
       <section className="mt-8 space-y-4">
         <h2 className="text-xl font-medium">Marketplace fee guides</h2>
         <ul className="list-disc pl-6 text-gray-700">
@@ -106,7 +152,6 @@ export default function DocsPage() {
   );
 }
 
-// Typed route helper
 type Route =
   | '/'
   | '/about'
