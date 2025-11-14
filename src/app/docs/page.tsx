@@ -1,4 +1,3 @@
-// src/app/docs/page.tsx
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
@@ -76,6 +75,19 @@ export default function DocsPage() {
         </ul>
       </section>
 
+      {/* New: Marketplace guides for SEO */}
+      <section className="mt-8 space-y-4">
+        <h2 className="text-xl font-medium">Marketplace fee guides</h2>
+        <ul className="list-disc pl-6 text-gray-700">
+          <li>
+            <Link href={'/docs/etsy-fees' as Route} className="underline">
+              Etsy Fees Guide — how Etsy fees are calculated
+            </Link>
+          </li>
+          {/* Future: add Depop/Mercari pages here */}
+        </ul>
+      </section>
+
       <section className="mt-8 space-y-4">
         <h2 className="text-xl font-medium">FAQ</h2>
         <ul className="list-disc pl-6 text-gray-700">
@@ -95,4 +107,10 @@ export default function DocsPage() {
 }
 
 // Typed route helper
-type Route = '/' | '/about' | '/docs' | '/pro' | '/pro/target';
+type Route =
+  | '/'
+  | '/about'
+  | '/docs'
+  | '/pro'
+  | '/pro/target'
+  | '/docs/etsy-fees';
