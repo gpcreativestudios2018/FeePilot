@@ -1,17 +1,17 @@
-import type { Metadata } from 'next';
+ï»¿import type { Metadata } from 'next';
 import Script from 'next/script';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Etsy Fees Guide — How Etsy fees are calculated (2025)',
+  title: 'Etsy Fees Guide â€” How Etsy fees are calculated (2025)',
   description:
     'A straightforward breakdown of Etsy fees: listing, transaction, and payment processing. Learn the effective total rate and see examples.',
   alternates: { canonical: '/docs/etsy-fees' },
   openGraph: {
     type: 'article',
-    title: 'Etsy Fees Guide — How Etsy fees are calculated',
+    title: 'Etsy Fees Guide â€” How Etsy fees are calculated',
     description:
-      'Understand Etsy’s listing, transaction, and payment processing fees with examples and tips.',
+      'Understand Etsyâ€™s listing, transaction, and payment processing fees with examples and tips.',
     url: '/docs/etsy-fees',
     siteName: 'Fee Pilot',
   },
@@ -41,7 +41,7 @@ const faqJsonLd = {
       acceptedAnswer: {
         '@type': 'Answer',
         text:
-          'For many sellers, the effective rate lands in the ~9%–12% range before listing fees, depending on location and payment processing. Listing fees add .20 per item.',
+          'For many sellers, the effective rate lands in the ~9%â€“12% range before listing fees, depending on location and payment processing. Listing fees add .20 per item.',
       },
     },
     {
@@ -59,7 +59,7 @@ const faqJsonLd = {
       acceptedAnswer: {
         '@type': 'Answer',
         text:
-          'Yes—Etsy’s transaction fee generally applies to the item price and the shipping price you charge the buyer.',
+          'Yesâ€”Etsyâ€™s transaction fee generally applies to the item price and the shipping price you charge the buyer.',
       },
     },
   ],
@@ -80,11 +80,11 @@ export default function EtsyFeesDoc() {
         Etsy fees typically include a <strong>.20 listing fee</strong> per item (for 4 months),
         a <strong>transaction fee</strong> (commonly ~6.5% of item price + shipping), and a{' '}
         <strong>payment processing fee</strong> (varies by country; often a fixed + percent). Actual
-        rates and rules may change—always confirm in Etsy’s official help docs.
+        rates and rules may changeâ€”always confirm in Etsyâ€™s official help docs.
       </p>
 
       <section className="mt-8 space-y-3">
-        <h2 className="text-xl font-medium">What’s included</h2>
+        <h2 className="text-xl font-medium">Whatâ€™s included</h2>
         <ul className="list-disc pl-6 text-gray-300">
           <li><strong>Listing fee:</strong> .20 per listing (renews every 4 months or when quantity sells).</li>
           <li><strong>Transaction fee:</strong> charged on the item price + shipping you charge the buyer (commonly around 6.5%).</li>
@@ -95,7 +95,7 @@ export default function EtsyFeesDoc() {
       <section className="mt-8 space-y-3">
         <h2 className="text-xl font-medium">Back-of-the-napkin estimate</h2>
         <p className="text-gray-300">
-          A simple sanity check many sellers use: <em>~9%–12% of price + shipping</em> for marketplace
+          A simple sanity check many sellers use: <em>~9%â€“12% of price + shipping</em> for marketplace
           + processing, then add <em>.20</em> per item for listing fees. Your exact numbers may
           differ by region and payment plan.
         </p>
@@ -114,7 +114,7 @@ export default function EtsyFeesDoc() {
       <section className="mt-10 text-sm text-gray-500">
         <p>
           Disclaimer: Fee Pilot is not affiliated with Etsy. This page is a general guide based on
-          commonly cited fee structures; consult Etsy’s official documentation for the latest rates.
+          commonly cited fee structures; consult Etsyâ€™s official documentation for the latest rates.
         </p>
       </section>
     </main>
