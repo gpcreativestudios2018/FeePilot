@@ -15,11 +15,7 @@ export const metadata: Metadata = {
     siteName: 'Fee Pilot',
     type: 'article',
   },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: { indexifembedded: true, noimageindex: true },
-  },
+  robots: { index: true, follow: true, googleBot: { indexifembedded: true, noimageindex: true } },
 };
 
 const faqJsonLd = {
@@ -31,8 +27,7 @@ const faqJsonLd = {
       name: 'Does Fee Pilot store my data?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text:
-          'No. Calculations run in your browser. We do not store the numbers you enter.',
+        text: 'No. Calculations run in your browser. We do not store the numbers you enter.',
       },
     },
     {
@@ -40,8 +35,7 @@ const faqJsonLd = {
       name: 'Can I export results?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text:
-          'Yes. Use “Download CSV” to export fee breakdowns for spreadsheets and audits.',
+        text: 'Yes. Use “Download CSV” to export fee breakdowns for spreadsheets and audits.',
       },
     },
     {
@@ -49,8 +43,7 @@ const faqJsonLd = {
       name: 'How do I share results?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text:
-          'Click “Copy link” to generate a shareable URL with your current calculator inputs.',
+        text: 'Click “Copy link” to generate a shareable URL with your current calculator inputs.',
       },
     },
     {
@@ -58,8 +51,7 @@ const faqJsonLd = {
       name: 'What is Fee Pilot Pro?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text:
-          'Pro adds the Reverse Calculator so you can work backward from a target payout.',
+        text: 'Pro adds the Reverse Calculator so you can work backward from a target payout.',
       },
     },
   ],
@@ -144,18 +136,10 @@ export default function DocsPage() {
       </section>
 
       <section className="mt-8 text-sm text-gray-600">
-        <p>
-          Built with Next.js 15 and React 19. Deployed on Vercel. Privacy-friendly by design.
-        </p>
+        <p>Built with Next.js 15 and React 19. Deployed on Vercel. Privacy-friendly by design.</p>
       </section>
     </main>
   );
 }
 
-type Route =
-  | '/'
-  | '/about'
-  | '/docs'
-  | '/pro'
-  | '/pro/target'
-  | '/docs/etsy-fees';
+type Route = '/' | '/about' | '/docs' | '/pro' | '/pro/target' | '/docs/etsy-fees';
