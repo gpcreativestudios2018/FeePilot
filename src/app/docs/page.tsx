@@ -122,7 +122,7 @@ export default function DocsPage() {
               Etsy Fees Guide — how Etsy fees are calculated
             </Link>
           </li>
-          {/* Future: add Depop/Mercari pages here */}
+          {/* We’ll add Depop/Mercari links here as they’re created */}
         </ul>
       </section>
 
