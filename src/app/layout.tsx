@@ -6,6 +6,7 @@ import ClientFooter from './components/ClientFooter';
 const PLAUSIBLE_DOMAIN = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || '';
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || '';
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || '';
+const GCMP_URL = process.env.NEXT_PUBLIC_GCMP_URL || '';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://fee-pilot.vercel.app'),
@@ -91,6 +92,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             data-domain={PLAUSIBLE_DOMAIN}
             src="https://plausible.io/js/script.js"
           />
+        ) : null}
+
+        {/* Google CMP / Funding Choices (prod only via NEXT_PUBLIC_GCMP_URL) */}
+        {isProd && GCMP_URL ? (
+          <Script id="cmp-funding-choices" strategy="afterInteractive" src={GCMP_URL} />
         ) : null}
 
         {/* Google Analytics 4 (prod only via NEXT_PUBLIC_GA_ID) */}
