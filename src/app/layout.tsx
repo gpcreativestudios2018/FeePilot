@@ -40,15 +40,36 @@ function AnalyticsProvider() {
 
   if (typeof window !== 'undefined') {
     queueMicrotask(() => {
-      try { if (window.gtag && GA_ID) window.gtag('event', 'page_view', { page_path: `${pathname}${search}` }); } catch {}
-      const sendPv = () => { try { if (window.gtag && GA_ID) window.gtag('event', 'page_view', { page_path: `${window.location.pathname}${window.location.search}` }); } catch {} };
+      try {
+        if (window.gtag && typeof window.gtag === 'function' && GA_ID) {
+          window.gtag('event', 'page_view', { page_path: `${pathname}${search}` });
+        }
+      } catch {}
+
+      const sendPv = () => {
+        if (window.gtag && typeof window.gtag === 'function' && GA_ID) {
+          window.gtag('event', 'page_view', {
+            page_path: `${window.location.pathname}${window.location.search}`,
+          });
+        }
+      };
+
       const push = history.pushState.bind(history) as typeof history.pushState;
       const replace = history.replaceState.bind(history) as typeof history.replaceState;
-      history.pushState = (d,t,u) => { push(d as unknown, t, u); sendPv(); };
-      history.replaceState = (d,t,u) => { replace(d as unknown, t, u); sendPv(); };
+
+      history.pushState = (data: unknown, title: string, url?: string | URL | null) => {
+        push(data as unknown, title, url);
+        sendPv();
+      };
+      history.replaceState = (data: unknown, title: string, url?: string | URL | null) => {
+        replace(data as unknown, title, url);
+        sendPv();
+      };
+
       window.addEventListener('popstate', sendPv);
     });
   }
+
   return null;
 }
 
@@ -62,10 +83,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Footer hidden on "/" via ClientFooter to avoid duplicates */}
         <ClientFooter />
 
+        {/* Plausible (prod only) */}
         {isProd && PLAUSIBLE_DOMAIN ? (
-          <Script id="plausible" strategy="afterInteractive" data-domain={PLAUSIBLE_DOMAIN} src="https://plausible.io/js/script.js" />
+          <Script
+            id="plausible"
+            strategy="afterInteractive"
+            data-domain={PLAUSIBLE_DOMAIN}
+            src="https://plausible.io/js/script.js"
+          />
         ) : null}
 
+        {/* Google Analytics 4 (prod only via NEXT_PUBLIC_GA_ID) */}
         {isProd && GA_ID ? (
           <>
             <Script id="ga4-src" strategy="afterInteractive" src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
@@ -86,12 +114,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </>
         ) : null}
 
+        {/* Google AdSense (prod only) */}
         {isProd && ADSENSE_CLIENT ? (
           <>
             <Script
               id="adsense-src"
               strategy="afterInteractive"
-              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(ADSENSE_CLIENT)}`}
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(
+                ADSENSE_CLIENT
+              )}`}
               crossOrigin="anonymous"
             />
             <Script
