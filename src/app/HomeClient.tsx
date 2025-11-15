@@ -95,6 +95,16 @@ function makeDefaults(): Inputs {
   };
 }
 
+/* -------------------------- platform docs links --------------------------- */
+const PLATFORM_DOC_LINKS: Partial<Record<PlatformKey, { href: string; name: string }>> = {
+  etsy: { href: '/docs/etsy-fees', name: 'Etsy' },
+  depop: { href: '/docs/depop-fees', name: 'Depop' },
+  mercari: { href: '/docs/mercari-fees', name: 'Mercari' },
+  poshmark: { href: '/docs/poshmark-fees', name: 'Poshmark' },
+  ebay: { href: '/docs/ebay-fees', name: 'eBay' },
+  stockx: { href: '/docs/stockx-fees', name: 'StockX' },
+};
+
 /* ------------------------- PERSISTENCE KEYS -------------------------------- */
 const THEME_KEY = 'feepilot:theme';          // 'light' | 'dark'
 const INPUTS_KEY = 'feepilot:inputs:v1';     // JSON of Inputs
@@ -287,6 +297,8 @@ export default function HomeClient() {
       : 'border-purple-600/50 text-white hover:bg-white/5'
   );
 
+  const currentPlatformDoc = PLATFORM_DOC_LINKS[inputs.platform];
+
   // Show dev tools (like "Clear saved data") in dev OR when the preview flag is set
   const showDevTools = process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_DEV_TOOLS === '1';
 
@@ -369,7 +381,7 @@ export default function HomeClient() {
             </Link>
           </h1>
 
-        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <ThemeToggle isLight={isLight} onToggle={toggleTheme} />
             <ResetButton onClick={resetInputs} />
             {/* Share / Copy / Pro */}
@@ -406,7 +418,30 @@ export default function HomeClient() {
         <section className={cx('rounded-2xl border p-4 sm:p-6', panelBorder)}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>Platform</label>
+              <label
+                className={cx(
+                  'mb-2 flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between',
+                  subtleText
+                )}
+              >
+                <span>Platform</span>
+                {currentPlatformDoc && (
+                  <span className="text-xs sm:text-[11px]">
+                    {currentPlatformDoc.name} fee guide{' '}
+                    <Link
+                      href={currentPlatformDoc.href}
+                      className={cx(
+                        'underline decoration-dotted',
+                        isLight
+                          ? 'text-purple-700 hover:text-purple-900'
+                          : 'text-purple-300 hover:text-purple-100'
+                      )}
+                    >
+                      here
+                    </Link>
+                  </span>
+                )}
+              </label>
               <select
                 className={cx('w-full rounded-xl border bg-transparent px-3 py-2 outline-none', controlBorder)}
                 value={inputs.platform}
