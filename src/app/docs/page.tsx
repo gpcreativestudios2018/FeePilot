@@ -85,6 +85,7 @@ export default function DocsPage() {
           <li><Link href={'/docs/mercari-fees' as Route} className="underline">Mercari Fees Guide — how Mercari fees are calculated</Link></li>
           <li><Link href={'/docs/poshmark-fees' as Route} className="underline">Poshmark Fees Guide — how Poshmark fees are calculated</Link></li>
           <li><Link href={'/docs/ebay-fees' as Route} className="underline">eBay Fees Guide — how eBay fees are calculated</Link></li>
+          <li><Link href={'/docs/stockx-fees' as Route} className="underline">StockX Fees Guide — how StockX fees are calculated</Link></li>
         </ul>
       </section>
 
@@ -114,4 +115,5 @@ type Route =
   | '/docs/depop-fees'
   | '/docs/mercari-fees'
   | '/docs/poshmark-fees'
-  | '/docs/ebay-fees';
+  | '/docs/ebay-fees'
+  | '/docs/stockx-fees';
