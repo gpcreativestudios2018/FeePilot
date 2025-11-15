@@ -734,7 +734,7 @@ export default function ReverseCalcPage() {
   };
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
+    <main className="mx-auto max-w-6xl px-4 pb-20 pt-10">
       <React.Suspense fallback={null}>
         <QueryParamsInitializer onInit={handleInitFromQuery} />
       </React.Suspense>
@@ -749,7 +749,11 @@ export default function ReverseCalcPage() {
             targetProfit={parseNum(targetProfit)}
             targetMargin={parseNum(targetMarginPct)}
           />
-          <span className="text-xs text-gray-600 dark:text-gray-300" aria-live="polite" suppressHydrationWarning>
+          <span
+            className="text-xs text-gray-600 dark:text-gray-300"
+            aria-live="polite"
+            suppressHydrationWarning
+          >
             {solvingForText}
           </span>
 
@@ -765,7 +769,12 @@ export default function ReverseCalcPage() {
               <button type="button" onClick={handleSaveAndCopyLink} className={PILL_CLASS}>
                 Save & copy link
               </button>
-              <button type="button" onClick={resetInputs} className={PILL_CLASS} title="Reset inputs to defaults">
+              <button
+                type="button"
+                onClick={resetInputs}
+                className={PILL_CLASS}
+                title="Reset inputs to defaults"
+              >
                 Reset inputs
               </button>
             </>
@@ -773,8 +782,8 @@ export default function ReverseCalcPage() {
         </div>
       </header>
 
-      {/* ✅ RESTORED: Input panel */}
-      <section className="rounded-2xl border border-purple-600/30 p-6">
+      {/* Inputs panel */}
+      <section className="rounded-2xl border border-purple-600/40 p-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {/* Platform */}
           <label className="block">
@@ -788,7 +797,11 @@ export default function ReverseCalcPage() {
               }}
             >
               {PLATFORMS.map((p) => (
-                <option key={p} value={p} className="text-black dark:text-white bg-white dark:bg-black">
+                <option
+                  key={p}
+                  value={p}
+                  className="text-black dark:text-white bg-white dark:bg-black"
+                >
                   {p[0].toUpperCase() + p.slice(1)}
                 </option>
               ))}
@@ -797,7 +810,9 @@ export default function ReverseCalcPage() {
 
           {/* Target profit */}
           <label className="block">
-            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Target profit ($)</span>
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">
+              Target profit ($)
+            </span>
             <input
               type="number"
               inputMode="decimal"
@@ -813,7 +828,9 @@ export default function ReverseCalcPage() {
 
           {/* Target margin */}
           <label className="block">
-            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Target margin (%)</span>
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">
+              Target margin (%)
+            </span>
             <input
               type="number"
               inputMode="decimal"
@@ -839,7 +856,9 @@ export default function ReverseCalcPage() {
 
           {/* Your shipping cost */}
           <label className="block">
-            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Your shipping cost ($)</span>
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">
+              Your shipping cost ($)
+            </span>
             <input
               type="number"
               inputMode="decimal"
@@ -852,7 +871,9 @@ export default function ReverseCalcPage() {
 
           {/* Discount (%) */}
           <label className="block">
-            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Discount (%)</span>
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">
+              Discount (%)
+            </span>
             <input
               type="number"
               inputMode="decimal"
@@ -865,7 +886,9 @@ export default function ReverseCalcPage() {
 
           {/* Shipping charged to buyer ($) */}
           <label className="block">
-            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Shipping charged to buyer ($)</span>
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">
+              Shipping charged to buyer ($)
+            </span>
             <input
               type="number"
               inputMode="decimal"
@@ -883,7 +906,9 @@ export default function ReverseCalcPage() {
               checked={includeTax}
               onChange={(e) => setIncludeTax(e.target.checked)}
             />
-            <span className="text-sm text-gray-600 dark:text-gray-300">Include tax in Buyer total only</span>
+            <span className="text-sm text-gray-600 dark:text-gray-300">
+              Include tax in Buyer total only
+            </span>
           </label>
 
           {/* Tax state + % */}
@@ -896,11 +921,18 @@ export default function ReverseCalcPage() {
               value={taxState}
               onChange={(e) => onSelectState(e.target.value)}
             >
-              <option value="" className="text-black dark:text-white bg-white dark:bg-black">
+              <option
+                value=""
+                className="text-black dark:text-white bg-white dark:bg-black"
+              >
                 — Select state —
               </option>
               {STATE_RATES.map((s) => (
-                <option key={s.code} value={s.code} className="text-black dark:text-white bg-white dark:bg-black">
+                <option
+                  key={s.code}
+                  value={s.code}
+                  className="text-black dark:text-white bg-white dark:bg-black"
+                >
                   {s.code} — base {formatPct(s.basePct)}
                   {s.minCombinedPct ? ` (min combined ${formatPct(s.minCombinedPct)})` : ''}
                 </option>
@@ -909,7 +941,9 @@ export default function ReverseCalcPage() {
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Sales tax (%)</span>
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">
+              Sales tax (%)
+            </span>
             <input
               type="number"
               inputMode="decimal"
@@ -955,26 +989,31 @@ export default function ReverseCalcPage() {
       ) : null}
 
       {/* Results */}
-      <section className="mt-6 rounded-2xl border border-purple-600/30 p-6">
+      <section className="mt-6 rounded-2xl border border-purple-600/40 p-6">
         <div className="text-base font-semibold">Suggested price</div>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={handleCopyPrice}
-            className="text-3xl font-semibold cursor-pointer hover:opacity-90 rounded-lg px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600/40"
+            className="cursor-pointer rounded-lg px-1 text-3xl font-semibold hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600/40"
             title="Click to copy suggested price"
             aria-label="Copy suggested price"
           >
             ${formatMoney(price)}
           </button>
 
-        {/* Copy buttons */}
+          {/* Copy buttons */}
           {copiedPrice ? (
             <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
               Price copied!
             </span>
           ) : (
-            <button type="button" onClick={handleCopyPrice} className={PILL_CLASS} title="Copy suggested price">
+            <button
+              type="button"
+              onClick={handleCopyPrice}
+              className={PILL_CLASS}
+              title="Copy suggested price"
+            >
               Copy price
             </button>
           )}
@@ -1004,15 +1043,15 @@ export default function ReverseCalcPage() {
           )}
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-purple-600/40 p-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-2xl border border-purple-600/40 p-4">
             <div className="text-sm text-gray-500 dark:text-gray-400">Estimated profit</div>
             <div className="mt-2 text-xl font-semibold" suppressHydrationWarning>
               ${formatMoney(result.profit)}
             </div>
           </div>
 
-          <div className="rounded-xl border border-purple-600/40 p-4">
+          <div className="rounded-2xl border border-purple-600/40 p-4">
             <div className="text-sm text-gray-500 dark:text-gray-400">Estimated margin</div>
             <div className="mt-2 text-xl font-semibold" suppressHydrationWarning>
               {result.marginPct.toFixed(1)}%
@@ -1020,46 +1059,68 @@ export default function ReverseCalcPage() {
           </div>
 
           {/* Buyer totals with optional tax */}
-          <div className="rounded-xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">Buyer subtotal (price after discount + shipping)</div>
-            <div className="mt-2" suppressHydrationWarning>${formatMoney(buyerSubTotal)}</div>
+          <div className="rounded-2xl border border-purple-600/40 p-4">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Buyer subtotal (price after discount + shipping)
+            </div>
+            <div className="mt-2" suppressHydrationWarning>
+              ${formatMoney(buyerSubTotal)}
+            </div>
           </div>
-          <div className="rounded-xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">Buyer total {includeTax ? '(w/ tax)' : '(no tax)'}</div>
-            <div className="mt-2 font-semibold" suppressHydrationWarning>${formatMoney(buyerTotalWithTax)}</div>
+
+          <div className="rounded-2xl border border-purple-600/40 p-4">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Buyer total {includeTax ? '(w/ tax)' : '(no tax)'}
+            </div>
+            <div className="mt-2 font-semibold" suppressHydrationWarning>
+              ${formatMoney(buyerTotalWithTax)}
+            </div>
             {includeTax ? (
-              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400" suppressHydrationWarning>
+              <div
+                className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                suppressHydrationWarning
+              >
                 Tax {buyerTaxPct.toFixed(2)}% = ${formatMoney(buyerTaxAmount)}
               </div>
             ) : null}
           </div>
 
-          <div className="rounded-xl border border-purple-600/40 p-4">
+          <div className="rounded-2xl border border-purple-600/40 p-4">
             <div className="text-sm text-gray-500 dark:text-gray-400">Marketplace fee</div>
-            <div className="mt-2" suppressHydrationWarning>${formatMoney(result.marketplaceFee)}</div>
+            <div className="mt-2" suppressHydrationWarning>
+              ${formatMoney(result.marketplaceFee)}
+            </div>
           </div>
-          <div className="rounded-xl border border-purple-600/40 p-4">
+          <div className="rounded-2xl border border-purple-600/40 p-4">
             <div className="text-sm text-gray-500 dark:text-gray-400">Payment fee</div>
-            <div className="mt-2" suppressHydrationWarning>${formatMoney(result.paymentFee)}</div>
+            <div className="mt-2" suppressHydrationWarning>
+              ${formatMoney(result.paymentFee)}
+            </div>
           </div>
-          <div className="rounded-xl border border-purple-600/40 p-4">
+          <div className="rounded-2xl border border-purple-600/40 p-4">
             <div className="text-sm text-gray-500 dark:text-gray-400">Listing fee</div>
-            <div className="mt-2" suppressHydrationWarning>${formatMoney(result.listingFee)}</div>
+            <div className="mt-2" suppressHydrationWarning>
+              ${formatMoney(result.listingFee)}
+            </div>
           </div>
-          <div className="rounded-xl border border-purple-600/40 p-4">
+          <div className="rounded-2xl border border-purple-600/40 p-4">
             <div className="text-sm text-gray-500 dark:text-gray-400">Total fees</div>
-            <div className="mt-2" suppressHydrationWarning>${formatMoney(result.totalFees)}</div>
+            <div className="mt-2" suppressHydrationWarning>
+              ${formatMoney(result.totalFees)}
+            </div>
           </div>
         </div>
 
         <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-          Sales tax is usually collected from the buyer and remitted (not profit). Toggle “Include tax” to change buyer total only.
+          Sales tax is usually collected from the buyer and remitted (not profit). Toggle “Include
+          tax” to change buyer total only.
         </p>
       </section>
 
       <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-        California note: the dropdown shows base and a commonly-cited minimum combined reference (7.25%). Use the exact local rate
-        for the item’s destination in the “Sales tax (%)” field if needed.
+        California note: the dropdown shows base and a commonly-cited minimum combined reference
+        (7.25%). Use the exact local rate for the item’s destination in the “Sales tax (%)” field if
+        needed.
       </p>
     </main>
   );
