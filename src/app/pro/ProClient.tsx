@@ -10,38 +10,50 @@ const hasCheckout = Boolean(checkoutUrl);
 
 export default function ProClient() {
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-20">
-      <header className="py-10">
-        <h1 className="text-4xl font-semibold tracking-tight">FeePilot Pro</h1>
-        <p className="mt-2 opacity-80">Unlock power features for sellers</p>
+    <main className="mx-auto max-w-6xl px-4 py-10 pb-20">
+      {/* Hero / overview (match Docs/About vibe) */}
+      <header className="max-w-3xl">
+        <h1 className="text-3xl font-semibold tracking-tight text-purple-400 underline">
+          Fee Pilot Pro
+        </h1>
+        <p className="mt-4 text-base text-white" suppressHydrationWarning>
+          Unlock power features for sellers: work backward from a target payout, tune fee rules,
+          and export comparisons for your workflow.
+        </p>
+        <p className="mt-2 text-sm text-gray-400">
+          Start with the free calculator, then upgrade when you&apos;re ready for deeper control.
+        </p>
       </header>
 
-      <section className="grid gap-6 sm:grid-cols-2">
+      {/* Free vs Pro overview */}
+      <section className="mt-8 grid gap-6 sm:grid-cols-2">
         {/* Free card */}
-        <div className="rounded-2xl border border-purple-600/40 p-6">
-          <div className="text-sm opacity-70">FREE</div>
-          <div className="mt-2 text-4xl font-bold">$0</div>
-          <ul className="mt-4 list-disc space-y-2 pl-5 opacity-90">
+        <div className="rounded-2xl border border-purple-600/40 bg-black/40 p-6 text-white">
+          <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">Free</div>
+          <div className="mt-2 text-3xl font-bold">$0</div>
+          <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-gray-100">
             <li>Core fee calculations</li>
             <li>Light/Dark theme</li>
-            <li>Share/Copy permalink</li>
+            <li>Share / copy permalink</li>
             <li>Comparison table</li>
             <li>CSV export</li>
           </ul>
           <Link
             href={'/' as Route}
-            className="mt-6 inline-block rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
+            className="mt-6 inline-flex items-center rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
           >
             Continue free
           </Link>
         </div>
 
         {/* Pro card */}
-        <div className="rounded-2xl border border-purple-600/40 p-6">
-          <div className="text-sm opacity-70">PRO</div>
-          <div className="mt-2 text-4xl font-bold">$5/mo</div>
-          <ul className="mt-4 list-disc space-y-2 pl-5 opacity-90">
-            <li><strong>Custom fee rules</strong> per platform</li>
+        <div className="rounded-2xl border border-purple-600/40 bg-black/40 p-6 text-white">
+          <div className="text-xs font-semibold uppercase tracking-wide text-purple-300">Pro</div>
+          <div className="mt-2 text-3xl font-bold">$5/mo</div>
+          <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-gray-100">
+            <li>
+              <strong>Custom fee rules</strong> per platform
+            </li>
             <li>Saved presets (name &amp; quick-load)</li>
             <li>Reverse calculator (target payout)</li>
             <li>CSV export of comparisons</li>
@@ -52,7 +64,7 @@ export default function ProClient() {
             {hasCheckout ? (
               <a
                 href={checkoutUrl as string}
-                className="rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
+                className="inline-flex items-center rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
               >
                 Get Pro
               </a>
@@ -60,7 +72,7 @@ export default function ProClient() {
               <button
                 type="button"
                 onClick={() => alert('Checkout coming soon ✨')}
-                className="rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
+                className="inline-flex items-center rounded-full border border-purple-600/50 px-4 py-2 text-sm hover:bg-white/5"
               >
                 Get Pro
               </button>
@@ -68,11 +80,16 @@ export default function ProClient() {
           </div>
 
           {!hasCheckout && (
-            <p className="mt-3 text-xs opacity-60">
-              Tip: set <code>NEXT_PUBLIC_PRO_CHECKOUT_URL</code> in Vercel (Preview &amp; Production)
-              and redeploy so this button goes to checkout.
+            <p className="mt-3 text-xs text-gray-400">
+              Tip: set <code className="font-mono text-[11px]">NEXT_PUBLIC_PRO_CHECKOUT_URL</code>{' '}
+              in Vercel (Preview &amp; Production) and redeploy so this button goes to checkout.
             </p>
           )}
+
+          <p className="mt-4 text-xs text-gray-500">
+            Already using the free calculator? You can upgrade anytime — your workflow stays the
+            same, you just get more control.
+          </p>
         </div>
       </section>
     </main>
