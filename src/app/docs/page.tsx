@@ -32,7 +32,6 @@ const faqJsonLd = {
 export default function DocsPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
-      {/* FAQ JSON-LD for rich results */}
       <Script id="faq-docs" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
       <h1 className="text-3xl font-semibold tracking-tight">Fee Pilot Docs</h1>
@@ -85,6 +84,7 @@ export default function DocsPage() {
           <li><Link href={'/docs/depop-fees' as Route} className="underline">Depop Fees Guide — how Depop fees are calculated</Link></li>
           <li><Link href={'/docs/mercari-fees' as Route} className="underline">Mercari Fees Guide — how Mercari fees are calculated</Link></li>
           <li><Link href={'/docs/poshmark-fees' as Route} className="underline">Poshmark Fees Guide — how Poshmark fees are calculated</Link></li>
+          <li><Link href={'/docs/ebay-fees' as Route} className="underline">eBay Fees Guide — how eBay fees are calculated</Link></li>
         </ul>
       </section>
 
@@ -113,4 +113,5 @@ type Route =
   | '/docs/etsy-fees'
   | '/docs/depop-fees'
   | '/docs/mercari-fees'
-  | '/docs/poshmark-fees';
+  | '/docs/poshmark-fees'
+  | '/docs/ebay-fees';
