@@ -30,16 +30,20 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="text-3xl font-semibold tracking-tight">About Fee Pilot</h1>
+      {/* Page title (match Docs style) */}
+      <h1 className="text-3xl font-semibold tracking-tight text-purple-400 underline">
+        About Fee Pilot
+      </h1>
 
-      <p className="mt-4 text-base text-gray-700" suppressHydrationWarning>
+      <p className="mt-4 text-base text-white" suppressHydrationWarning>
         Fee Pilot helps you quickly estimate platform and processor fees, compare options, and share
         results. It’s fast, privacy-friendly, and built for clarity.
       </p>
 
-      <section className="mt-8 space-y-4">
-        <h2 className="text-xl font-medium">What&apos;s included</h2>
-        <ul className="list-disc pl-6 text-gray-700">
+      {/* What's included (match Docs section styling) */}
+      <section className="mt-8 space-y-4 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">What&apos;s included</h2>
+        <ul className="list-disc pl-6">
           <li>Main calculator with summary cards</li>
           <li>CSV export and shareable links</li>
           <li>
@@ -53,25 +57,36 @@ export default function AboutPage() {
         </ul>
       </section>
 
-      <section className="mt-8 space-y-4">
-        <h2 className="text-xl font-medium">Learn more</h2>
-        <ul className="list-disc pl-6 text-gray-700">
+      {/* Learn more (match Docs section styling) */}
+      <section className="mt-8 space-y-4 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">Learn more</h2>
+        <ul className="list-disc pl-6">
           <li>
-            Read the <Link href={'/docs' as Route} className="underline">Docs</Link>
+            Read the{' '}
+            <Link href={'/docs' as Route} className="underline">
+              Docs
+            </Link>
           </li>
           <li>
-            Explore <Link href={'/pro' as Route} className="underline">Pro</Link>
+            Explore{' '}
+            <Link href={'/pro' as Route} className="underline">
+              Pro
+            </Link>
           </li>
           <li>
-            Try the <Link href={'/' as Route} className="underline">Calculator</Link>
+            Try the{' '}
+            <Link href={'/' as Route} className="underline">
+              Calculator
+            </Link>
           </li>
         </ul>
       </section>
 
+      {/* Footer note (keep subtle like Docs) */}
       <section className="mt-8 text-sm text-gray-600">
         <p>
-          Built with Next.js 15, React 19, and TypeScript. Deployed on Vercel. If you have feedback,
-          we&apos;d love to hear it.
+          Built with Next.js 15, React 19, and TypeScript. Deployed on Vercel. If you have
+          feedback, we&apos;d love to hear it.
         </p>
       </section>
     </main>
@@ -79,9 +94,4 @@ export default function AboutPage() {
 }
 
 // Typed route helper
-type Route =
-  | '/'
-  | '/about'
-  | '/docs'
-  | '/pro'
-  | '/pro/target';
+type Route = '/' | '/about' | '/docs' | '/pro' | '/pro/target';
