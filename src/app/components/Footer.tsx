@@ -72,7 +72,10 @@ export default function Footer() {
       {/* Existing metadata / links */}
       <div className="flex flex-col items-center gap-2 text-sm text-neutral-400">
         <div className="text-center">
-          FeePilot by GP Creative Studios{' '}
+          FeePilot by{' '}
+          <span className="bg-gradient-to-r from-sky-400 via-purple-400 to-purple-500 bg-clip-text text-transparent">
+            GP Creative Studios
+          </span>{' '}
           <a
             href="mailto:gpcreativestudios2018@gmail.com"
             className="underline decoration-dotted hover:text-purple-400"
