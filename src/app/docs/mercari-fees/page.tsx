@@ -66,41 +66,56 @@ export default function MercariFeesDoc() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <h1 className="text-3xl font-semibold tracking-tight">Mercari Fees Guide (Quick Overview)</h1>
+      {/* Page title (match Docs/About style) */}
+      <h1 className="text-3xl font-semibold tracking-tight text-purple-400 underline">
+        Mercari Fees Guide (Quick Overview)
+      </h1>
 
-      <p className="mt-4 text-base text-gray-300" suppressHydrationWarning>
-        Mercari fees generally include a <strong>selling fee</strong> (often around 10% of the buyer’s total)
-        and a <strong>payment processing fee</strong> (fixed + percent, varies by region/provider).
-        Policies can change—always confirm in Mercari’s official help docs.
+      <p className="mt-4 text-base text-white" suppressHydrationWarning>
+        Mercari fees generally include a <strong>selling fee</strong> (often around 10% of the
+        buyer’s total) and a <strong>payment processing fee</strong> (fixed + percent, varies by
+        region/provider). Policies can change—always confirm in Mercari’s official help docs.
       </p>
 
-      <section className="mt-8 space-y-3">
-        <h2 className="text-xl font-medium">What’s included</h2>
-        <ul className="list-disc pl-6 text-gray-300">
-          <li><strong>Selling fee:</strong> commonly ~10% of the buyer’s total.</li>
-          <li><strong>Payment processing:</strong> fixed + percent; varies by region/provider.</li>
+      <section className="mt-8 space-y-3 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">What&apos;s included</h2>
+        <ul className="list-disc pl-6">
+          <li>
+            <strong>Selling fee:</strong> commonly ~10% of the buyer’s total.
+          </li>
+          <li>
+            <strong>Payment processing:</strong> fixed + percent; varies by region/provider.
+          </li>
         </ul>
       </section>
 
-      <section className="mt-8 space-y-3">
-        <h2 className="text-xl font-medium">Back-of-the-napkin estimate</h2>
-        <p className="text-gray-300">
+      <section className="mt-8 space-y-3 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">
+          Back-of-the-napkin estimate
+        </h2>
+        <p>
           A quick sanity check: <em>~12%–14% of price + shipping</em> for marketplace + processing,
-          then add any fixed processing component. Your exact figures depend on your region/provider.
+          then add any fixed processing component. Your exact figures depend on your
+          region/provider.
         </p>
       </section>
 
-      <section className="mt-8 space-y-3">
-        <h2 className="text-xl font-medium">Run a quick calculation</h2>
-        <p className="text-gray-300">
-          Try the main calculator to estimate net payout, compare outcomes, export CSV, or share a link.
+      <section className="mt-8 space-y-3 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">
+          Run a quick calculation
+        </h2>
+        <p>
+          Try the main calculator to estimate net payout, compare outcomes, export CSV, or share a
+          link.
         </p>
         <p className="mt-2">
-          <Link href={'/' as Route} className="underline">Open Fee Pilot calculator</Link>
+          <Link href={'/' as Route} className="underline">
+            Open Fee Pilot calculator
+          </Link>
         </p>
       </section>
 
-      <section className="mt-10 text-sm text-gray-500">
+      <section className="mt-10 text-sm text-gray-600">
         <p>
           Disclaimer: Fee Pilot is not affiliated with Mercari. This page is a general guide; consult
           Mercari’s official documentation for the latest rates and rules.
