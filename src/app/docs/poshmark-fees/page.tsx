@@ -10,8 +10,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'article',
     title: 'Poshmark Fees Guide — How Poshmark fees are calculated',
-    description:
-      'Understand Poshmark’s fee structure with examples and tips.',
+    description: 'Understand Poshmark’s fee structure with examples and tips.',
     url: '/docs/poshmark-fees',
     siteName: 'Fee Pilot',
   },
@@ -66,46 +65,62 @@ export default function PoshmarkFeesDoc() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <h1 className="text-3xl font-semibold tracking-tight">Poshmark Fees Guide (Quick Overview)</h1>
+      {/* Page title (match Docs/About style) */}
+      <h1 className="text-3xl font-semibold tracking-tight text-purple-400 underline">
+        Poshmark Fees Guide (Quick Overview)
+      </h1>
 
-      <p className="mt-4 text-base text-gray-300" suppressHydrationWarning>
+      <p className="mt-4 text-base text-white" suppressHydrationWarning>
         Poshmark typically charges a <strong>flat fee</strong> on lower-order totals and a{' '}
         <strong>percent-based fee</strong> on higher totals. Check Poshmark’s official docs for the
         latest numbers in your region.
       </p>
 
-      <section className="mt-8 space-y-3">
-        <h2 className="text-xl font-medium">What’s included</h2>
-        <ul className="list-disc pl-6 text-gray-300">
-          <li><strong>Flat fee:</strong> applied to smaller order totals (varies by country/plan).</li>
-          <li><strong>Percent fee:</strong> applied to orders above the flat-fee threshold.</li>
-          <li><strong>Shipping:</strong> often prepaid labels; fee interplay differs by region.</li>
+      <section className="mt-8 space-y-3 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">What&apos;s included</h2>
+        <ul className="list-disc pl-6">
+          <li>
+            <strong>Flat fee:</strong> applied to smaller order totals (varies by country/plan).
+          </li>
+          <li>
+            <strong>Percent fee:</strong> applied to orders above the flat-fee threshold.
+          </li>
+          <li>
+            <strong>Shipping:</strong> often prepaid labels; fee interplay differs by region.
+          </li>
         </ul>
       </section>
 
-      <section className="mt-8 space-y-3">
-        <h2 className="text-xl font-medium">Back-of-the-napkin estimate</h2>
-        <p className="text-gray-300">
+      <section className="mt-8 space-y-3 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">
+          Back-of-the-napkin estimate
+        </h2>
+        <p>
           A quick sanity check: the <em>percent fee</em> usually dominates for higher-price items,
           while the <em>flat fee</em> matters more for lower-price items. Use the calculator to see
           the impact on your specific price + shipping.
         </p>
       </section>
 
-      <section className="mt-8 space-y-3">
-        <h2 className="text-xl font-medium">Run a quick calculation</h2>
-        <p className="text-gray-300">
-          Try the main calculator to estimate net payout, compare outcomes, export CSV, or share a link.
+      <section className="mt-8 space-y-3 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">
+          Run a quick calculation
+        </h2>
+        <p>
+          Try the main calculator to estimate net payout, compare outcomes, export CSV, or share a
+          link.
         </p>
         <p className="mt-2">
-          <Link href={'/' as Route} className="underline">Open Fee Pilot calculator</Link>
+          <Link href={'/' as Route} className="underline">
+            Open Fee Pilot calculator
+          </Link>
         </p>
       </section>
 
-      <section className="mt-10 text-sm text-gray-500">
+      <section className="mt-10 text-sm text-gray-600">
         <p>
-          Disclaimer: Fee Pilot is not affiliated with Poshmark. This page is a general guide; consult
-          Poshmark’s official documentation for the latest rates and rules.
+          Disclaimer: Fee Pilot is not affiliated with Poshmark. This page is a general guide;
+          consult Poshmark’s official documentation for the latest rates and rules.
         </p>
       </section>
     </main>
