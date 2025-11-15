@@ -80,7 +80,16 @@ function calcFor(rule: FeeRule, inputs: Inputs) {
   const profit = net;
   const marginPct = discounted > 0 ? (profit / discounted) * 100 : 0;
 
-  return { discounted, marketplaceFee, paymentFee, listingFee, totalFees, net, profit, marginPct };
+  return {
+    discounted,
+    marketplaceFee,
+    paymentFee,
+    listingFee,
+    totalFees,
+    net,
+    profit,
+    marginPct,
+  };
 }
 
 function makeDefaults(): Inputs {
@@ -166,7 +175,9 @@ function inputsFromSearch(): Inputs | null {
       shipCharge: parseNum(url.searchParams.get('shipCharge') ?? String(d.shipCharge)),
       shipCost: parseNum(url.searchParams.get('shipCost') ?? String(d.shipCost)),
       cogs: parseNum(url.searchParams.get('cogs') ?? String(d.cogs)),
-      discountPct: parseNum(url.searchParams.get('discountPct') ?? String(d.discountPct)),
+      discountPct: parseNum(
+        url.searchParams.get('discountPct') ?? String(d.discountPct),
+      ),
       tax: parseNum(url.searchParams.get('tax') ?? String(d.tax)),
     };
 
@@ -204,10 +215,14 @@ export default function HomeClient() {
             ? (p.platform as PlatformKey)
             : d.platform,
         price: Number.isFinite(p.price) ? (p.price as number) : d.price,
-        shipCharge: Number.isFinite(p.shipCharge) ? (p.shipCharge as number) : d.shipCharge,
+        shipCharge: Number.isFinite(p.shipCharge)
+          ? (p.shipCharge as number)
+          : d.shipCharge,
         shipCost: Number.isFinite(p.shipCost) ? (p.shipCost as number) : d.shipCost,
         cogs: Number.isFinite(p.cogs) ? (p.cogs as number) : d.cogs,
-        discountPct: Number.isFinite(p.discountPct) ? (p.discountPct as number) : d.discountPct,
+        discountPct: Number.isFinite(p.discountPct)
+          ? (p.discountPct as number)
+          : d.discountPct,
         tax: Number.isFinite(p.tax) ? (p.tax as number) : d.tax,
       };
     } catch {
@@ -306,7 +321,7 @@ export default function HomeClient() {
     'rounded-full px-4 py-2 text-base select-none border',
     isLight
       ? 'border-purple-800/70 text-black hover:bg-purple-50'
-      : 'border-purple-600/50 text-white hover:bg-white/5'
+      : 'border-purple-600/50 text-white hover:bg-white/5',
   );
 
   const currentPlatformDoc = PLATFORM_DOC_LINKS[inputs.platform];
@@ -422,7 +437,7 @@ export default function HomeClient() {
           className={cx(
             'mt-3 inline-flex rounded-full border px-3 py-1 text-sm',
             controlBorder,
-            isLight ? 'text-purple-700' : 'text-purple-200'
+            isLight ? 'text-purple-700' : 'text-purple-200',
           )}
         >
           Rules last updated: {RULES_UPDATED_AT}
@@ -437,7 +452,7 @@ export default function HomeClient() {
               <label
                 className={cx(
                   'mb-2 flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between',
-                  subtleText
+                  subtleText,
                 )}
               >
                 <span>Platform</span>
@@ -450,7 +465,7 @@ export default function HomeClient() {
                         'underline decoration-dotted',
                         isLight
                           ? 'text-purple-700 hover:text-purple-900'
-                          : 'text-purple-300 hover:text-purple-100'
+                          : 'text-purple-300 hover:text-purple-100',
                       )}
                     >
                       here
@@ -461,7 +476,7 @@ export default function HomeClient() {
               <select
                 className={cx(
                   'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
-                  controlBorder
+                  controlBorder,
                 )}
                 value={inputs.platform}
                 onChange={(e) =>
@@ -479,6 +494,9 @@ export default function HomeClient() {
             <div>
               <label className={cx('mb-2 block text-sm', subtleText)}>
                 Item price ($)
+                <span className="mt-1 block text-xs opacity-70">
+                  Sale price for the item, before shipping and tax.
+                </span>
               </label>
               <input
                 type="number"
@@ -486,7 +504,7 @@ export default function HomeClient() {
                 inputMode="decimal"
                 className={cx(
                   'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
-                  controlBorder
+                  controlBorder,
                 )}
                 value={inputs.price}
                 onChange={(e) =>
@@ -499,14 +517,19 @@ export default function HomeClient() {
             </div>
 
             <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>Discount (%)</label>
+              <label className={cx('mb-2 block text-sm', subtleText)}>
+                Discount (%)
+                <span className="mt-1 block text-xs opacity-70">
+                  Percent off the original price (offers, promos, coupons).
+                </span>
+              </label>
               <input
                 type="number"
                 step="any"
                 inputMode="decimal"
                 className={cx(
                   'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
-                  controlBorder
+                  controlBorder,
                 )}
                 value={inputs.discountPct}
                 onChange={(e) =>
@@ -521,6 +544,9 @@ export default function HomeClient() {
             <div>
               <label className={cx('mb-2 block text-sm', subtleText)}>
                 Shipping charged to buyer ($)
+                <span className="mt-1 block text-xs opacity-70">
+                  What the buyer pays for shipping. Use 0 for &quot;free shipping&quot;.
+                </span>
               </label>
               <input
                 type="number"
@@ -528,7 +554,7 @@ export default function HomeClient() {
                 inputMode="decimal"
                 className={cx(
                   'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
-                  controlBorder
+                  controlBorder,
                 )}
                 value={inputs.shipCharge}
                 onChange={(e) =>
@@ -543,6 +569,9 @@ export default function HomeClient() {
             <div>
               <label className={cx('mb-2 block text-sm', subtleText)}>
                 Your shipping cost ($)
+                <span className="mt-1 block text-xs opacity-70">
+                  Your actual shipping expense (labels, postage, etc.).
+                </span>
               </label>
               <input
                 type="number"
@@ -550,7 +579,7 @@ export default function HomeClient() {
                 inputMode="decimal"
                 className={cx(
                   'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
-                  controlBorder
+                  controlBorder,
                 )}
                 value={inputs.shipCost}
                 onChange={(e) =>
@@ -563,14 +592,19 @@ export default function HomeClient() {
             </div>
 
             <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>COGS ($)</label>
+              <label className={cx('mb-2 block text-sm', subtleText)}>
+                COGS ($)
+                <span className="mt-1 block text-xs opacity-70">
+                  What you paid for the item (inventory cost).
+                </span>
+              </label>
               <input
                 type="number"
                 step="any"
                 inputMode="decimal"
                 className={cx(
                   'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
-                  controlBorder
+                  controlBorder,
                 )}
                 value={inputs.cogs}
                 onChange={(e) =>
@@ -585,6 +619,9 @@ export default function HomeClient() {
             <div>
               <label className={cx('mb-2 block text-sm', subtleText)}>
                 Tax collected ($)
+                <span className="mt-1 block text-xs opacity-70">
+                  Sales tax / VAT collected on the order.
+                </span>
               </label>
               <input
                 type="number"
@@ -592,7 +629,7 @@ export default function HomeClient() {
                 inputMode="decimal"
                 className={cx(
                   'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
-                  controlBorder
+                  controlBorder,
                 )}
                 value={inputs.tax}
                 onChange={(e) =>
@@ -659,7 +696,7 @@ export default function HomeClient() {
                   ? 'text-red-500'
                   : isLight
                   ? 'text-emerald-700'
-                  : 'text-emerald-300'
+                  : 'text-emerald-300',
               )}
               suppressHydrationWarning
             >
@@ -672,7 +709,7 @@ export default function HomeClient() {
             <div
               className={cx(
                 'mt-2 text-3xl font-semibold',
-                current.marginPct < 0 && 'text-red-500'
+                current.marginPct < 0 && 'text-red-500',
               )}
               suppressHydrationWarning
             >
@@ -707,10 +744,10 @@ export default function HomeClient() {
 /* Typed route helper for Link */
 type Route =
   | '/'
-  | '/pro'
-  | '/pro/target'
   | '/about'
   | '/docs'
+  | '/pro'
+  | '/pro/target'
   | '/docs/etsy-fees'
   | '/docs/depop-fees'
   | '/docs/mercari-fees'
