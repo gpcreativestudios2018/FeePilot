@@ -96,7 +96,15 @@ function makeDefaults(): Inputs {
 }
 
 /* -------------------------- platform docs links --------------------------- */
-const PLATFORM_DOC_LINKS: Partial<Record<PlatformKey, { href: string; name: string }>> = {
+const PLATFORM_DOC_LINKS: Partial<
+  Record<
+    PlatformKey,
+    {
+      href: Route;
+      name: string;
+    }
+  >
+> = {
   etsy: { href: '/docs/etsy-fees', name: 'Etsy' },
   depop: { href: '/docs/depop-fees', name: 'Depop' },
   mercari: { href: '/docs/mercari-fees', name: 'Mercari' },
@@ -106,8 +114,8 @@ const PLATFORM_DOC_LINKS: Partial<Record<PlatformKey, { href: string; name: stri
 };
 
 /* ------------------------- PERSISTENCE KEYS -------------------------------- */
-const THEME_KEY = 'feepilot:theme';          // 'light' | 'dark'
-const INPUTS_KEY = 'feepilot:inputs:v1';     // JSON of Inputs
+const THEME_KEY = 'feepilot:theme'; // 'light' | 'dark'
+const INPUTS_KEY = 'feepilot:inputs:v1'; // JSON of Inputs
 
 /* ------------------------- PERMALINK HELPERS ------------------------------- */
 function buildPermalinkUrl(inputs: Inputs): string {
@@ -148,9 +156,9 @@ function inputsFromSearch(): Inputs | null {
 
     const d = makeDefaults();
     const platformParam = url.searchParams.get('platform') ?? d.platform;
-    const platform = (PLATFORMS.includes(platformParam as PlatformKey)
+    const platform = PLATFORMS.includes(platformParam as PlatformKey)
       ? (platformParam as PlatformKey)
-      : d.platform);
+      : d.platform;
 
     const candidate: Inputs = {
       platform,
@@ -191,8 +199,10 @@ export default function HomeClient() {
       const p = JSON.parse(raw) as Partial<Inputs>;
       const d = makeDefaults();
       return {
-        platform: (p.platform && PLATFORMS.includes(p.platform as PlatformKey))
-          ? (p.platform as PlatformKey) : d.platform,
+        platform:
+          p.platform && PLATFORMS.includes(p.platform as PlatformKey)
+            ? (p.platform as PlatformKey)
+            : d.platform,
         price: Number.isFinite(p.price) ? (p.price as number) : d.price,
         shipCharge: Number.isFinite(p.shipCharge) ? (p.shipCharge as number) : d.shipCharge,
         shipCost: Number.isFinite(p.shipCost) ? (p.shipCost as number) : d.shipCost,
@@ -253,7 +263,9 @@ export default function HomeClient() {
   const resetInputs = () => {
     const next = makeDefaults();
     setInputs(next);
-    try { window.localStorage.removeItem(INPUTS_KEY); } catch {}
+    try {
+      window.localStorage.removeItem(INPUTS_KEY);
+    } catch {}
     // also strip query params so refresh doesn’t re-apply them
     try {
       const url = new URL(window.location.href);
@@ -300,7 +312,8 @@ export default function HomeClient() {
   const currentPlatformDoc = PLATFORM_DOC_LINKS[inputs.platform];
 
   // Show dev tools (like "Clear saved data") in dev OR when the preview flag is set
-  const showDevTools = process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_DEV_TOOLS === '1';
+  const showDevTools =
+    process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_DEV_TOOLS === '1';
 
   // ---- CSV + Get Pro analytics with zero UI change ----
   useEffect(() => {
@@ -375,7 +388,10 @@ export default function HomeClient() {
         <div className="flex items-center justify-between">
           <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight">
             {/* accent dot */}
-            <span aria-hidden="true" className="inline-block h-3 w-3 rounded-full bg-purple-500 ring-2 ring-purple-400/50" />
+            <span
+              aria-hidden="true"
+              className="inline-block h-3 w-3 rounded-full bg-purple-500 ring-2 ring-purple-400/50"
+            />
             <Link href={'/' as Route} className="outline-none focus:underline">
               FeePilot
             </Link>
@@ -443,9 +459,14 @@ export default function HomeClient() {
                 )}
               </label>
               <select
-                className={cx('w-full rounded-xl border bg-transparent px-3 py-2 outline-none', controlBorder)}
+                className={cx(
+                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  controlBorder
+                )}
                 value={inputs.platform}
-                onChange={(e) => setInputs((s) => ({ ...s, platform: e.target.value as PlatformKey }))}
+                onChange={(e) =>
+                  setInputs((s) => ({ ...s, platform: e.target.value as PlatformKey }))
+                }
               >
                 {PLATFORMS.map((p) => (
                   <option key={p} value={p} className={selectOption}>
@@ -456,14 +477,24 @@ export default function HomeClient() {
             </div>
 
             <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>Item price ($)</label>
+              <label className={cx('mb-2 block text-sm', subtleText)}>
+                Item price ($)
+              </label>
               <input
                 type="number"
                 step="any"
                 inputMode="decimal"
-                className={cx('w-full rounded-xl border bg-transparent px-3 py-2 outline-none', controlBorder)}
+                className={cx(
+                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  controlBorder
+                )}
                 value={inputs.price}
-                onChange={(e) => setInputs((s) => ({ ...s, price: clamp(parseNum(e.target.value), 0) }))}
+                onChange={(e) =>
+                  setInputs((s) => ({
+                    ...s,
+                    price: clamp(parseNum(e.target.value), 0),
+                  }))
+                }
               />
             </div>
 
@@ -473,35 +504,61 @@ export default function HomeClient() {
                 type="number"
                 step="any"
                 inputMode="decimal"
-                className={cx('w-full rounded-xl border bg-transparent px-3 py-2 outline-none', controlBorder)}
+                className={cx(
+                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  controlBorder
+                )}
                 value={inputs.discountPct}
                 onChange={(e) =>
-                  setInputs((s) => ({ ...s, discountPct: clamp(parseNum(e.target.value), 0, 100) }))
+                  setInputs((s) => ({
+                    ...s,
+                    discountPct: clamp(parseNum(e.target.value), 0, 100),
+                  }))
                 }
               />
             </div>
 
             <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>Shipping charged to buyer ($)</label>
+              <label className={cx('mb-2 block text-sm', subtleText)}>
+                Shipping charged to buyer ($)
+              </label>
               <input
                 type="number"
                 step="any"
                 inputMode="decimal"
-                className={cx('w-full rounded-xl border bg-transparent px-3 py-2 outline-none', controlBorder)}
+                className={cx(
+                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  controlBorder
+                )}
                 value={inputs.shipCharge}
-                onChange={(e) => setInputs((s) => ({ ...s, shipCharge: clamp(parseNum(e.target.value), 0) }))}
+                onChange={(e) =>
+                  setInputs((s) => ({
+                    ...s,
+                    shipCharge: clamp(parseNum(e.target.value), 0),
+                  }))
+                }
               />
             </div>
 
             <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>Your shipping cost ($)</label>
+              <label className={cx('mb-2 block text-sm', subtleText)}>
+                Your shipping cost ($)
+              </label>
               <input
                 type="number"
                 step="any"
                 inputMode="decimal"
-                className={cx('w-full rounded-xl border bg-transparent px-3 py-2 outline-none', controlBorder)}
+                className={cx(
+                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  controlBorder
+                )}
                 value={inputs.shipCost}
-                onChange={(e) => setInputs((s) => ({ ...s, shipCost: clamp(parseNum(e.target.value), 0) }))}
+                onChange={(e) =>
+                  setInputs((s) => ({
+                    ...s,
+                    shipCost: clamp(parseNum(e.target.value), 0),
+                  }))
+                }
               />
             </div>
 
@@ -511,21 +568,39 @@ export default function HomeClient() {
                 type="number"
                 step="any"
                 inputMode="decimal"
-                className={cx('w-full rounded-xl border bg-transparent px-3 py-2 outline-none', controlBorder)}
+                className={cx(
+                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  controlBorder
+                )}
                 value={inputs.cogs}
-                onChange={(e) => setInputs((s) => ({ ...s, cogs: clamp(parseNum(e.target.value), 0) }))}
+                onChange={(e) =>
+                  setInputs((s) => ({
+                    ...s,
+                    cogs: clamp(parseNum(e.target.value), 0),
+                  }))
+                }
               />
             </div>
 
             <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>Tax collected ($)</label>
+              <label className={cx('mb-2 block text-sm', subtleText)}>
+                Tax collected ($)
+              </label>
               <input
                 type="number"
                 step="any"
                 inputMode="decimal"
-                className={cx('w-full rounded-xl border bg-transparent px-3 py-2 outline-none', controlBorder)}
+                className={cx(
+                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  controlBorder
+                )}
                 value={inputs.tax}
-                onChange={(e) => setInputs((s) => ({ ...s, tax: clamp(parseNum(e.target.value), 0) }))}
+                onChange={(e) =>
+                  setInputs((s) => ({
+                    ...s,
+                    tax: clamp(parseNum(e.target.value), 0),
+                  }))
+                }
               />
             </div>
           </div>
@@ -580,7 +655,11 @@ export default function HomeClient() {
             <div
               className={cx(
                 'mt-2 text-3xl font-semibold',
-                current.profit < 0 ? 'text-red-500' : isLight ? 'text-emerald-700' : 'text-emerald-300'
+                current.profit < 0
+                  ? 'text-red-500'
+                  : isLight
+                  ? 'text-emerald-700'
+                  : 'text-emerald-300'
               )}
               suppressHydrationWarning
             >
@@ -591,7 +670,10 @@ export default function HomeClient() {
           <div className={cx('rounded-2xl border p-5', panelBorder)}>
             <div className={cx('text-sm', subtleText)}>Margin</div>
             <div
-              className={cx('mt-2 text-3xl font-semibold', current.marginPct < 0 && 'text-red-500')}
+              className={cx(
+                'mt-2 text-3xl font-semibold',
+                current.marginPct < 0 && 'text-red-500'
+              )}
               suppressHydrationWarning
             >
               {current.marginPct.toFixed(1)}%
@@ -622,5 +704,16 @@ export default function HomeClient() {
   );
 }
 
-// Typed route helper for Link
-type Route = '/' | '/pro' | '/pro/target' | '/about' | '/docs';
+/* Typed route helper for Link */
+type Route =
+  | '/'
+  | '/pro'
+  | '/pro/target'
+  | '/about'
+  | '/docs'
+  | '/docs/etsy-fees'
+  | '/docs/depop-fees'
+  | '/docs/mercari-fees'
+  | '/docs/poshmark-fees'
+  | '/docs/ebay-fees'
+  | '/docs/stockx-fees';
