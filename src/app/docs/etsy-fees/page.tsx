@@ -74,44 +74,62 @@ export default function EtsyFeesDoc() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <h1 className="text-3xl font-semibold tracking-tight">Etsy Fees Guide (Quick Overview)</h1>
+      {/* Page title (match Docs/About style) */}
+      <h1 className="text-3xl font-semibold tracking-tight text-purple-400 underline">
+        Etsy Fees Guide (Quick Overview)
+      </h1>
 
-      <p className="mt-4 text-base text-gray-300" suppressHydrationWarning>
-        Etsy fees typically include a <strong>.20 listing fee</strong> per item (for 4 months),
-        a <strong>transaction fee</strong> (commonly ~6.5% of item price + shipping), and a{' '}
+      <p className="mt-4 text-base text-white" suppressHydrationWarning>
+        Etsy fees typically include a <strong>.20 listing fee</strong> per item (for 4 months), a{' '}
+        <strong>transaction fee</strong> (commonly ~6.5% of item price + shipping), and a{' '}
         <strong>payment processing fee</strong> (varies by country; often a fixed + percent). Actual
         rates and rules may change—always confirm in Etsy’s official help docs.
       </p>
 
-      <section className="mt-8 space-y-3">
-        <h2 className="text-xl font-medium">What’s included</h2>
-        <ul className="list-disc pl-6 text-gray-300">
-          <li><strong>Listing fee:</strong> .20 per listing (renews every 4 months or when quantity sells).</li>
-          <li><strong>Transaction fee:</strong> charged on the item price + shipping you charge the buyer (commonly around 6.5%).</li>
-          <li><strong>Payment processing:</strong> fixed + percent, varies by country.</li>
+      <section className="mt-8 space-y-3 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">What&apos;s included</h2>
+        <ul className="list-disc pl-6">
+          <li>
+            <strong>Listing fee:</strong> .20 per listing (renews every 4 months or when quantity
+            sells).
+          </li>
+          <li>
+            <strong>Transaction fee:</strong> charged on the item price + shipping you charge the
+            buyer (commonly around 6.5%).
+          </li>
+          <li>
+            <strong>Payment processing:</strong> fixed + percent, varies by country.
+          </li>
         </ul>
       </section>
 
-      <section className="mt-8 space-y-3">
-        <h2 className="text-xl font-medium">Back-of-the-napkin estimate</h2>
-        <p className="text-gray-300">
-          A simple sanity check many sellers use: <em>~9%–12% of price + shipping</em> for marketplace
-          + processing, then add <em>.20</em> per item for listing fees. Your exact numbers may
-          differ by region and payment plan.
+      <section className="mt-8 space-y-3 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">
+          Back-of-the-napkin estimate
+        </h2>
+        <p>
+          A simple sanity check many sellers use: <em>~9%–12% of price + shipping</em> for
+          marketplace + processing, then add <em>.20</em> per item for listing fees. Your exact
+          numbers may differ by region and payment plan.
         </p>
       </section>
 
-      <section className="mt-8 space-y-3">
-        <h2 className="text-xl font-medium">Run a quick calculation</h2>
-        <p className="text-gray-300">
-          Try the main calculator to estimate net payout, compare outcomes, export CSV, or share a link.
+      <section className="mt-8 space-y-3 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">
+          Run a quick calculation
+        </h2>
+        <p>
+          Try the main calculator to estimate net payout, compare outcomes, export CSV, or share a
+          link.
         </p>
         <p className="mt-2">
-          <Link href={'/' as Route} className="underline">Open Fee Pilot calculator</Link>
+          <Link href={'/' as Route} className="underline">
+            Open Fee Pilot calculator
+          </Link>
         </p>
       </section>
 
-      <section className="mt-10 text-sm text-gray-500">
+      <section className="mt-10 text-sm text-gray-600">
         <p>
           Disclaimer: Fee Pilot is not affiliated with Etsy. This page is a general guide based on
           commonly cited fee structures; consult Etsy’s official documentation for the latest rates.
