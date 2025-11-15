@@ -19,14 +19,14 @@ export default function Footer() {
       <nav className="mb-4 flex flex-wrap items-center justify-center gap-3 text-sm">
         <Link
           href={'/' as Route}
-          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 text-white transition hover:bg-white/5"
+          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 transition hover:bg-purple-500/10"
         >
           Home
         </Link>
 
         <Link
           href={'/pro' as Route}
-          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 text-white transition hover:bg-white/5"
+          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 transition hover:bg-purple-500/10"
         >
           Pro
         </Link>
@@ -34,7 +34,7 @@ export default function Footer() {
         {/* Route Reverse calculator to /pro (Pro-only overview), not /pro/target */}
         <Link
           href={'/pro' as Route}
-          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 text-white transition hover:bg-white/5"
+          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 transition hover:bg-purple-500/10"
         >
           <span className="mr-2">Reverse calculator</span>
           <span className="rounded-full border px-2 py-0.5 text-[10px] align-middle opacity-70">
@@ -44,14 +44,14 @@ export default function Footer() {
 
         <Link
           href={'/about' as Route}
-          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 text-white transition hover:bg-white/5"
+          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 transition hover:bg-purple-500/10"
         >
           About
         </Link>
 
         <Link
           href={'/docs' as Route}
-          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 text-white transition hover:bg-white/5"
+          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 transition hover:bg-purple-500/10"
         >
           Docs
         </Link>
@@ -61,7 +61,7 @@ export default function Footer() {
           target="_blank"
           rel="noopener noreferrer"
           onClick={onSupportClick}
-          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 text-white transition hover:bg-white/5"
+          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 transition hover:bg-purple-500/10"
           title="Support the project"
           aria-label="Support the project"
         >
