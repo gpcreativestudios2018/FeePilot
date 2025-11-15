@@ -66,41 +66,55 @@ export default function StockXFeesDoc() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <h1 className="text-3xl font-semibold tracking-tight">StockX Fees Guide (Quick Overview)</h1>
+      {/* Page title (match Docs/About style) */}
+      <h1 className="text-3xl font-semibold tracking-tight text-purple-400 underline">
+        StockX Fees Guide (Quick Overview)
+      </h1>
 
-      <p className="mt-4 text-base text-gray-300" suppressHydrationWarning>
+      <p className="mt-4 text-base text-white" suppressHydrationWarning>
         StockX fees usually include a <strong>transaction fee</strong> (percent, varies by seller
         level and sometimes category) plus <strong>payment processing</strong> (fixed + percent, may
         vary by region/provider). Policies change—always confirm via StockX&apos;s official docs.
       </p>
 
-      <section className="mt-8 space-y-3">
-        <h2 className="text-xl font-medium">What’s included</h2>
-        <ul className="list-disc pl-6 text-gray-300">
-          <li><strong>Transaction fee:</strong> percentage that can vary by seller level/category.</li>
-          <li><strong>Payment processing:</strong> fixed + percent; varies by region/provider.</li>
+      <section className="mt-8 space-y-3 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">What&apos;s included</h2>
+        <ul className="list-disc pl-6">
+          <li>
+            <strong>Transaction fee:</strong> percentage that can vary by seller level/category.
+          </li>
+          <li>
+            <strong>Payment processing:</strong> fixed + percent; varies by region/provider.
+          </li>
         </ul>
       </section>
 
-      <section className="mt-8 space-y-3">
-        <h2 className="text-xl font-medium">Back-of-the-napkin estimate</h2>
-        <p className="text-gray-300">
-          Many sellers see an effective total in the <em>~12%–15%</em> range for marketplace + processing,
-          depending on tier/category. Your exact rate may differ by level and region.
+      <section className="mt-8 space-y-3 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">
+          Back-of-the-napkin estimate
+        </h2>
+        <p>
+          Many sellers see an effective total in the <em>~12%–15%</em> range for marketplace +
+          processing, depending on tier/category. Your exact rate may differ by level and region.
         </p>
       </section>
 
-      <section className="mt-8 space-y-3">
-        <h2 className="text-xl font-medium">Run a quick calculation</h2>
-        <p className="text-gray-300">
-          Try the main calculator to estimate net payout, compare outcomes, export CSV, or share a link.
+      <section className="mt-8 space-y-3 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">
+          Run a quick calculation
+        </h2>
+        <p>
+          Try the main calculator to estimate net payout, compare outcomes, export CSV, or share a
+          link.
         </p>
         <p className="mt-2">
-          <Link href={'/' as Route} className="underline">Open Fee Pilot calculator</Link>
+          <Link href={'/' as Route} className="underline">
+            Open Fee Pilot calculator
+          </Link>
         </p>
       </section>
 
-      <section className="mt-10 text-sm text-gray-500">
+      <section className="mt-10 text-sm text-gray-600">
         <p>
           Disclaimer: Fee Pilot is not affiliated with StockX. This page is a general guide; consult
           StockX’s official documentation for the latest rates and rules.
