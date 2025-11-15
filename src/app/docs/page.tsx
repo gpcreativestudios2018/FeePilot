@@ -122,7 +122,12 @@ export default function DocsPage() {
               Etsy Fees Guide — how Etsy fees are calculated
             </Link>
           </li>
-          {/* We’ll add Depop/Mercari links here as they’re created */}
+          <li>
+            <Link href={'/docs/depop-fees' as Route} className="underline">
+              Depop Fees Guide — how Depop fees are calculated
+            </Link>
+          </li>
+          {/* Next up: Mercari, eBay, Poshmark, etc. */}
         </ul>
       </section>
 
@@ -142,4 +147,11 @@ export default function DocsPage() {
   );
 }
 
-type Route = '/' | '/about' | '/docs' | '/pro' | '/pro/target' | '/docs/etsy-fees';
+type Route =
+  | '/'
+  | '/about'
+  | '/docs'
+  | '/pro'
+  | '/pro/target'
+  | '/docs/etsy-fees'
+  | '/docs/depop-fees';
