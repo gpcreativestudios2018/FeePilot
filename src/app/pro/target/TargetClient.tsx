@@ -5,12 +5,7 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { PILL_CLASS } from '@/lib/ui';
-import {
-  PLATFORMS,
-  RULES,
-  type PlatformKey,
-  type FeeRule,
-} from '@/data/fees';
+import { PLATFORMS, RULES, type PlatformKey, type FeeRule } from '@/data/fees';
 import { STATE_RATES, type USStateCode, formatPct } from '@/data/us-tax';
 import SolvingForPill from './SolvingForPill';
 import FeeOverridesDev, { type FeeOverrides } from './FeeOverridesDev';
@@ -65,7 +60,8 @@ function savePreset(name: string, data: TargetPreset): void {
   const all = readAll();
   const idx = all.findIndex((p) => p.name.toLowerCase() === trimmed.toLowerCase());
   const item: NamedTargetPreset = { name: trimmed, updatedAt: Date.now(), data };
-  if (idx >= 0) all[idx] = item; else all.push(item);
+  if (idx >= 0) all[idx] = item;
+  else all.push(item);
   writeAll(all);
 }
 function loadPreset(name: string): TargetPreset | null {
@@ -146,7 +142,8 @@ function solvePrice(opts: {
   shipCost: number;
   cogs: number;
 }) {
-  const { platform, rule, targetProfit, targetMarginPct, discountPct, shipCharge, shipCost, cogs } = opts;
+  const { platform, rule, targetProfit, targetMarginPct, discountPct, shipCharge, shipCost, cogs } =
+    opts;
 
   const mode: 'profit' | 'margin' | null =
     Number.isFinite(targetProfit as number) && (targetProfit as number) > 0
@@ -156,7 +153,15 @@ function solvePrice(opts: {
       : null;
 
   if (!mode) {
-    const result = computeAtPrice({ platform, rule, price: 0, discountPct, shipCharge, shipCost, cogs });
+    const result = computeAtPrice({
+      platform,
+      rule,
+      price: 0,
+      discountPct,
+      shipCharge,
+      shipCost,
+      cogs,
+    });
     return { price: 0, result };
   }
 
@@ -164,21 +169,47 @@ function solvePrice(opts: {
   let hi = 1_000_000;
   for (let i = 0; i < 20; i++) {
     const mid = (lo + hi) / 2;
-    const r = computeAtPrice({ platform, rule, price: mid, discountPct, shipCharge, shipCost, cogs });
+    const r = computeAtPrice({
+      platform,
+      rule,
+      price: mid,
+      discountPct,
+      shipCharge,
+      shipCost,
+      cogs,
+    });
     const val = mode === 'profit' ? r.profit : r.marginPct;
     const tgt = mode === 'profit' ? (targetProfit as number) : (targetMarginPct as number);
-    if (val < tgt) lo = mid; else hi = mid;
+    if (val < tgt) lo = mid;
+    else hi = mid;
   }
   for (let i = 0; i < 60; i++) {
     const mid = (lo + hi) / 2;
-    const r = computeAtPrice({ platform, rule, price: mid, discountPct, shipCharge, shipCost, cogs });
+    const r = computeAtPrice({
+      platform,
+      rule,
+      price: mid,
+      discountPct,
+      shipCharge,
+      shipCost,
+      cogs,
+    });
     const val = mode === 'profit' ? r.profit : r.marginPct;
     const tgt = mode === 'profit' ? (targetProfit as number) : (targetMarginPct as number);
-    if (val < tgt) lo = mid; else hi = mid;
+    if (val < tgt) lo = mid;
+    else hi = mid;
   }
 
   const price = Math.max(0, hi);
-  const result = computeAtPrice({ platform, rule, price, discountPct, shipCharge, shipCost, cogs });
+  const result = computeAtPrice({
+    platform,
+    rule,
+    price,
+    discountPct,
+    shipCharge,
+    shipCost,
+    cogs,
+  });
   return { price, result };
 }
 
@@ -211,14 +242,22 @@ function QueryParamsInitializer(props: {
     } = {};
     const p = searchParams.get('platform');
     if (p && PLATFORMS.includes(p as PlatformKey)) vals.platform = p as PlatformKey;
-    const tp = searchParams.get('targetProfit');      if (tp != null) vals.targetProfit = tp;
-    const tm = searchParams.get('targetMarginPct');  if (tm != null) vals.targetMarginPct = tm;
-    const cg = searchParams.get('cogs');             if (cg != null) vals.cogs = cg;
-    const sc = searchParams.get('shipCost');         if (sc != null) vals.shipCost = sc;
-    const dc = searchParams.get('discountPct');      if (dc != null) vals.discountPct = dc;
-    const sb = searchParams.get('shipCharge');       if (sb != null) vals.shipCharge = sb;
-    const tx = searchParams.get('taxPct');           if (tx != null) vals.taxPct = tx;
-    const it = searchParams.get('includeTax');       if (it != null) vals.includeTax = it;
+    const tp = searchParams.get('targetProfit');
+    if (tp != null) vals.targetProfit = tp;
+    const tm = searchParams.get('targetMarginPct');
+    if (tm != null) vals.targetMarginPct = tm;
+    const cg = searchParams.get('cogs');
+    if (cg != null) vals.cogs = cg;
+    const sc = searchParams.get('shipCost');
+    if (sc != null) vals.shipCost = sc;
+    const dc = searchParams.get('discountPct');
+    if (dc != null) vals.discountPct = dc;
+    const sb = searchParams.get('shipCharge');
+    if (sb != null) vals.shipCharge = sb;
+    const tx = searchParams.get('taxPct');
+    if (tx != null) vals.taxPct = tx;
+    const it = searchParams.get('includeTax');
+    if (it != null) vals.includeTax = it;
     props.onInit(vals);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -320,14 +359,12 @@ function LocalPresetsControls(props: {
         <label className="flex-1">
           <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Saved presets</span>
           <select
-            className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+            className="w-full rounded-xl border border-purple-600/40 bg-white text-black dark:bg-white dark:text-black px-3 py-2 outline-none"
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
           >
             {presets.length === 0 ? (
-              <option value="">
-                (none yet)
-              </option>
+              <option value="">{'(none yet)'}</option>
             ) : null}
             {presets.map((p) => (
               <option key={p.name} value={p.name}>
@@ -376,7 +413,9 @@ function LocalPresetsControls(props: {
 }
 
 export default function ReverseCalcPage() {
-  const [platform, setPlatform] = React.useState<PlatformKey>(PLATFORMS[0] ?? ('mercari' as PlatformKey));
+  const [platform, setPlatform] = React.useState<PlatformKey>(
+    PLATFORMS[0] ?? ('mercari' as PlatformKey)
+  );
   const [targetProfit, setTargetProfit] = React.useState<string>('25');
   const [targetMarginPct, setTargetMarginPct] = React.useState<string>('0');
   const [cogs, setCogs] = React.useState<string>('12');
@@ -402,8 +441,7 @@ export default function ReverseCalcPage() {
   );
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
-    const wantsDev =
-      new URLSearchParams(window.location.search).get('devtools') === '1';
+    const wantsDev = new URLSearchParams(window.location.search).get('devtools') === '1';
     if (wantsDev) setShowDevTools(true);
   }, []);
 
@@ -428,30 +466,36 @@ export default function ReverseCalcPage() {
     }
   }, [platform]);
 
-  const handleInitFromQuery = React.useCallback((vals: {
-    platform?: PlatformKey;
-    targetProfit?: string;
-    targetMarginPct?: string;
-    cogs?: string;
-    shipCost?: string;
-    discountPct?: string;
-    shipCharge?: string;
-    taxPct?: string;
-    includeTax?: string;
-  }) => {
-    if (vals.platform) setPlatform(vals.platform);
-    if (vals.targetProfit !== undefined) setTargetProfit(vals.targetProfit);
-    if (vals.targetMarginPct !== undefined) setTargetMarginPct(vals.targetMarginPct);
-    if (vals.cogs !== undefined) setCogs(vals.cogs);
-    if (vals.shipCost !== undefined) setShipCost(vals.shipCost);
-    if (vals.discountPct !== undefined) setDiscountPct(vals.discountPct);
-    if (vals.shipCharge !== undefined) setShipCharge(vals.shipCharge);
-    if (vals.taxPct !== undefined) setTaxPct(vals.taxPct);
-    if (vals.includeTax !== undefined) setIncludeTax(vals.includeTax === '1');
-  }, []);
+  const handleInitFromQuery = React.useCallback(
+    (vals: {
+      platform?: PlatformKey;
+      targetProfit?: string;
+      targetMarginPct?: string;
+      cogs?: string;
+      shipCost?: string;
+      discountPct?: string;
+      shipCharge?: string;
+      taxPct?: string;
+      includeTax?: string;
+    }) => {
+      if (vals.platform) setPlatform(vals.platform);
+      if (vals.targetProfit !== undefined) setTargetProfit(vals.targetProfit);
+      if (vals.targetMarginPct !== undefined) setTargetMarginPct(vals.targetMarginPct);
+      if (vals.cogs !== undefined) setCogs(vals.cogs);
+      if (vals.shipCost !== undefined) setShipCost(vals.shipCost);
+      if (vals.discountPct !== undefined) setDiscountPct(vals.discountPct);
+      if (vals.shipCharge !== undefined) setShipCharge(vals.shipCharge);
+      if (vals.taxPct !== undefined) setTaxPct(vals.taxPct);
+      if (vals.includeTax !== undefined) setIncludeTax(vals.includeTax === '1');
+    },
+    []
+  );
 
   const ruleBase = RULES[platform];
-  const rule = React.useMemo(() => ({ ...ruleBase, ...overrides }) as FeeRule, [ruleBase, overrides]);
+  const rule = React.useMemo(
+    () => ({ ...ruleBase, ...overrides }) as FeeRule,
+    [ruleBase, overrides]
+  );
 
   const solved = React.useMemo(() => {
     const tProfit = parseNum(targetProfit);
@@ -483,17 +527,19 @@ export default function ReverseCalcPage() {
     const url = new URL(window.location.href);
     url.pathname = '/pro/target';
     const ordered = new URL(url.origin + url.pathname);
-    ([
-      ['platform', platform],
-      ['targetProfit', targetProfit],
-      ['targetMarginPct', targetMarginPct],
-      ['cogs', cogs],
-      ['shipCost', shipCost],
-      ['discountPct', discountPct],
-      ['shipCharge', shipCharge],
-      ['taxPct', taxPct],
-      ['includeTax', includeTax ? '1' : '0'],
-    ] as const).forEach(([k, v]) => ordered.searchParams.set(k, v));
+    (
+      [
+        ['platform', platform],
+        ['targetProfit', targetProfit],
+        ['targetMarginPct', targetMarginPct],
+        ['cogs', cogs],
+        ['shipCost', shipCost],
+        ['discountPct', discountPct],
+        ['shipCharge', shipCharge],
+        ['taxPct', taxPct],
+        ['includeTax', includeTax ? '1' : '0'],
+      ] as const
+    ).forEach(([k, v]) => ordered.searchParams.set(k, v));
     return ordered.toString();
   };
 
@@ -515,16 +561,25 @@ export default function ReverseCalcPage() {
     const tProfit = parseNum(targetProfit);
     const tMargin = parseNum(targetMarginPct);
     const primary =
-      tProfit > 0
-        ? `Profit $${tProfit}`
-        : tMargin > 0
-        ? `Margin ${tMargin}%`
-        : `Defaults`;
+      tProfit > 0 ? `Profit $${tProfit}` : tMargin > 0 ? `Margin ${tMargin}%` : `Defaults`;
     return `${nicePlatform} – ${primary}`;
   }, [platform, targetProfit, targetMarginPct]);
 
-  const getPresetState = React.useCallback((): TargetPreset => {
-    return {
+  const getPresetState = React.useCallback(
+    (): TargetPreset => {
+      return {
+        platform,
+        targetProfit,
+        targetMarginPct,
+        cogs,
+        shipCost,
+        discountPct,
+        shipCharge,
+        taxPct,
+        includeTax,
+      };
+    },
+    [
       platform,
       targetProfit,
       targetMarginPct,
@@ -534,11 +589,12 @@ export default function ReverseCalcPage() {
       shipCharge,
       taxPct,
       includeTax,
-    };
-  }, [platform, targetProfit, targetMarginPct, cogs, shipCost, discountPct, shipCharge, taxPct, includeTax]);
+    ]
+  );
 
   const applyPreset = React.useCallback((p: TargetPreset) => {
-    if (p.platform && PLATFORMS.includes(p.platform as PlatformKey)) setPlatform(p.platform as PlatformKey);
+    if (p.platform && PLATFORMS.includes(p.platform as PlatformKey))
+      setPlatform(p.platform as PlatformKey);
     if (typeof p.targetProfit === 'string') setTargetProfit(p.targetProfit);
     if (typeof p.targetMarginPct === 'string') setTargetMarginPct(p.targetMarginPct);
     if (typeof p.cogs === 'string') setCogs(p.cogs);
@@ -789,7 +845,7 @@ export default function ReverseCalcPage() {
           <label className="block">
             <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Platform</span>
             <select
-              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              className="w-full rounded-xl border border-purple-600/40 bg-white text-black dark:bg-white dark:text-black px-3 py-2 outline-none"
               value={platform}
               onChange={(e) => {
                 setPlatform(e.target.value as PlatformKey);
@@ -913,13 +969,11 @@ export default function ReverseCalcPage() {
               State (fills base rate)
             </span>
             <select
-              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              className="w-full rounded-xl border border-purple-600/40 bg-white text-black dark:bg-white dark:text-black px-3 py-2 outline-none"
               value={taxState}
               onChange={(e) => onSelectState(e.target.value)}
             >
-              <option value="">
-                — Select state —
-              </option>
+              <option value="">{'— Select state —'}</option>
               {STATE_RATES.map((s) => (
                 <option key={s.code} value={s.code}>
                   {s.code} — base {formatPct(s.basePct)}
@@ -1056,7 +1110,6 @@ export default function ReverseCalcPage() {
               ${formatMoney(buyerSubTotal)}
             </div>
           </div>
-
           <div className="rounded-2xl border border-purple-600/40 p-4">
             <div className="text-sm text-gray-500 dark:text-gray-400">
               Buyer total {includeTax ? '(w/ tax)' : '(no tax)'}
