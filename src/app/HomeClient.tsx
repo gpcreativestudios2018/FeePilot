@@ -195,6 +195,62 @@ function inputsFromSearch(): Inputs | null {
   }
 }
 
+/* ----------------------- SCENARIO PRESETS (HOME) -------------------------- */
+
+type ScenarioPresetId = 'low-flip' | 'high-ticket-sneaker' | 'bundle-sale';
+
+type ScenarioPreset = {
+  id: ScenarioPresetId;
+  label: string;
+  description: string;
+  apply: (platform: PlatformKey, previous: Inputs) => Partial<Inputs>;
+};
+
+const SCENARIO_PRESETS: ScenarioPreset[] = [
+  {
+    id: 'low-flip',
+    label: 'Low-price flip',
+    description: 'Cheap tee / small item flip with basic shipping.',
+    apply: (platform) => {
+      // Keep it simple but give slightly different shipping behavior
+      const usesZeroShipCharge = platform === 'poshmark' || platform === 'stockx';
+      return {
+        price: 25,
+        cogs: 5,
+        shipCharge: usesZeroShipCharge ? 0 : 4.99,
+        shipCost: usesZeroShipCharge ? 0 : 5.5,
+      };
+    },
+  },
+  {
+    id: 'high-ticket-sneaker',
+    label: 'High-ticket sneaker',
+    description: 'Premium sneaker sale on StockX/eBay-style platforms.',
+    apply: (platform) => {
+      const isSneakerCore = platform === 'stockx' || platform === 'ebay';
+      return {
+        price: isSneakerCore ? 350 : 280,
+        cogs: isSneakerCore ? 220 : 190,
+        shipCharge: 0,
+        shipCost: 18,
+      };
+    },
+  },
+  {
+    id: 'bundle-sale',
+    label: 'Bundle sale',
+    description: 'Multiple items bundled with free shipping.',
+    apply: () => {
+      return {
+        price: 120,
+        cogs: 40,
+        shipCharge: 0,
+        shipCost: 15,
+      };
+    },
+  },
+];
+
 /* ----------------------------------- UI ----------------------------------- */
 export default function HomeClient() {
   // Inputs init priority: URL query params → localStorage → defaults.
@@ -447,6 +503,35 @@ export default function HomeClient() {
       <main className="mx-auto max-w-6xl px-4 pb-20">
         {/* Inputs */}
         <section className={cx('rounded-2xl border p-4 sm:p-6', panelBorder)}>
+          {/* Scenario presets row */}
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className={cx('text-xs sm:text-sm', subtleText)}>
+              Try a quick scenario to see real numbers:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {SCENARIO_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className={cx(
+                    pillButton,
+                    'px-3 py-1 text-xs sm:text-sm',
+                    'border-dashed',
+                  )}
+                  title={preset.description}
+                  onClick={() =>
+                    setInputs((prev) => ({
+                      ...prev,
+                      ...preset.apply(prev.platform, prev),
+                    }))
+                  }
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label
