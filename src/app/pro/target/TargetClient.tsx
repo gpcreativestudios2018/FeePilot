@@ -325,12 +325,12 @@ function LocalPresetsControls(props: {
             onChange={(e) => setSelected(e.target.value)}
           >
             {presets.length === 0 ? (
-              <option value="" className="text-black dark:text-white bg-white dark:bg-black">
+              <option value="">
                 (none yet)
               </option>
             ) : null}
             {presets.map((p) => (
-              <option key={p.name} value={p.name} className="text-black dark:text-white bg-white dark:bg-black">
+              <option key={p.name} value={p.name}>
                 {p.name}
               </option>
             ))}
@@ -797,11 +797,7 @@ export default function ReverseCalcPage() {
               }}
             >
               {PLATFORMS.map((p) => (
-                <option
-                  key={p}
-                  value={p}
-                  className="text-black dark:text-white bg-white dark:bg-black"
-                >
+                <option key={p} value={p}>
                   {p[0].toUpperCase() + p.slice(1)}
                 </option>
               ))}
@@ -921,18 +917,11 @@ export default function ReverseCalcPage() {
               value={taxState}
               onChange={(e) => onSelectState(e.target.value)}
             >
-              <option
-                value=""
-                className="text-black dark:text-white bg-white dark:bg-black"
-              >
+              <option value="">
                 — Select state —
               </option>
               {STATE_RATES.map((s) => (
-                <option
-                  key={s.code}
-                  value={s.code}
-                  className="text-black dark:text-white bg-white dark:bg-black"
-                >
+                <option key={s.code} value={s.code}>
                   {s.code} — base {formatPct(s.basePct)}
                   {s.minCombinedPct ? ` (min combined ${formatPct(s.minCombinedPct)})` : ''}
                 </option>
