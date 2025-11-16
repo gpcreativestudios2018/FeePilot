@@ -40,6 +40,8 @@ export default function ComparisonTableSection({
   const headText = isLight ? 'text-gray-800' : 'text-gray-200';
   const bodyText = isLight ? 'text-gray-800' : 'text-gray-200';
   const subtle = isLight ? 'text-gray-600' : 'text-gray-400';
+  const headerBg = isLight ? 'bg-purple-50/70' : 'bg-purple-900/30';
+  const zebraRow = isLight ? 'bg-gray-50' : 'bg-white/5';
 
   // Gate dynamic classes to avoid SSR/client className mismatches
   const [mounted, setMounted] = React.useState(false);
@@ -81,7 +83,7 @@ export default function ComparisonTableSection({
 
   return (
     <section className={cx('rounded-2xl p-4 sm:p-6', className)}>
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CurrentInputs
           isLight={isLight}
           className="mb-0"
@@ -101,7 +103,7 @@ export default function ComparisonTableSection({
             'shrink-0 rounded-full px-4 py-2 text-base select-none border',
             isLight
               ? 'border-purple-800/70 text-black hover:bg-purple-50'
-              : 'border-purple-600/50 text-white hover:bg-white/5'
+              : 'border-purple-600/50 text-white hover:bg-white/5',
           )}
           aria-label="Export comparison as CSV"
           title="Export comparison as CSV"
@@ -111,46 +113,64 @@ export default function ComparisonTableSection({
       </div>
 
       <div className="overflow-x-auto rounded-2xl">
-        <table className={cx('w-full text-sm', bodyText)}>
-          <thead className={cx(subtle, headText)}>
-            <tr className="text-left">
-              <th className="py-2 pr-4">Platform</th>
-              <th className="py-2 pr-4">Marketplace fee</th>
-              <th className="py-2 pr-4">Payment fee</th>
-              <th className="py-2 pr-4">Listing fee</th>
-              <th className="py-2 pr-4">Total fees</th>
-              <th className="py-2 pr-4">Profit</th>
-              <th className="py-2 pr-0">Margin</th>
+        <table className={cx('w-full text-xs sm:text-sm', bodyText)}>
+          <thead className={cx('border-b', border, headerBg, headText)}>
+            <tr className="text-left align-middle uppercase tracking-wide">
+              <th className="py-2.5 pr-4 text-[0.7rem] sm:text-[0.75rem]">Platform</th>
+              <th className="py-2.5 pr-4 text-right text-[0.7rem] sm:text-[0.75rem]">
+                Marketplace fee
+              </th>
+              <th className="py-2.5 pr-4 text-right text-[0.7rem] sm:text-[0.75rem]">
+                Payment fee
+              </th>
+              <th className="py-2.5 pr-4 text-right text-[0.7rem] sm:text-[0.75rem]">
+                Listing fee
+              </th>
+              <th className="py-2.5 pr-4 text-right text-[0.7rem] sm:text-[0.75rem]">
+                Total fees
+              </th>
+              <th className="py-2.5 pr-4 text-right text-[0.7rem] sm:text-[0.75rem]">
+                Profit
+              </th>
+              <th className="py-2.5 pr-0 text-right text-[0.7rem] sm:text-[0.75rem]">
+                Margin
+              </th>
             </tr>
           </thead>
 
           <tbody className={cx('border-t', border)}>
-            {comparison.map((row) => (
-              <tr key={row.platform} className="border-t first:border-0">
-                <td className="py-2 pr-4">
+            {comparison.map((row, idx) => (
+              <tr
+                key={row.platform}
+                className={cx(
+                  'border-t first:border-0',
+                  idx % 2 === 1 && zebraRow,
+                )}
+              >
+                <td className="py-2.5 pr-4">
                   <span className="inline-flex items-center gap-2">
-                    <span className={cx('rounded-lg border px-2 py-1', border)}>
+                    <span className={cx('rounded-lg border px-2 py-1 text-xs', border)}>
                       {row.platform.slice(0, 1).toUpperCase() + row.platform.slice(1)}
                     </span>
                   </span>
                 </td>
 
-                <td className="py-2 pr-4">
+                <td className="py-2.5 pr-4 text-right">
                   <span suppressHydrationWarning>
                     {formatMoneyWithParens(row.marketplaceFee)}
                   </span>
                 </td>
-                <td className="py-2 pr-4">
+                <td className="py-2.5 pr-4 text-right">
                   <span suppressHydrationWarning>
                     {formatMoneyWithParens(row.paymentFee)}
                   </span>
                 </td>
-                <td className="py-2 pr-4">
+                <td className="py-2.5 pr-4 text-right">
                   <span suppressHydrationWarning>
                     {formatMoneyWithParens(row.listingFee)}
                   </span>
                 </td>
-                <td className="py-2 pr-4">
+                <td className="py-2.5 pr-4 text-right">
                   <span suppressHydrationWarning>
                     {formatMoneyWithParens(row.totalFees)}
                   </span>
@@ -158,8 +178,13 @@ export default function ComparisonTableSection({
 
                 <td
                   className={cx(
-                    'py-2 pr-4',
-                    mounted && (row.profit < 0 ? 'text-red-500' : isLight ? 'text-emerald-700' : 'text-emerald-300')
+                    'py-2.5 pr-4 text-right',
+                    mounted &&
+                      (row.profit < 0
+                        ? 'text-red-500'
+                        : isLight
+                        ? 'text-emerald-700'
+                        : 'text-emerald-300'),
                   )}
                 >
                   <span suppressHydrationWarning>
@@ -167,7 +192,7 @@ export default function ComparisonTableSection({
                   </span>
                 </td>
 
-                <td className="py-2 pr-0">
+                <td className="py-2.5 pr-0 text-right">
                   <span
                     className={cx(mounted && row.marginPct < 0 && 'text-red-500')}
                     suppressHydrationWarning
@@ -180,7 +205,7 @@ export default function ComparisonTableSection({
           </tbody>
         </table>
 
-        <div className={cx('mt-2 text-xs', subtle)}>
+        <div className={cx('mt-3 text-xs', subtle)}>
           Values are estimates based on current inputs.
         </div>
       </div>
