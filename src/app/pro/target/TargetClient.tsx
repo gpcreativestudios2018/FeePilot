@@ -359,13 +359,11 @@ function LocalPresetsControls(props: {
         <label className="flex-1">
           <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Saved presets</span>
           <select
-            className="w-full rounded-xl border border-purple-600/40 bg-white text-black dark:bg-white dark:text-black px-3 py-2 outline-none"
+            className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
           >
-            {presets.length === 0 ? (
-              <option value="">{'(none yet)'}</option>
-            ) : null}
+            {presets.length === 0 ? <option value="">(none yet)</option> : null}
             {presets.map((p) => (
               <option key={p.name} value={p.name}>
                 {p.name}
@@ -845,7 +843,7 @@ export default function ReverseCalcPage() {
           <label className="block">
             <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Platform</span>
             <select
-              className="w-full rounded-xl border border-purple-600/40 bg-white text-black dark:bg-white dark:text-black px-3 py-2 outline-none"
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
               value={platform}
               onChange={(e) => {
                 setPlatform(e.target.value as PlatformKey);
@@ -969,11 +967,11 @@ export default function ReverseCalcPage() {
               State (fills base rate)
             </span>
             <select
-              className="w-full rounded-xl border border-purple-600/40 bg-white text-black dark:bg-white dark:text-black px-3 py-2 outline-none"
+              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
               value={taxState}
               onChange={(e) => onSelectState(e.target.value)}
             >
-              <option value="">{'— Select state —'}</option>
+              <option value="">— Select state —</option>
               {STATE_RATES.map((s) => (
                 <option key={s.code} value={s.code}>
                   {s.code} — base {formatPct(s.basePct)}
