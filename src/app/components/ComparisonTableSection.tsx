@@ -149,7 +149,7 @@ export default function ComparisonTableSection({
               >
                 <td className="py-2.5 pr-4">
                   <span className="inline-flex items-center gap-2">
-                    <span className={cx('rounded-lg border px-2 py-1', border)}>
+                    <span className={cx('rounded-lg border px-2 py-1 text-xs', border)}>
                       {row.platform.slice(0, 1).toUpperCase() + row.platform.slice(1)}
                     </span>
                   </span>
