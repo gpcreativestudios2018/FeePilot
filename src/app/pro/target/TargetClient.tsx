@@ -365,7 +365,7 @@ function LocalPresetsControls(props: {
           >
             {presets.length === 0 ? <option value="">(none yet)</option> : null}
             {presets.map((p) => (
-              <option key={p.name} value={p.name}>
+              <option key={p.name} value={p.name} className="bg-black text-white">
                 {p.name}
               </option>
             ))}
@@ -603,13 +603,6 @@ export default function ReverseCalcPage() {
     if (typeof p.includeTax === 'boolean') setIncludeTax(p.includeTax);
   }, []);
 
-  const solvingForText =
-    parseNum(targetProfit) > 0
-      ? 'Solving for: Profit'
-      : parseNum(targetMarginPct) > 0
-      ? 'Solving for: Margin'
-      : 'Solving for: —';
-
   const resetInputs = () => {
     setTargetProfit('25');
     setTargetMarginPct('0');
@@ -803,13 +796,6 @@ export default function ReverseCalcPage() {
             targetProfit={parseNum(targetProfit)}
             targetMargin={parseNum(targetMarginPct)}
           />
-          <span
-            className="text-xs text-gray-600 dark:text-gray-300"
-            aria-live="polite"
-            suppressHydrationWarning
-          >
-            {solvingForText}
-          </span>
 
           {copied ? (
             <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
@@ -851,7 +837,7 @@ export default function ReverseCalcPage() {
               }}
             >
               {PLATFORMS.map((p) => (
-                <option key={p} value={p}>
+                <option key={p} value={p} className="bg-black text-white">
                   {p[0].toUpperCase() + p.slice(1)}
                 </option>
               ))}
@@ -973,7 +959,7 @@ export default function ReverseCalcPage() {
             >
               <option value="">— Select state —</option>
               {STATE_RATES.map((s) => (
-                <option key={s.code} value={s.code}>
+                <option key={s.code} value={s.code} className="bg-black text-white">
                   {s.code} — base {formatPct(s.basePct)}
                   {s.minCombinedPct ? ` (min combined ${formatPct(s.minCombinedPct)})` : ''}
                 </option>
