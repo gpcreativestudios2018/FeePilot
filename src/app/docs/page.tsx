@@ -57,6 +57,39 @@ const faqJsonLd = {
   ],
 };
 
+const feeGuides = [
+  {
+    slug: '/docs/etsy-fees' as Route,
+    name: 'Etsy',
+    line: 'Etsy Fees Guide — how Etsy fees are calculated',
+  },
+  {
+    slug: '/docs/depop-fees' as Route,
+    name: 'Depop',
+    line: 'Depop Fees Guide — how Depop fees are calculated',
+  },
+  {
+    slug: '/docs/mercari-fees' as Route,
+    name: 'Mercari',
+    line: 'Mercari Fees Guide — how Mercari fees are calculated',
+  },
+  {
+    slug: '/docs/poshmark-fees' as Route,
+    name: 'Poshmark',
+    line: 'Poshmark Fees Guide — how Poshmark fees are calculated',
+  },
+  {
+    slug: '/docs/ebay-fees' as Route,
+    name: 'eBay',
+    line: 'eBay Fees Guide — how eBay fees are calculated',
+  },
+  {
+    slug: '/docs/stockx-fees' as Route,
+    name: 'StockX',
+    line: 'StockX Fees Guide — how StockX fees are calculated',
+  },
+];
+
 export default function DocsPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
@@ -119,40 +152,32 @@ export default function DocsPage() {
       </section>
 
       {/* Marketplace guides for SEO */}
-      <section className="mt-8 space-y-4 text-white">
-        <h2 className="text-xl font-medium text-purple-400 underline">Marketplace fee guides</h2>
-        <ul className="list-disc pl-6">
-          <li>
-            <Link href={'/docs/etsy-fees' as Route} className="underline">
-              Etsy Fees Guide — how Etsy fees are calculated
+      <section className="mt-8 text-white">
+        <h2 className="text-xl font-medium text-purple-400 underline">
+          Marketplace fee guides
+        </h2>
+        <p className="mt-2 text-sm text-gray-300">
+          Deep dives on how each marketplace&apos;s fees are calculated, with real-world examples
+          and notes on promos, shipping, and discounts.
+        </p>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {feeGuides.map((guide) => (
+            <Link
+              key={guide.slug}
+              href={guide.slug}
+              className="group block rounded-2xl border border-purple-600/40 bg-black/40 p-4 transition hover:border-purple-400/80 hover:bg-black/70"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-base font-semibold text-white">{guide.name}</h3>
+                <span className="text-[11px] font-medium uppercase tracking-wide text-purple-300 group-hover:text-purple-200">
+                  Fee guide
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-gray-300">{guide.line}</p>
             </Link>
-          </li>
-          <li>
-            <Link href={'/docs/depop-fees' as Route} className="underline">
-              Depop Fees Guide — how Depop fees are calculated
-            </Link>
-          </li>
-          <li>
-            <Link href={'/docs/mercari-fees' as Route} className="underline">
-              Mercari Fees Guide — how Mercari fees are calculated
-            </Link>
-          </li>
-          <li>
-            <Link href={'/docs/poshmark-fees' as Route} className="underline">
-              Poshmark Fees Guide — how Poshmark fees are calculated
-            </Link>
-          </li>
-          <li>
-            <Link href={'/docs/ebay-fees' as Route} className="underline">
-              eBay Fees Guide — how eBay fees are calculated
-            </Link>
-          </li>
-          <li>
-            <Link href={'/docs/stockx-fees' as Route} className="underline">
-              StockX Fees Guide — how StockX fees are calculated
-            </Link>
-          </li>
-        </ul>
+          ))}
+        </div>
       </section>
 
       {/* FAQ */}
