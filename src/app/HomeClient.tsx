@@ -212,14 +212,58 @@ const SCENARIO_PRESETS: ScenarioPreset[] = [
     label: 'Low-price flip',
     description: 'Cheap tee / small item flip with basic shipping.',
     apply: (platform) => {
-      // Keep it simple but give slightly different shipping behavior
-      const usesZeroShipCharge = platform === 'poshmark' || platform === 'stockx';
-      return {
-        price: 25,
-        cogs: 5,
-        shipCharge: usesZeroShipCharge ? 0 : 4.99,
-        shipCost: usesZeroShipCharge ? 0 : 5.5,
-      };
+      // More realistic per-platform low-ticket flips
+      switch (platform) {
+        case 'poshmark':
+          return {
+            price: 25,
+            cogs: 5,
+            shipCharge: 0,
+            shipCost: 0,
+          };
+        case 'depop':
+          return {
+            price: 30,
+            cogs: 8,
+            shipCharge: 5.99,
+            shipCost: 6.5,
+          };
+        case 'etsy':
+          return {
+            price: 22,
+            cogs: 5,
+            shipCharge: 4.99,
+            shipCost: 5.5,
+          };
+        case 'mercari':
+          return {
+            price: 25,
+            cogs: 6,
+            shipCharge: 4.99,
+            shipCost: 6,
+          };
+        case 'ebay':
+          return {
+            price: 25,
+            cogs: 5,
+            shipCharge: 4.99,
+            shipCost: 5.5,
+          };
+        case 'stockx':
+          return {
+            price: 60,
+            cogs: 35,
+            shipCharge: 0,
+            shipCost: 0,
+          };
+        default:
+          return {
+            price: 25,
+            cogs: 5,
+            shipCharge: 4.99,
+            shipCost: 5.5,
+          };
+      }
     },
   },
   {
@@ -227,26 +271,103 @@ const SCENARIO_PRESETS: ScenarioPreset[] = [
     label: 'High-ticket sneaker',
     description: 'Premium sneaker sale on StockX/eBay-style platforms.',
     apply: (platform) => {
-      const isSneakerCore = platform === 'stockx' || platform === 'ebay';
-      return {
-        price: isSneakerCore ? 350 : 280,
-        cogs: isSneakerCore ? 220 : 190,
-        shipCharge: 0,
-        shipCost: 18,
-      };
+      switch (platform) {
+        case 'stockx':
+          return {
+            price: 350,
+            cogs: 220,
+            shipCharge: 0,
+            shipCost: 18,
+          };
+        case 'ebay':
+          return {
+            price: 320,
+            cogs: 200,
+            shipCharge: 14.99,
+            shipCost: 18,
+          };
+        case 'depop':
+        case 'poshmark':
+          return {
+            price: 260,
+            cogs: 160,
+            shipCharge: 0,
+            shipCost: 18,
+          };
+        case 'mercari':
+          return {
+            price: 280,
+            cogs: 170,
+            shipCharge: 0,
+            shipCost: 18,
+          };
+        case 'etsy':
+          return {
+            price: 260,
+            cogs: 160,
+            shipCharge: 9.99,
+            shipCost: 18,
+          };
+        default:
+          return {
+            price: 280,
+            cogs: 190,
+            shipCharge: 0,
+            shipCost: 18,
+          };
+      }
     },
   },
   {
     id: 'bundle-sale',
     label: 'Bundle sale',
     description: 'Multiple items bundled with free shipping.',
-    apply: () => {
-      return {
-        price: 120,
-        cogs: 40,
-        shipCharge: 0,
-        shipCost: 15,
-      };
+    apply: (platform) => {
+      switch (platform) {
+        case 'poshmark':
+        case 'depop':
+          return {
+            price: 85,
+            cogs: 30,
+            shipCharge: 0,
+            shipCost: 12,
+          };
+        case 'mercari':
+          return {
+            price: 95,
+            cogs: 35,
+            shipCharge: 0,
+            shipCost: 14,
+          };
+        case 'etsy':
+          return {
+            price: 110,
+            cogs: 40,
+            shipCharge: 0,
+            shipCost: 15,
+          };
+        case 'ebay':
+          return {
+            price: 120,
+            cogs: 45,
+            shipCharge: 0,
+            shipCost: 16,
+          };
+        case 'stockx':
+          return {
+            price: 260,
+            cogs: 180,
+            shipCharge: 0,
+            shipCost: 20,
+          };
+        default:
+          return {
+            price: 120,
+            cogs: 40,
+            shipCharge: 0,
+            shipCost: 15,
+          };
+      }
     },
   },
 ];
@@ -501,10 +622,21 @@ export default function HomeClient() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-20">
+        {/* Intro / tagline */}
+        <section className="mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-purple-300">
+            Marketplace fee calculator
+          </h2>
+          <p className={cx('mt-1 max-w-2xl text-sm sm:text-base', subtleText)}>
+            Estimate your profit after marketplace fees, shipping, and tax across platforms
+            like Etsy, eBay, Poshmark, Depop, Mercari, and StockX.
+          </p>
+        </section>
+
         {/* Inputs */}
         <section className={cx('rounded-2xl border p-4 sm:p-6', panelBorder)}>
           {/* Scenario presets row */}
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
             <p className={cx('text-xs sm:text-sm', subtleText)}>
               Try a quick scenario to see real numbers:
             </p>
