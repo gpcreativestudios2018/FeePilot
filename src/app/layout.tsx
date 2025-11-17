@@ -27,6 +27,11 @@ export const metadata: Metadata = {
     title: 'Fee Pilot — Marketplace Fee Calculator',
     description: 'Fast, accurate marketplace fee calculator with CSV export and shareable links.',
   },
+  // This generates:
+  // <meta name="google-site-verification" content="1DcR8BTQTm1Gtj2oqQtpmOIyPS82NU5lqsETG6E-MAA" />
+  verification: {
+    google: '1DcR8BTQTm1Gtj2oqQtpmOIyPS82NU5lqsETG6E-MAA',
+  },
 };
 
 export const viewport: Viewport = {
@@ -102,7 +107,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Google Analytics 4 (prod only via NEXT_PUBLIC_GA_ID) */}
         {isProd && GA_ID ? (
           <>
-            <Script id="ga4-src" strategy="afterInteractive" src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
+            <Script
+              id="ga4-src"
+              strategy="afterInteractive"
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+            />
             <Script
               id="ga4-init"
               strategy="afterInteractive"
@@ -127,7 +136,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               id="adsense-src"
               strategy="afterInteractive"
               src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(
-                ADSENSE_CLIENT
+                ADSENSE_CLIENT,
               )}`}
               crossOrigin="anonymous"
             />
