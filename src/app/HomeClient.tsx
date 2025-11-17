@@ -12,6 +12,7 @@ import {
   PLATFORMS,
   RULES,
   RULES_UPDATED_AT,
+  PLATFORM_LABELS,
   type PlatformKey,
   type FeeRule,
 } from '@/data/fees';
@@ -702,7 +703,7 @@ export default function HomeClient() {
               >
                 {PLATFORMS.map((p) => (
                   <option key={p} value={p} className={selectOption}>
-                    {p[0].toUpperCase() + p.slice(1)}
+                    {PLATFORM_LABELS[p]}
                   </option>
                 ))}
               </select>
