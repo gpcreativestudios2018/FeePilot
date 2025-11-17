@@ -8,14 +8,30 @@ export type PlatformKey =
   | 'mercari'
   | 'poshmark';
 
+/**
+ * Default platform order used across the app:
+ * - Start with popular handmade / social marketplaces
+ * - Then general marketplaces
+ * - Then sneakers
+ */
 export const PLATFORMS: PlatformKey[] = [
   'etsy',
-  'stockx',
-  'ebay',
   'depop',
   'mercari',
   'poshmark',
+  'ebay',
+  'stockx',
 ];
+
+/** Human-friendly labels for each platform (for selects, tables, etc.) */
+export const PLATFORM_LABELS: Record<PlatformKey, string> = {
+  etsy: 'Etsy',
+  stockx: 'StockX',
+  ebay: 'eBay',
+  depop: 'Depop',
+  mercari: 'Mercari',
+  poshmark: 'Poshmark',
+};
 
 export type FeeRule = {
   /** % of (discounted price + shipping charged to buyer) */

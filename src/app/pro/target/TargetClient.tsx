@@ -5,7 +5,13 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { PILL_CLASS } from '@/lib/ui';
-import { PLATFORMS, RULES, type PlatformKey, type FeeRule } from '@/data/fees';
+import {
+  PLATFORMS,
+  RULES,
+  PLATFORM_LABELS,
+  type PlatformKey,
+  type FeeRule,
+} from '@/data/fees';
 import { STATE_RATES, type USStateCode, formatPct } from '@/data/us-tax';
 import SolvingForPill from './SolvingForPill';
 import FeeOverridesDev, { type FeeOverrides } from './FeeOverridesDev';
@@ -40,7 +46,13 @@ function readAll(): NamedTargetPreset[] {
   const arr = safeParse<NamedTargetPreset[]>(raw);
   if (!Array.isArray(arr)) return [];
   return arr
-    .filter((it) => it && typeof it.name === 'string' && typeof it.updatedAt === 'number' && it.data)
+    .filter(
+      (it) =>
+        it &&
+        typeof it.name === 'string' &&
+        typeof it.updatedAt === 'number' &&
+        it.data,
+    )
     .slice(0, 200);
 }
 function writeAll(list: NamedTargetPreset[]) {
@@ -58,7 +70,9 @@ function savePreset(name: string, data: TargetPreset): void {
   const trimmed = name.trim();
   if (!trimmed) return;
   const all = readAll();
-  const idx = all.findIndex((p) => p.name.toLowerCase() === trimmed.toLowerCase());
+  const idx = all.findIndex(
+    (p) => p.name.toLowerCase() === trimmed.toLowerCase(),
+  );
   const item: NamedTargetPreset = { name: trimmed, updatedAt: Date.now(), data };
   if (idx >= 0) all[idx] = item;
   else all.push(item);
@@ -67,13 +81,19 @@ function savePreset(name: string, data: TargetPreset): void {
 function loadPreset(name: string): TargetPreset | null {
   const trimmed = name.trim();
   if (!trimmed) return null;
-  const found = readAll().find((p) => p.name.toLowerCase() === trimmed.toLowerCase());
+  const found = readAll().find(
+    (p) => p.name.toLowerCase() === trimmed.toLowerCase(),
+  );
   return found ? found.data : null;
 }
 function deletePreset(name: string): void {
   const trimmed = name.trim();
   if (!trimmed) return;
-  writeAll(readAll().filter((p) => p.name.toLowerCase() !== trimmed.toLowerCase()));
+  writeAll(
+    readAll().filter(
+      (p) => p.name.toLowerCase() !== trimmed.toLowerCase(),
+    ),
+  );
 }
 function clearAllPresets(): void {
   if (typeof window === 'undefined') return;
@@ -83,13 +103,17 @@ function clearAllPresets(): void {
 
 // --- helpers ---
 const pct = (n: number) => n / 100;
-const clamp = (n: number, min = 0, max = 1_000_000) => Math.min(max, Math.max(min, n));
+const clamp = (n: number, min = 0, max = 1_000_000) =>
+  Math.min(max, Math.max(min, n));
 const parseNum = (v: string) => {
   const n = Number.parseFloat(v);
   return Number.isFinite(n) ? n : 0;
 };
 const formatMoney = (n: number) =>
-  n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
 const getListingFixed = (rule: FeeRule): number => {
   const anyRule = rule as unknown as { listingFixed?: number };
@@ -106,7 +130,8 @@ function computeAtPrice(opts: {
   shipCost: number;
   cogs: number;
 }) {
-  const { platform, rule, price, discountPct, shipCharge, shipCost, cogs } = opts;
+  const { platform, rule, price, discountPct, shipCharge, shipCost, cogs } =
+    opts;
   const discounted = clamp(price * (1 - pct(discountPct)), 0);
 
   if (platform === 'poshmark') {
@@ -116,12 +141,21 @@ function computeAtPrice(opts: {
     const totalFees = marketplaceFee + paymentFee + listingFee;
     const profit = discounted - totalFees - shipCost - cogs;
     const marginPct = discounted > 0 ? (profit / discounted) * 100 : 0;
-    return { discounted, marketplaceFee, paymentFee, listingFee, totalFees, profit, marginPct };
+    return {
+      discounted,
+      marketplaceFee,
+      paymentFee,
+      listingFee,
+      totalFees,
+      profit,
+      marginPct,
+    };
   }
 
   const base = discounted + shipCharge;
   const marketplaceFee =
-    clamp(base * pct(rule.marketplacePct ?? 0)) + (rule.marketplaceFixed ?? 0);
+    clamp(base * pct(rule.marketplacePct ?? 0)) +
+    (rule.marketplaceFixed ?? 0);
   const paymentFee =
     clamp(base * pct(rule.paymentPct ?? 0)) + (rule.paymentFixed ?? 0);
   const listingFee = getListingFixed(rule);
@@ -129,7 +163,15 @@ function computeAtPrice(opts: {
   const profit = discounted + shipCharge - totalFees - shipCost - cogs;
   const marginPct = discounted > 0 ? (profit / discounted) * 100 : 0;
 
-  return { discounted, marketplaceFee, paymentFee, listingFee, totalFees, profit, marginPct };
+  return {
+    discounted,
+    marketplaceFee,
+    paymentFee,
+    listingFee,
+    totalFees,
+    profit,
+    marginPct,
+  };
 }
 
 function solvePrice(opts: {
@@ -142,13 +184,23 @@ function solvePrice(opts: {
   shipCost: number;
   cogs: number;
 }) {
-  const { platform, rule, targetProfit, targetMarginPct, discountPct, shipCharge, shipCost, cogs } =
-    opts;
+  const {
+    platform,
+    rule,
+    targetProfit,
+    targetMarginPct,
+    discountPct,
+    shipCharge,
+    shipCost,
+    cogs,
+  } = opts;
 
   const mode: 'profit' | 'margin' | null =
-    Number.isFinite(targetProfit as number) && (targetProfit as number) > 0
+    Number.isFinite(targetProfit as number) &&
+    (targetProfit as number) > 0
       ? 'profit'
-      : Number.isFinite(targetMarginPct as number) && (targetMarginPct as number) > 0
+      : Number.isFinite(targetMarginPct as number) &&
+        (targetMarginPct as number) > 0
       ? 'margin'
       : null;
 
@@ -179,7 +231,10 @@ function solvePrice(opts: {
       cogs,
     });
     const val = mode === 'profit' ? r.profit : r.marginPct;
-    const tgt = mode === 'profit' ? (targetProfit as number) : (targetMarginPct as number);
+    const tgt =
+      mode === 'profit'
+        ? (targetProfit as number)
+        : (targetMarginPct as number);
     if (val < tgt) lo = mid;
     else hi = mid;
   }
@@ -195,7 +250,10 @@ function solvePrice(opts: {
       cogs,
     });
     const val = mode === 'profit' ? r.profit : r.marginPct;
-    const tgt = mode === 'profit' ? (targetProfit as number) : (targetMarginPct as number);
+    const tgt =
+      mode === 'profit'
+        ? (targetProfit as number)
+        : (targetMarginPct as number);
     if (val < tgt) lo = mid;
     else hi = mid;
   }
@@ -241,7 +299,8 @@ function QueryParamsInitializer(props: {
       includeTax?: string;
     } = {};
     const p = searchParams.get('platform');
-    if (p && PLATFORMS.includes(p as PlatformKey)) vals.platform = p as PlatformKey;
+    if (p && PLATFORMS.includes(p as PlatformKey))
+      vals.platform = p as PlatformKey;
     const tp = searchParams.get('targetProfit');
     if (tp != null) vals.targetProfit = tp;
     const tm = searchParams.get('targetMarginPct');
@@ -341,7 +400,9 @@ function LocalPresetsControls(props: {
     <div className="rounded-2xl border border-purple-600/30 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <label className="flex-1">
-          <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Preset name</span>
+          <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">
+            Preset name
+          </span>
           <input
             type="text"
             placeholder="e.g. Mercari 30% margin"
@@ -357,7 +418,9 @@ function LocalPresetsControls(props: {
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
         <label className="flex-1">
-          <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Saved presets</span>
+          <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">
+            Saved presets
+          </span>
           <select
             className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
             value={selected}
@@ -365,14 +428,19 @@ function LocalPresetsControls(props: {
           >
             {presets.length === 0 ? <option value="">(none yet)</option> : null}
             {presets.map((p) => (
-              <option key={p.name} value={p.name} className="bg-black text-white">
+              <option key={p.name} value={p.name} className="bg-black textwhite">
                 {p.name}
               </option>
             ))}
           </select>
         </label>
         <div className="flex gap-2">
-          <button type="button" className={PILL_CLASS} onClick={onLoad} disabled={!selected}>
+          <button
+            type="button"
+            className={PILL_CLASS}
+            onClick={onLoad}
+            disabled={!selected}
+          >
             Load
           </button>
           <button
@@ -401,7 +469,11 @@ function LocalPresetsControls(props: {
 
       {flash ? (
         <div className="mt-3">
-          <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
+          <span
+            className={PILL_CLASS}
+            aria-live="polite"
+            suppressHydrationWarning
+          >
             {flash}
           </span>
         </div>
@@ -412,7 +484,7 @@ function LocalPresetsControls(props: {
 
 export default function ReverseCalcPage() {
   const [platform, setPlatform] = React.useState<PlatformKey>(
-    PLATFORMS[0] ?? ('mercari' as PlatformKey)
+    PLATFORMS[0] ?? ('mercari' as PlatformKey),
   );
   const [targetProfit, setTargetProfit] = React.useState<string>('25');
   const [targetMarginPct, setTargetMarginPct] = React.useState<string>('0');
@@ -435,11 +507,12 @@ export default function ReverseCalcPage() {
   const [copiedBreakdown, setCopiedBreakdown] = React.useState(false);
 
   const [showDevTools, setShowDevTools] = React.useState(
-    process.env.NEXT_PUBLIC_DEV_TOOLS === 'true'
+    process.env.NEXT_PUBLIC_DEV_TOOLS === 'true',
   );
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
-    const wantsDev = new URLSearchParams(window.location.search).get('devtools') === '1';
+    const wantsDev =
+      new URLSearchParams(window.location.search).get('devtools') === '1';
     if (wantsDev) setShowDevTools(true);
   }, []);
 
@@ -478,21 +551,23 @@ export default function ReverseCalcPage() {
     }) => {
       if (vals.platform) setPlatform(vals.platform);
       if (vals.targetProfit !== undefined) setTargetProfit(vals.targetProfit);
-      if (vals.targetMarginPct !== undefined) setTargetMarginPct(vals.targetMarginPct);
+      if (vals.targetMarginPct !== undefined)
+        setTargetMarginPct(vals.targetMarginPct);
       if (vals.cogs !== undefined) setCogs(vals.cogs);
       if (vals.shipCost !== undefined) setShipCost(vals.shipCost);
       if (vals.discountPct !== undefined) setDiscountPct(vals.discountPct);
       if (vals.shipCharge !== undefined) setShipCharge(vals.shipCharge);
       if (vals.taxPct !== undefined) setTaxPct(vals.taxPct);
-      if (vals.includeTax !== undefined) setIncludeTax(vals.includeTax === '1');
+      if (vals.includeTax !== undefined)
+        setIncludeTax(vals.includeTax === '1');
     },
-    []
+    [],
   );
 
   const ruleBase = RULES[platform];
   const rule = React.useMemo(
     () => ({ ...ruleBase, ...overrides }) as FeeRule,
-    [ruleBase, overrides]
+    [ruleBase, overrides],
   );
 
   const solved = React.useMemo(() => {
@@ -508,14 +583,23 @@ export default function ReverseCalcPage() {
       shipCost: clamp(parseNum(shipCost), 0),
       cogs: clamp(parseNum(cogs), 0),
     });
-  }, [platform, targetProfit, targetMarginPct, discountPct, shipCharge, cogs, shipCost, rule]);
+  }, [
+    platform,
+    targetProfit,
+    targetMarginPct,
+    discountPct,
+    shipCharge,
+    cogs,
+    shipCost,
+    rule,
+  ]);
 
   const { price, result } = solved;
 
   // Buyer total with optional tax (reference; does not affect profit)
   const buyerSubTotal = React.useMemo(
     () => result.discounted + clamp(parseNum(shipCharge), 0),
-    [result.discounted, shipCharge]
+    [result.discounted, shipCharge],
   );
   const buyerTaxPct = clamp(parseNum(taxPct), 0, 100);
   const buyerTaxAmount = includeTax ? buyerSubTotal * (buyerTaxPct / 100) : 0;
@@ -555,11 +639,15 @@ export default function ReverseCalcPage() {
   };
 
   const generatePresetName = React.useCallback(() => {
-    const nicePlatform = platform[0].toUpperCase() + platform.slice(1);
+    const nicePlatform = PLATFORM_LABELS[platform];
     const tProfit = parseNum(targetProfit);
     const tMargin = parseNum(targetMarginPct);
     const primary =
-      tProfit > 0 ? `Profit $${tProfit}` : tMargin > 0 ? `Margin ${tMargin}%` : `Defaults`;
+      tProfit > 0
+        ? `Profit $${tProfit}`
+        : tMargin > 0
+        ? `Margin ${tMargin}%`
+        : `Defaults`;
     return `${nicePlatform} – ${primary}`;
   }, [platform, targetProfit, targetMarginPct]);
 
@@ -587,14 +675,15 @@ export default function ReverseCalcPage() {
       shipCharge,
       taxPct,
       includeTax,
-    ]
+    ],
   );
 
   const applyPreset = React.useCallback((p: TargetPreset) => {
     if (p.platform && PLATFORMS.includes(p.platform as PlatformKey))
       setPlatform(p.platform as PlatformKey);
     if (typeof p.targetProfit === 'string') setTargetProfit(p.targetProfit);
-    if (typeof p.targetMarginPct === 'string') setTargetMarginPct(p.targetMarginPct);
+    if (typeof p.targetMarginPct === 'string')
+      setTargetMarginPct(p.targetMarginPct);
     if (typeof p.cogs === 'string') setCogs(p.cogs);
     if (typeof p.shipCost === 'string') setShipCost(p.shipCost);
     if (typeof p.discountPct === 'string') setDiscountPct(p.discountPct);
@@ -652,7 +741,10 @@ export default function ReverseCalcPage() {
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName?.toLowerCase();
       const isInteractive =
-        tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable;
+        tag === 'input' ||
+        tag === 'textarea' ||
+        tag === 'select' ||
+        target?.isContentEditable;
       if (isInteractive) return;
       if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
         const key = e.key.toLowerCase();
@@ -692,7 +784,7 @@ export default function ReverseCalcPage() {
         'TargetProfit',
         'TargetMargin%',
       ].join(','),
-    []
+    [],
   );
   const csvRow = React.useMemo(
     () =>
@@ -737,7 +829,7 @@ export default function ReverseCalcPage() {
       shipCharge,
       targetProfit,
       targetMarginPct,
-    ]
+    ],
   );
 
   const handleCopyBreakdownCsv = async () => {
@@ -764,6 +856,7 @@ export default function ReverseCalcPage() {
     link.click();
     document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(url), 0);
+    setCopiedBreakdown(false);
   };
 
   // --- State tax helper ---
@@ -787,9 +880,12 @@ export default function ReverseCalcPage() {
       </React.Suspense>
 
       <header className="mb-6">
-        <h1 className="text-3xl font-semibold tracking-tight">Reverse calculator</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Reverse calculator
+        </h1>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Set a target profit <i>or</i> margin — we’ll suggest the listing price.
+          Set a target profit <i>or</i> margin — we’ll suggest the listing
+          price.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <SolvingForPill
@@ -798,15 +894,27 @@ export default function ReverseCalcPage() {
           />
 
           {copied ? (
-            <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
+            <span
+              className={PILL_CLASS}
+              aria-live="polite"
+              suppressHydrationWarning
+            >
               {copiedMsg}
             </span>
           ) : (
             <>
-              <button type="button" onClick={handleCopyLink} className={PILL_CLASS}>
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className={PILL_CLASS}
+              >
                 Copy share link
               </button>
-              <button type="button" onClick={handleSaveAndCopyLink} className={PILL_CLASS}>
+              <button
+                type="button"
+                onClick={handleSaveAndCopyLink}
+                className={PILL_CLASS}
+              >
                 Save & copy link
               </button>
               <button
@@ -827,7 +935,9 @@ export default function ReverseCalcPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {/* Platform */}
           <label className="block">
-            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">Platform</span>
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">
+              Platform
+            </span>
             <select
               className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
               value={platform}
@@ -838,7 +948,7 @@ export default function ReverseCalcPage() {
             >
               {PLATFORMS.map((p) => (
                 <option key={p} value={p} className="bg-black text-white">
-                  {p[0].toUpperCase() + p.slice(1)}
+                  {PLATFORM_LABELS[p]}
                 </option>
               ))}
             </select>
@@ -879,7 +989,9 @@ export default function ReverseCalcPage() {
 
           {/* COGS */}
           <label className="block">
-            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">COGS ($)</span>
+            <span className="mb-1 block text-sm text-gray-600 dark:text-gray-300">
+              COGS ($)
+            </span>
             <input
               type="number"
               inputMode="decimal"
@@ -959,9 +1071,15 @@ export default function ReverseCalcPage() {
             >
               <option value="">— Select state —</option>
               {STATE_RATES.map((s) => (
-                <option key={s.code} value={s.code} className="bg-black text-white">
+                <option
+                  key={s.code}
+                  value={s.code}
+                  className="bg-black text-white"
+                >
                   {s.code} — base {formatPct(s.basePct)}
-                  {s.minCombinedPct ? ` (min combined ${formatPct(s.minCombinedPct)})` : ''}
+                  {s.minCombinedPct
+                    ? ` (min combined ${formatPct(s.minCombinedPct)})`
+                    : ''}
                 </option>
               ))}
             </select>
@@ -980,7 +1098,8 @@ export default function ReverseCalcPage() {
               onChange={(e) => setTaxPct(e.target.value)}
             />
             <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
-              Reference only — doesn’t change profit/fees (affects Buyer total).
+              Reference only — doesn’t change profit/fees (affects Buyer
+              total).
             </span>
           </label>
         </div>
@@ -1031,7 +1150,11 @@ export default function ReverseCalcPage() {
 
           {/* Copy buttons */}
           {copiedPrice ? (
-            <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
+            <span
+              className={PILL_CLASS}
+              aria-live="polite"
+              suppressHydrationWarning
+            >
               Price copied!
             </span>
           ) : (
@@ -1045,7 +1168,11 @@ export default function ReverseCalcPage() {
             </button>
           )}
           {copiedBreakdown ? (
-            <span className={PILL_CLASS} aria-live="polite" suppressHydrationWarning>
+            <span
+              className={PILL_CLASS}
+              aria-live="polite"
+              suppressHydrationWarning
+            >
               Breakdown copied!
             </span>
           ) : (
@@ -1072,15 +1199,25 @@ export default function ReverseCalcPage() {
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">Estimated profit</div>
-            <div className="mt-2 text-xl font-semibold" suppressHydrationWarning>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Estimated profit
+            </div>
+            <div
+              className="mt-2 text-xl font-semibold"
+              suppressHydrationWarning
+            >
               ${formatMoney(result.profit)}
             </div>
           </div>
 
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">Estimated margin</div>
-            <div className="mt-2 text-xl font-semibold" suppressHydrationWarning>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Estimated margin
+            </div>
+            <div
+              className="mt-2 text-xl font-semibold"
+              suppressHydrationWarning
+            >
               {result.marginPct.toFixed(1)}%
             </div>
           </div>
@@ -1098,7 +1235,10 @@ export default function ReverseCalcPage() {
             <div className="text-sm text-gray-500 dark:text-gray-400">
               Buyer total {includeTax ? '(w/ tax)' : '(no tax)'}
             </div>
-            <div className="mt-2 font-semibold" suppressHydrationWarning>
+            <div
+              className="mt-2 font-semibold"
+              suppressHydrationWarning
+            >
               ${formatMoney(buyerTotalWithTax)}
             </div>
             {includeTax ? (
@@ -1112,25 +1252,33 @@ export default function ReverseCalcPage() {
           </div>
 
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">Marketplace fee</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Marketplace fee
+            </div>
             <div className="mt-2" suppressHydrationWarning>
               ${formatMoney(result.marketplaceFee)}
             </div>
           </div>
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">Payment fee</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Payment fee
+            </div>
             <div className="mt-2" suppressHydrationWarning>
               ${formatMoney(result.paymentFee)}
             </div>
           </div>
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">Listing fee</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Listing fee
+            </div>
             <div className="mt-2" suppressHydrationWarning>
               ${formatMoney(result.listingFee)}
             </div>
           </div>
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">Total fees</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Total fees
+            </div>
             <div className="mt-2" suppressHydrationWarning>
               ${formatMoney(result.totalFees)}
             </div>
@@ -1138,15 +1286,15 @@ export default function ReverseCalcPage() {
         </div>
 
         <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-          Sales tax is usually collected from the buyer and remitted (not profit). Toggle “Include
-          tax” to change buyer total only.
+          Sales tax is usually collected from the buyer and remitted (not
+          profit). Toggle “Include tax” to change buyer total only.
         </p>
       </section>
 
       <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-        California note: the dropdown shows base and a commonly-cited minimum combined reference
-        (7.25%). Use the exact local rate for the item’s destination in the “Sales tax (%)” field if
-        needed.
+        California note: the dropdown shows base and a commonly-cited minimum
+        combined reference (7.25%). Use the exact local rate for the item’s
+        destination in the “Sales tax (%)” field if needed.
       </p>
     </main>
   );
