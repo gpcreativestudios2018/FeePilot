@@ -241,6 +241,82 @@ export default function ComparisonTableSection({
           Values are estimates based on current inputs.
         </div>
       </div>
+
+      {/* Visual profit comparison chart */}
+      {mounted && inputs.price > 0 && (
+        <div className="mt-6">
+          <h3 className={cx('mb-3 text-sm font-medium', headText)}>
+            Profit Comparison
+          </h3>
+          <div className="space-y-2">
+            {(() => {
+              // Sort by profit descending for the chart
+              const sorted = [...comparison].sort((a, b) => b.profit - a.profit);
+              const maxProfitValue = Math.max(...sorted.map((r) => Math.abs(r.profit)));
+              const hasNegative = sorted.some((r) => r.profit < 0);
+
+              return sorted.map((row) => {
+                const isBest = hasBest && bestPlatforms.has(row.platform);
+                const barWidth = maxProfitValue > 0
+                  ? Math.abs(row.profit) / maxProfitValue * 100
+                  : 0;
+                const isNegative = row.profit < 0;
+
+                return (
+                  <div key={row.platform} className="flex items-center gap-3">
+                    <div className={cx('w-20 shrink-0 text-xs', bodyText)}>
+                      {row.platform.charAt(0).toUpperCase() + row.platform.slice(1)}
+                    </div>
+                    <div className="flex-1 relative">
+                      <div
+                        className={cx(
+                          'h-6 rounded transition-all duration-300',
+                          isNegative
+                            ? 'bg-red-500/80'
+                            : isBest
+                            ? isLight
+                              ? 'bg-emerald-500'
+                              : 'bg-emerald-400'
+                            : isLight
+                            ? 'bg-purple-400'
+                            : 'bg-purple-500/70'
+                        )}
+                        style={{ width: `${Math.max(barWidth, 2)}%` }}
+                      />
+                      {/* Show "Best" badge on winning bar */}
+                      {isBest && barWidth > 20 && (
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-white">
+                          Best
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      className={cx(
+                        'w-16 shrink-0 text-right text-xs font-medium',
+                        isNegative
+                          ? 'text-red-500'
+                          : isBest
+                          ? isLight
+                            ? 'text-emerald-700'
+                            : 'text-emerald-300'
+                          : bodyText
+                      )}
+                      suppressHydrationWarning
+                    >
+                      {formatMoneyWithParens(row.profit)}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+          {comparison.some((r) => r.profit < 0) && (
+            <p className={cx('mt-2 text-xs', subtle)}>
+              Red bars indicate a loss at current price.
+            </p>
+          )}
+        </div>
+      )}
     </section>
   );
 }
