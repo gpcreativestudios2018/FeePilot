@@ -4,7 +4,7 @@
 
 **Started:** January 14, 2025  
 **Last Updated:** January 14, 2025  
-**Progress:** 16 / 87 tasks complete
+**Progress:** 23 / 87 tasks complete
 
 ---
 
@@ -19,8 +19,8 @@
 - [x] Research and verify Mercari fees (current 2025 rates) ✅ 2025-01-14
 - [x] Research and verify StockX fees (seller level tiers 1-4) ✅ 2025-01-14
 - [x] Add official source links for each platform's fee page ✅ 2025-01-14
-- [ ] Update `RULES_UPDATED_AT` with accurate date
-- [ ] Remove "example" comments from fees.ts
+- [x] Update `RULES_UPDATED_AT` with accurate date ✅ 2025-01-14
+- [x] Remove "example" comments from fees.ts ✅ 2025-01-14
 - [ ] Add fee update verification process documentation
 
 ### 1.2 Tiered/Complex Fee Logic
@@ -28,7 +28,7 @@
 - [x] Implement eBay category-specific fees ✅ 2025-01-14
 - [x] Implement StockX seller level tiers ✅ 2025-01-14
 - [x] Implement Etsy offsite ads fee (12-15% when applicable) ✅ 2025-01-14
-- [ ] Add promoted listings fee option (eBay, Etsy)
+- [x] Add promoted listings fee option (eBay, Etsy) ✅ 2025-01-14
 - [ ] Add payment processing variations by platform
 
 ### 1.3 Code Refactoring
@@ -67,17 +67,17 @@
 - [x] Add shipping cost input to profit calculation ✅ 2025-01-14
 - [x] Add profit indicator colors (green/yellow/red based on margin) ✅ 2025-01-14
 - [x] Highlight best platform in comparison table ✅ 2025-01-14
-- [ ] Add visual fee comparison chart (bar chart)
+- [x] Add visual fee comparison chart (bar chart) ✅ 2025-01-14
 - [ ] Improve mobile touch targets and spacing
 - [ ] Add empty state messages with helpful prompts
-- [ ] Add friendly error messages ("Negative profit? Try raising your price!")
+- [x] Add friendly error messages ("Negative profit? Try raising your price!") ✅ 2025-01-14
 - [ ] Add keyboard shortcuts (Tab navigation, Enter to calculate)
 - [ ] Add calculation animations/transitions
 
 ### 2.3 Trust & Transparency
-- [ ] Add "How we calculate" section with formulas shown
+- [x] Add "How we calculate" section with formulas shown ✅ 2025-01-14
 - [ ] Add expandable breakdown for each fee type
-- [ ] Add "Last verified" dates per platform
+- [x] Add "Last verified" dates per platform ✅ 2025-01-14
 - [x] Add tooltips explaining each input field ✅ 2025-01-14
 - [ ] Add FAQ section
 - [ ] Add calculator accuracy guarantee statement
