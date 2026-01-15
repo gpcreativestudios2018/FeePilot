@@ -62,8 +62,14 @@ function calcFor(rule: FeeRule, inputs: Inputs, offsiteAdsEnabled = false) {
   const discounted = clamp(inputs.price * (1 - pct(inputs.discountPct)));
   const base = discounted + inputs.shipCharge;
 
-  const marketplaceFee =
-    clamp(base * pct(rule.marketplacePct ?? 0)) + (rule.marketplaceFixed ?? 0);
+  // Handle tiered fees (e.g., Poshmark: flat $2.95 under $15, 20% for $15+)
+  const hasTieredFee =
+    rule.flatFeeThreshold !== undefined && rule.flatFee !== undefined;
+  const useFlatFee = hasTieredFee && discounted < (rule.flatFeeThreshold ?? 0);
+
+  const marketplaceFee = useFlatFee
+    ? rule.flatFee ?? 0
+    : clamp(base * pct(rule.marketplacePct ?? 0)) + (rule.marketplaceFixed ?? 0);
   const paymentFee =
     clamp(base * pct(rule.paymentPct ?? 0)) + (rule.paymentFixed ?? 0);
   const listingFee = getListingFixed(rule);

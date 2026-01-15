@@ -48,6 +48,10 @@ export type FeeRule = {
   offsiteAdsPct?: number;
   /** Official source URL for fee information */
   sourceUrl?: string;
+  /** Price threshold for tiered fees (e.g., Poshmark $15 threshold) */
+  flatFeeThreshold?: number;
+  /** Flat fee used when price is below threshold */
+  flatFee?: number;
 };
 
 export const RULES: Record<PlatformKey, FeeRule> = {
@@ -91,8 +95,10 @@ export const RULES: Record<PlatformKey, FeeRule> = {
   },
   poshmark: {
     // Source: https://poshmark.com/posh_protect
-    // Note: Flat $2.95 fee for sales under $15, 20% for $15+
+    // Tiered: flat $2.95 under $15, 20% for $15+
     marketplacePct: 20,
+    flatFeeThreshold: 15,
+    flatFee: 2.95,
     paymentPct: 0,
     paymentFixed: 0,
     sourceUrl: 'https://poshmark.com/posh_protect',
