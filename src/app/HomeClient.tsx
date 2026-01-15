@@ -15,6 +15,7 @@ import {
   PLATFORM_LABELS,
   type PlatformKey,
   type FeeRule,
+  type EbayCategoryKey,
 } from '@/data/fees';
 
 import { cx, formatMoneyWithParens } from '../lib/format';
@@ -58,7 +59,13 @@ const getListingFixed = (rule: FeeRule): number => {
   return anyRule.listingFixed ?? 0;
 };
 
-function calcFor(rule: FeeRule, inputs: Inputs, offsiteAdsEnabled = false) {
+type CalcOptions = {
+  offsiteAdsEnabled?: boolean;
+  ebayCategory?: EbayCategoryKey;
+};
+
+function calcFor(rule: FeeRule, inputs: Inputs, options: CalcOptions = {}) {
+  const { offsiteAdsEnabled = false, ebayCategory } = options;
   const discounted = clamp(inputs.price * (1 - pct(inputs.discountPct)));
   const base = discounted + inputs.shipCharge;
 
@@ -67,9 +74,15 @@ function calcFor(rule: FeeRule, inputs: Inputs, offsiteAdsEnabled = false) {
     rule.flatFeeThreshold !== undefined && rule.flatFee !== undefined;
   const useFlatFee = hasTieredFee && discounted < (rule.flatFeeThreshold ?? 0);
 
+  // Get marketplace percentage (use eBay category if available)
+  let marketplacePct = rule.marketplacePct ?? 0;
+  if (ebayCategory && rule.categories) {
+    marketplacePct = rule.categories[ebayCategory]?.marketplacePct ?? marketplacePct;
+  }
+
   const marketplaceFee = useFlatFee
     ? rule.flatFee ?? 0
-    : clamp(base * pct(rule.marketplacePct ?? 0)) + (rule.marketplaceFixed ?? 0);
+    : clamp(base * pct(marketplacePct)) + (rule.marketplaceFixed ?? 0);
   const paymentFee =
     clamp(base * pct(rule.paymentPct ?? 0)) + (rule.paymentFixed ?? 0);
   const listingFee = getListingFixed(rule);
@@ -419,6 +432,9 @@ export default function HomeClient() {
   // Etsy-specific: offsite ads toggle (not persisted in Inputs for simplicity)
   const [etsyOffsiteAds, setEtsyOffsiteAds] = useState(false);
 
+  // eBay-specific: category selection
+  const [ebayCategory, setEbayCategory] = useState<EbayCategoryKey>('most');
+
   // Theme with synchronous init, too
   const [isLight, setIsLight] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -479,20 +495,26 @@ export default function HomeClient() {
   };
 
   const rule = RULES[inputs.platform];
-  // Pass offsite ads toggle only for Etsy
-  const shouldApplyOffsiteAds = inputs.platform === 'etsy' && etsyOffsiteAds;
+  // Build calculation options for current platform
+  const calcOptions: CalcOptions = {
+    offsiteAdsEnabled: inputs.platform === 'etsy' && etsyOffsiteAds,
+    ebayCategory: inputs.platform === 'ebay' ? ebayCategory : undefined,
+  };
   const current = useMemo(
-    () => calcFor(rule, inputs, shouldApplyOffsiteAds),
-    [rule, inputs, shouldApplyOffsiteAds],
+    () => calcFor(rule, inputs, calcOptions),
+    [rule, inputs, calcOptions.offsiteAdsEnabled, calcOptions.ebayCategory],
   );
 
   // derive the comparison rows once so we can reference .length for analytics
   const tableComparison = useMemo(() => {
     return PLATFORMS.map((p) => {
       const r = RULES[p];
-      // Apply offsite ads only to Etsy row when toggle is on
-      const applyAds = p === 'etsy' && etsyOffsiteAds;
-      const c = calcFor(r, inputs, applyAds);
+      // Apply platform-specific options
+      const opts: CalcOptions = {
+        offsiteAdsEnabled: p === 'etsy' && etsyOffsiteAds,
+        ebayCategory: p === 'ebay' ? ebayCategory : undefined,
+      };
+      const c = calcFor(r, inputs, opts);
       return {
         platform: p,
         profit: c.profit,
@@ -504,7 +526,7 @@ export default function HomeClient() {
         totalFees: c.totalFees,
       };
     });
-  }, [inputs, etsyOffsiteAds]);
+  }, [inputs, etsyOffsiteAds, ebayCategory]);
 
   // theme helpers
   const pageBgText = isLight ? 'bg-white text-black' : 'bg-black text-white';
@@ -742,6 +764,28 @@ export default function HomeClient() {
                   />
                   <span>Offsite Ads applied (15%)</span>
                 </label>
+              )}
+              {/* eBay-specific category dropdown */}
+              {inputs.platform === 'ebay' && RULES.ebay.categories && (
+                <div className="mt-3">
+                  <label className={cx('mb-1 block text-xs', subtleText)}>
+                    Category
+                  </label>
+                  <select
+                    className={cx(
+                      'w-full rounded-lg border bg-transparent px-2 py-1.5 text-sm outline-none',
+                      controlBorder,
+                    )}
+                    value={ebayCategory}
+                    onChange={(e) => setEbayCategory(e.target.value as EbayCategoryKey)}
+                  >
+                    {Object.entries(RULES.ebay.categories).map(([key, cat]) => (
+                      <option key={key} value={key} className={selectOption}>
+                        {cat.name} ({cat.marketplacePct}%)
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
             </div>
 

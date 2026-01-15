@@ -33,6 +33,15 @@ export const PLATFORM_LABELS: Record<PlatformKey, string> = {
   poshmark: 'Poshmark',
 };
 
+/** eBay category keys */
+export type EbayCategoryKey = 'most' | 'clothing' | 'sneakers' | 'electronics' | 'books';
+
+/** eBay category config */
+export type EbayCategory = {
+  name: string;
+  marketplacePct: number;
+};
+
 export type FeeRule = {
   /** % of (discounted price + shipping charged to buyer) */
   marketplacePct?: number;
@@ -52,6 +61,10 @@ export type FeeRule = {
   flatFeeThreshold?: number;
   /** Flat fee used when price is below threshold */
   flatFee?: number;
+  /** eBay category-specific fees */
+  categories?: Record<EbayCategoryKey, EbayCategory>;
+  /** Default category key */
+  defaultCategory?: EbayCategoryKey;
 };
 
 export const RULES: Record<PlatformKey, FeeRule> = {
@@ -74,7 +87,15 @@ export const RULES: Record<PlatformKey, FeeRule> = {
   },
   ebay: {
     // Source: https://www.ebay.com/sellercenter/selling/selling-fees
-    marketplacePct: 13.25,
+    categories: {
+      most: { name: 'Most categories', marketplacePct: 13.25 },
+      clothing: { name: 'Clothing & Accessories', marketplacePct: 12.9 },
+      sneakers: { name: 'Sneakers (authenticated)', marketplacePct: 8.0 },
+      electronics: { name: 'Electronics', marketplacePct: 14.6 },
+      books: { name: 'Books & Media', marketplacePct: 14.6 },
+    },
+    defaultCategory: 'most',
+    marketplacePct: 13.25, // fallback for comparison table
     paymentPct: 0,
     paymentFixed: 0.3,
     sourceUrl: 'https://www.ebay.com/sellercenter/selling/selling-fees',
