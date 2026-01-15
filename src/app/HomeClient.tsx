@@ -272,6 +272,12 @@ type ScenarioPreset = {
   apply: (platform: PlatformKey, previous: Inputs) => Partial<Inputs>;
 };
 
+// Common input styles for mobile-friendly touch targets
+const inputClasses = 'w-full rounded-xl border bg-transparent px-4 py-3 text-base outline-none min-h-[48px]';
+const selectClasses = 'w-full rounded-xl border bg-transparent px-4 py-3 text-base outline-none min-h-[48px]';
+const smallSelectClasses = 'w-full rounded-lg border bg-transparent px-3 py-2.5 text-base outline-none min-h-[44px]';
+const checkboxLabelClasses = 'flex cursor-pointer items-center gap-3 text-base py-2 min-h-[44px]';
+
 const SCENARIO_PRESETS: ScenarioPreset[] = [
   {
     id: 'low-flip',
@@ -647,9 +653,9 @@ export default function HomeClient() {
   const panelBorder = isLight ? 'border-purple-800/70' : 'border-purple-600/40';
   const controlBorder = isLight ? 'border-purple-800/70' : 'border-purple-600/50';
 
-  // unified pill style (kept in each component where needed)
+  // unified pill style (kept in each component where needed) - min 44px height for touch targets
   const pillButton = cx(
-    'rounded-full px-4 py-2 text-base select-none border',
+    'rounded-full px-4 py-2.5 text-base select-none border min-h-[44px] inline-flex items-center justify-center',
     isLight
       ? 'border-purple-800/70 text-black hover:bg-purple-50'
       : 'border-purple-600/50 text-white hover:bg-white/5',
@@ -788,20 +794,20 @@ export default function HomeClient() {
         </section>
 
         {/* Inputs */}
-        <section className={cx('rounded-2xl border p-4 sm:p-6', panelBorder)}>
+        <section className={cx('rounded-2xl border p-5 sm:p-6', panelBorder)}>
           {/* Scenario presets row */}
-          <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
-            <p className={cx('text-xs sm:text-sm', subtleText)}>
+          <div className="mb-5 flex flex-wrap items-center gap-3">
+            <p className={cx('text-sm sm:text-sm', subtleText)}>
               Try a quick scenario to see real numbers:
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2.5">
               {SCENARIO_PRESETS.map((preset) => (
                 <button
                   key={preset.id}
                   type="button"
                   className={cx(
                     pillButton,
-                    'px-3 py-1 text-xs sm:text-sm',
+                    'px-4 py-2 text-sm',
                     'border-dashed',
                   )}
                   title={preset.description}
@@ -818,7 +824,7 @@ export default function HomeClient() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:gap-4 sm:grid-cols-3">
             <div>
               <label
                 className={cx(
@@ -849,7 +855,7 @@ export default function HomeClient() {
               </label>
               <select
                 className={cx(
-                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  selectClasses,
                   controlBorder,
                 )}
                 value={inputs.platform}
@@ -864,14 +870,15 @@ export default function HomeClient() {
                 ))}
               </select>
               {/* Keyboard shortcuts hint */}
-              <p className={cx('mt-1 text-[10px]', subtleText, 'opacity-60')}>
+              <p className={cx('mt-2 text-xs', subtleText, 'opacity-60')}>
                 Press 1-6 to switch platforms • Esc to reset
               </p>
               {/* Etsy-specific offsite ads toggle */}
               {inputs.platform === 'etsy' && (
                 <label
                   className={cx(
-                    'mt-3 flex cursor-pointer items-center gap-2 text-sm',
+                    checkboxLabelClasses,
+                    'mt-3',
                     subtleText,
                   )}
                 >
@@ -879,20 +886,20 @@ export default function HomeClient() {
                     type="checkbox"
                     checked={etsyOffsiteAds}
                     onChange={(e) => setEtsyOffsiteAds(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-400 accent-purple-500"
+                    className="h-5 w-5 rounded border-gray-400 accent-purple-500"
                   />
                   <span>Offsite Ads applied (15%)</span>
                 </label>
               )}
               {/* eBay-specific category dropdown */}
               {inputs.platform === 'ebay' && RULES.ebay.categories && (
-                <div className="mt-3">
-                  <label className={cx('mb-1 block text-xs', subtleText)}>
+                <div className="mt-4">
+                  <label className={cx('mb-2 block text-sm', subtleText)}>
                     Category
                   </label>
                   <select
                     className={cx(
-                      'w-full rounded-lg border bg-transparent px-2 py-1.5 text-sm outline-none',
+                      smallSelectClasses,
                       controlBorder,
                     )}
                     value={ebayCategory}
@@ -908,13 +915,13 @@ export default function HomeClient() {
               )}
               {/* StockX-specific seller level dropdown */}
               {inputs.platform === 'stockx' && RULES.stockx.levels && (
-                <div className="mt-3">
-                  <label className={cx('mb-1 block text-xs', subtleText)}>
+                <div className="mt-4">
+                  <label className={cx('mb-2 block text-sm', subtleText)}>
                     Seller Level
                   </label>
                   <select
                     className={cx(
-                      'w-full rounded-lg border bg-transparent px-2 py-1.5 text-sm outline-none',
+                      smallSelectClasses,
                       controlBorder,
                     )}
                     value={stockxLevel}
@@ -930,10 +937,10 @@ export default function HomeClient() {
               )}
               {/* Promoted listing toggle (eBay and Etsy) */}
               {(inputs.platform === 'ebay' || inputs.platform === 'etsy') && (
-                <div className="mt-3">
+                <div className="mt-4">
                   <label
                     className={cx(
-                      'flex cursor-pointer items-center gap-2 text-sm',
+                      checkboxLabelClasses,
                       subtleText,
                     )}
                   >
@@ -948,13 +955,13 @@ export default function HomeClient() {
                           setPromotedPct(defaultPct);
                         }
                       }}
-                      className="h-4 w-4 rounded border-gray-400 accent-purple-500"
+                      className="h-5 w-5 rounded border-gray-400 accent-purple-500"
                     />
                     <span>Promoted listing</span>
                   </label>
                   {promotedEnabled && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <label className={cx('text-xs', subtleText)}>Ad rate:</label>
+                    <div className="mt-3 flex items-center gap-3">
+                      <label className={cx('text-sm', subtleText)}>Ad rate:</label>
                       <input
                         type="number"
                         step="0.1"
@@ -962,7 +969,7 @@ export default function HomeClient() {
                         max="100"
                         inputMode="decimal"
                         className={cx(
-                          'w-20 rounded-lg border bg-transparent px-2 py-1 text-sm outline-none',
+                          'w-24 rounded-lg border bg-transparent px-3 py-2.5 text-base outline-none min-h-[44px]',
                           controlBorder,
                         )}
                         value={promotedPct}
@@ -970,7 +977,7 @@ export default function HomeClient() {
                           setPromotedPct(clamp(parseNum(e.target.value), 0, 100))
                         }
                       />
-                      <span className={cx('text-xs', subtleText)}>%</span>
+                      <span className={cx('text-sm', subtleText)}>%</span>
                     </div>
                   )}
                 </div>
@@ -990,7 +997,7 @@ export default function HomeClient() {
                 step="any"
                 inputMode="decimal"
                 className={cx(
-                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  inputClasses,
                   controlBorder,
                 )}
                 value={inputs.price}
@@ -1016,7 +1023,7 @@ export default function HomeClient() {
                 step="any"
                 inputMode="decimal"
                 className={cx(
-                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  inputClasses,
                   controlBorder,
                 )}
                 value={inputs.cogs}
@@ -1042,7 +1049,7 @@ export default function HomeClient() {
                 step="any"
                 inputMode="decimal"
                 className={cx(
-                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  inputClasses,
                   controlBorder,
                 )}
                 value={inputs.shipCost}
@@ -1068,7 +1075,7 @@ export default function HomeClient() {
                 step="any"
                 inputMode="decimal"
                 className={cx(
-                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  inputClasses,
                   controlBorder,
                 )}
                 value={inputs.discountPct}
@@ -1094,7 +1101,7 @@ export default function HomeClient() {
                 step="any"
                 inputMode="decimal"
                 className={cx(
-                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  inputClasses,
                   controlBorder,
                 )}
                 value={inputs.shipCharge}
@@ -1120,7 +1127,7 @@ export default function HomeClient() {
                 step="any"
                 inputMode="decimal"
                 className={cx(
-                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  inputClasses,
                   controlBorder,
                 )}
                 value={inputs.tax}
@@ -1282,12 +1289,12 @@ export default function HomeClient() {
             type="button"
             onClick={() => setShowBreakdown((v) => !v)}
             className={cx(
-              'flex w-full items-center justify-between px-5 py-4 text-left',
+              'flex w-full items-center justify-between px-5 py-4 text-left min-h-[52px]',
               subtleText,
             )}
             aria-expanded={showBreakdown}
           >
-            <span className="text-sm font-medium">How we calculate your profit</span>
+            <span className="text-base font-medium">How we calculate your profit</span>
             <span
               className={cx(
                 'transform transition-transform duration-200',
@@ -1436,15 +1443,15 @@ export default function HomeClient() {
                   type="button"
                   onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
                   className={cx(
-                    'flex w-full items-center justify-between px-5 py-4 text-left',
+                    'flex w-full items-center justify-between px-5 py-4 text-left min-h-[52px]',
                     subtleText,
                   )}
                   aria-expanded={openFaqIndex === idx}
                 >
-                  <span className="text-sm font-medium">{faq.q}</span>
+                  <span className="text-base font-medium pr-4">{faq.q}</span>
                   <span
                     className={cx(
-                      'transform transition-transform duration-200',
+                      'transform transition-transform duration-200 shrink-0',
                       openFaqIndex === idx && 'rotate-180',
                     )}
                   >
@@ -1452,8 +1459,8 @@ export default function HomeClient() {
                   </span>
                 </button>
                 {openFaqIndex === idx && (
-                  <div className={cx('border-t px-5 pb-4 pt-3', panelBorder)}>
-                    <p className={cx('text-sm', subtleText)}>{faq.a}</p>
+                  <div className={cx('border-t px-5 pb-5 pt-4', panelBorder)}>
+                    <p className={cx('text-base leading-relaxed', subtleText)}>{faq.a}</p>
                   </div>
                 )}
               </div>
