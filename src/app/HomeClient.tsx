@@ -1181,22 +1181,34 @@ export default function HomeClient() {
           )}
         </div>
 
-        {/* Official source link */}
-        {rule.sourceUrl && (
-          <div className="mt-4 text-center">
-            <a
-              href={rule.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cx(
-                'inline-flex items-center gap-1 text-xs',
-                isLight
-                  ? 'text-gray-500 hover:text-purple-700'
-                  : 'text-gray-400 hover:text-purple-300',
-              )}
-            >
-              View official {PLATFORM_LABELS[inputs.platform]} fees →
-            </a>
+        {/* Official source link and verification date */}
+        {(rule.sourceUrl || rule.lastVerified) && (
+          <div className="mt-4 flex flex-col items-center gap-1 text-center">
+            {rule.lastVerified && (
+              <p className={cx('text-xs', subtleText)}>
+                Fees verified:{' '}
+                {new Date(rule.lastVerified + 'T00:00:00').toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </p>
+            )}
+            {rule.sourceUrl && (
+              <a
+                href={rule.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cx(
+                  'inline-flex items-center gap-1 text-xs',
+                  isLight
+                    ? 'text-gray-500 hover:text-purple-700'
+                    : 'text-gray-400 hover:text-purple-300',
+                )}
+              >
+                View official {PLATFORM_LABELS[inputs.platform]} fees →
+              </a>
+            )}
           </div>
         )}
 
