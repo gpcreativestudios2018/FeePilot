@@ -4,7 +4,7 @@
 
 **Started:** January 14, 2025  
 **Last Updated:** January 14, 2025  
-**Progress:** 11 / 87 tasks complete
+**Progress:** 13 / 87 tasks complete
 
 ---
 
@@ -63,6 +63,8 @@
 - [ ] Shipping cost estimator integration
 
 ### 2.2 Visual & UX Improvements
+- [x] Add item cost input with profit after fees vs net profit display ✅ 2025-01-14
+- [x] Add shipping cost input to profit calculation ✅ 2025-01-14
 - [ ] Add profit indicator colors (green/yellow/red based on margin)
 - [ ] Highlight best platform in comparison table
 - [ ] Add visual fee comparison chart (bar chart)

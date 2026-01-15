@@ -95,15 +95,16 @@ function calcFor(rule: FeeRule, inputs: Inputs, options: CalcOptions = {}) {
 
   const totalFees = marketplaceFee + paymentFee + listingFee + offsiteAdsFee;
 
-  const net =
+  // Profit after fees only (before item cost)
+  const profitAfterFees =
     discounted +
     inputs.shipCharge -
     totalFees -
     inputs.shipCost -
-    inputs.cogs -
     inputs.tax;
 
-  const profit = net;
+  // Net profit (after item cost)
+  const profit = profitAfterFees - inputs.cogs;
   const marginPct = discounted > 0 ? (profit / discounted) * 100 : 0;
 
   return {
@@ -113,7 +114,8 @@ function calcFor(rule: FeeRule, inputs: Inputs, options: CalcOptions = {}) {
     listingFee,
     offsiteAdsFee,
     totalFees,
-    net,
+    net: profit, // keep 'net' as alias for backward compatibility
+    profitAfterFees,
     profit,
     marginPct,
   };
@@ -124,7 +126,7 @@ function makeDefaults(): Inputs {
     platform: PLATFORMS[0] ?? ('mercari' as PlatformKey),
     price: 100,
     shipCharge: 0,
-    shipCost: 10,
+    shipCost: 0,
     cogs: 40,
     discountPct: 0,
     tax: 0,
@@ -848,6 +850,56 @@ export default function HomeClient() {
 
             <div>
               <label className={cx('mb-2 block text-sm', subtleText)}>
+                Item cost ($)
+                <span className="mt-1 block text-xs opacity-70">
+                  What you paid for the item (inventory cost).
+                </span>
+              </label>
+              <input
+                type="number"
+                step="any"
+                inputMode="decimal"
+                className={cx(
+                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  controlBorder,
+                )}
+                value={inputs.cogs}
+                onChange={(e) =>
+                  setInputs((s) => ({
+                    ...s,
+                    cogs: clamp(parseNum(e.target.value), 0),
+                  }))
+                }
+              />
+            </div>
+
+            <div>
+              <label className={cx('mb-2 block text-sm', subtleText)}>
+                Shipping cost ($)
+                <span className="mt-1 block text-xs opacity-70">
+                  Your actual shipping expense (labels, postage, etc.).
+                </span>
+              </label>
+              <input
+                type="number"
+                step="any"
+                inputMode="decimal"
+                className={cx(
+                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
+                  controlBorder,
+                )}
+                value={inputs.shipCost}
+                onChange={(e) =>
+                  setInputs((s) => ({
+                    ...s,
+                    shipCost: clamp(parseNum(e.target.value), 0),
+                  }))
+                }
+              />
+            </div>
+
+            <div>
+              <label className={cx('mb-2 block text-sm', subtleText)}>
                 Discount (%)
                 <span className="mt-1 block text-xs opacity-70">
                   Percent off the original price (offers, promos, coupons).
@@ -891,56 +943,6 @@ export default function HomeClient() {
                   setInputs((s) => ({
                     ...s,
                     shipCharge: clamp(parseNum(e.target.value), 0),
-                  }))
-                }
-              />
-            </div>
-
-            <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>
-                Your shipping cost ($)
-                <span className="mt-1 block text-xs opacity-70">
-                  Your actual shipping expense (labels, postage, etc.).
-                </span>
-              </label>
-              <input
-                type="number"
-                step="any"
-                inputMode="decimal"
-                className={cx(
-                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
-                  controlBorder,
-                )}
-                value={inputs.shipCost}
-                onChange={(e) =>
-                  setInputs((s) => ({
-                    ...s,
-                    shipCost: clamp(parseNum(e.target.value), 0),
-                  }))
-                }
-              />
-            </div>
-
-            <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>
-                COGS ($)
-                <span className="mt-1 block text-xs opacity-70">
-                  What you paid for the item (inventory cost).
-                </span>
-              </label>
-              <input
-                type="number"
-                step="any"
-                inputMode="decimal"
-                className={cx(
-                  'w-full rounded-xl border bg-transparent px-3 py-2 outline-none',
-                  controlBorder,
-                )}
-                value={inputs.cogs}
-                onChange={(e) =>
-                  setInputs((s) => ({
-                    ...s,
-                    cogs: clamp(parseNum(e.target.value), 0),
                   }))
                 }
               />
@@ -1011,18 +1013,11 @@ export default function HomeClient() {
           </div>
 
           <div className={cx('rounded-2xl border p-5', panelBorder)}>
-            <div className={cx('text-sm', subtleText)}>Estimated payout</div>
-            <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
-              {formatMoneyWithParens(current.net)}
-            </div>
-          </div>
-
-          <div className={cx('rounded-2xl border p-5', panelBorder)}>
-            <div className={cx('text-sm', subtleText)}>Profit</div>
+            <div className={cx('text-sm', subtleText)}>Profit after fees</div>
             <div
               className={cx(
                 'mt-2 text-3xl font-semibold',
-                current.profit < 0
+                current.profitAfterFees < 0
                   ? 'text-red-500'
                   : isLight
                   ? 'text-emerald-700'
@@ -1030,9 +1025,28 @@ export default function HomeClient() {
               )}
               suppressHydrationWarning
             >
-              {formatMoneyWithParens(current.profit)}
+              {formatMoneyWithParens(current.profitAfterFees)}
             </div>
           </div>
+
+          {inputs.cogs > 0 && (
+            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+              <div className={cx('text-sm', subtleText)}>Net profit (after cost)</div>
+              <div
+                className={cx(
+                  'mt-2 text-3xl font-semibold',
+                  current.profit < 0
+                    ? 'text-red-500'
+                    : isLight
+                    ? 'text-emerald-700'
+                    : 'text-emerald-300',
+                )}
+                suppressHydrationWarning
+              >
+                {formatMoneyWithParens(current.profit)}
+              </div>
+            </div>
+          )}
 
           <div className={cx('rounded-2xl border p-5', panelBorder)}>
             <div className={cx('text-sm', subtleText)}>Margin</div>
