@@ -48,33 +48,40 @@ export type FeeRule = {
 
 export const RULES: Record<PlatformKey, FeeRule> = {
   etsy: {
+    // Source: https://www.etsy.com/legal/fees/
     marketplacePct: 6.5,
-    paymentPct: 3.0, // tune these numbers to your latest reference
-    paymentFixed: 0.85,
-    listingFixed: 0.2, // Etsy has a $0.20 listing fee
+    paymentPct: 3.0,
+    paymentFixed: 0.25,
+    listingFixed: 0.2,
   },
   stockx: {
-    marketplacePct: 10, // example
+    // Source: https://stockx.com/about/selling/
+    // Note: Fees decrease with seller level (Level 4 = 8% transaction)
+    marketplacePct: 10,
     paymentPct: 3,
-    paymentFixed: 0.6,
-  },
-  ebay: {
-    marketplacePct: 12, // example
-    paymentPct: 0,
     paymentFixed: 0,
   },
+  ebay: {
+    // Source: https://www.ebay.com/sellercenter/selling/selling-fees
+    marketplacePct: 13.25,
+    paymentPct: 0,
+    paymentFixed: 0.3,
+  },
   depop: {
-    marketplacePct: 10, // example
-    paymentPct: 2.9,
-    paymentFixed: 0.5,
+    // Source: https://www.depop.com/sellingfees/
+    marketplacePct: 10,
+    paymentPct: 3.3,
+    paymentFixed: 0.45,
   },
   mercari: {
-    marketplacePct: 10, // example: marketplace fee
+    // Source: https://www.mercari.com/us/help_center/topics/selling/fees/
+    marketplacePct: 10,
     paymentPct: 2.9,
     paymentFixed: 0.5,
   },
   poshmark: {
-    // Poshmark often acts like flat $2.95 under $15 / 20% above; this is a simple placeholder.
+    // Source: https://poshmark.com/posh_protect
+    // Note: Flat $2.95 fee for sales under $15, 20% for $15+
     marketplacePct: 20,
     paymentPct: 0,
     paymentFixed: 0,
