@@ -157,4 +157,4 @@ export const RULES: Record<PlatformKey, FeeRule> = {
   },
 };
 
-export const RULES_UPDATED_AT = '2025-01-15';
+export const RULES_UPDATED_AT = '2025-01-14';
