@@ -489,6 +489,9 @@ export default function HomeClient() {
     return RULES.ebay.promotedPctDefault ?? 5;
   });
 
+  // "How we calculate" section expanded state
+  const [showBreakdown, setShowBreakdown] = useState(false);
+
   // Theme with synchronous init, too
   const [isLight, setIsLight] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -1211,6 +1214,115 @@ export default function HomeClient() {
             )}
           </div>
         )}
+
+        {/* How we calculate - expandable breakdown */}
+        <div className={cx('mt-6 rounded-2xl border', panelBorder)}>
+          <button
+            type="button"
+            onClick={() => setShowBreakdown((v) => !v)}
+            className={cx(
+              'flex w-full items-center justify-between px-5 py-4 text-left',
+              subtleText,
+            )}
+            aria-expanded={showBreakdown}
+          >
+            <span className="text-sm font-medium">How we calculate your profit</span>
+            <span
+              className={cx(
+                'transform transition-transform duration-200',
+                showBreakdown && 'rotate-180',
+              )}
+            >
+              ▼
+            </span>
+          </button>
+          {showBreakdown && (
+            <div className={cx('border-t px-5 pb-5 pt-4', panelBorder)}>
+              <div className="space-y-2 font-mono text-sm">
+                {/* Sale Price */}
+                <div className="flex justify-between">
+                  <span className={subtleText}>Sale Price</span>
+                  <span>{formatMoneyWithParens(current.discounted)}</span>
+                </div>
+                {inputs.shipCharge > 0 && (
+                  <div className="flex justify-between">
+                    <span className={subtleText}>+ Shipping charged to buyer</span>
+                    <span>{formatMoneyWithParens(inputs.shipCharge)}</span>
+                  </div>
+                )}
+                <div className={cx('border-t pt-2', panelBorder)} />
+
+                {/* Fees breakdown */}
+                <div className="flex justify-between text-red-500">
+                  <span>
+                    − Marketplace Fee
+                    {rule.marketplacePct && ` (${rule.marketplacePct}%)`}
+                  </span>
+                  <span>−{formatMoneyWithParens(current.marketplaceFee)}</span>
+                </div>
+                {current.paymentFee > 0 && (
+                  <div className="flex justify-between text-red-500">
+                    <span>
+                      − Payment Fee
+                      {rule.paymentPct ? ` (${rule.paymentPct}%` : ''}
+                      {rule.paymentFixed ? ` + $${rule.paymentFixed.toFixed(2)})` : rule.paymentPct ? ')' : ''}
+                    </span>
+                    <span>−{formatMoneyWithParens(current.paymentFee)}</span>
+                  </div>
+                )}
+                {current.listingFee > 0 && (
+                  <div className="flex justify-between text-red-500">
+                    <span>− Listing Fee</span>
+                    <span>−{formatMoneyWithParens(current.listingFee)}</span>
+                  </div>
+                )}
+                {current.offsiteAdsFee > 0 && (
+                  <div className="flex justify-between text-red-500">
+                    <span>− Offsite Ads ({rule.offsiteAdsPct}%)</span>
+                    <span>−{formatMoneyWithParens(current.offsiteAdsFee)}</span>
+                  </div>
+                )}
+                {current.promotedFee > 0 && (
+                  <div className="flex justify-between text-red-500">
+                    <span>− Promoted Listing ({promotedPct}%)</span>
+                    <span>−{formatMoneyWithParens(current.promotedFee)}</span>
+                  </div>
+                )}
+
+                {/* Costs */}
+                {inputs.shipCost > 0 && (
+                  <div className="flex justify-between text-red-500">
+                    <span>− Shipping Cost</span>
+                    <span>−{formatMoneyWithParens(inputs.shipCost)}</span>
+                  </div>
+                )}
+                {inputs.tax > 0 && (
+                  <div className="flex justify-between text-red-500">
+                    <span>− Tax</span>
+                    <span>−{formatMoneyWithParens(inputs.tax)}</span>
+                  </div>
+                )}
+                {inputs.cogs > 0 && (
+                  <div className="flex justify-between text-red-500">
+                    <span>− Item Cost</span>
+                    <span>−{formatMoneyWithParens(inputs.cogs)}</span>
+                  </div>
+                )}
+
+                {/* Final profit */}
+                <div className={cx('border-t pt-2', panelBorder)} />
+                <div className={cx('flex justify-between font-semibold', getProfitColorClass(current.marginPct, isLight))}>
+                  <span>= Your Profit</span>
+                  <span>{formatMoneyWithParens(current.profit)}</span>
+                </div>
+                <div className={cx('flex justify-between text-xs', subtleText)}>
+                  <span>Margin</span>
+                  <span>{current.marginPct.toFixed(1)}%</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Comparison table */}
         <ComparisonTableSection
