@@ -44,6 +44,8 @@ export type FeeRule = {
   paymentFixed?: number;
   /** flat listing fee (per listing/order) */
   listingFixed?: number;
+  /** % offsite ads fee (Etsy-specific) */
+  offsiteAdsPct?: number;
 };
 
 export const RULES: Record<PlatformKey, FeeRule> = {
@@ -53,6 +55,7 @@ export const RULES: Record<PlatformKey, FeeRule> = {
     paymentPct: 3.0,
     paymentFixed: 0.25,
     listingFixed: 0.2,
+    offsiteAdsPct: 15, // 15% for shops under $10k/year, 12% for $10k+
   },
   stockx: {
     // Source: https://stockx.com/about/selling/

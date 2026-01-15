@@ -58,7 +58,7 @@ const getListingFixed = (rule: FeeRule): number => {
   return anyRule.listingFixed ?? 0;
 };
 
-function calcFor(rule: FeeRule, inputs: Inputs) {
+function calcFor(rule: FeeRule, inputs: Inputs, offsiteAdsEnabled = false) {
   const discounted = clamp(inputs.price * (1 - pct(inputs.discountPct)));
   const base = discounted + inputs.shipCharge;
 
@@ -67,8 +67,9 @@ function calcFor(rule: FeeRule, inputs: Inputs) {
   const paymentFee =
     clamp(base * pct(rule.paymentPct ?? 0)) + (rule.paymentFixed ?? 0);
   const listingFee = getListingFixed(rule);
+  const offsiteAdsFee = offsiteAdsEnabled ? clamp(base * pct(rule.offsiteAdsPct ?? 0)) : 0;
 
-  const totalFees = marketplaceFee + paymentFee + listingFee;
+  const totalFees = marketplaceFee + paymentFee + listingFee + offsiteAdsFee;
 
   const net =
     discounted +
@@ -86,6 +87,7 @@ function calcFor(rule: FeeRule, inputs: Inputs) {
     marketplaceFee,
     paymentFee,
     listingFee,
+    offsiteAdsFee,
     totalFees,
     net,
     profit,
@@ -408,6 +410,9 @@ export default function HomeClient() {
     }
   });
 
+  // Etsy-specific: offsite ads toggle (not persisted in Inputs for simplicity)
+  const [etsyOffsiteAds, setEtsyOffsiteAds] = useState(false);
+
   // Theme with synchronous init, too
   const [isLight, setIsLight] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -468,13 +473,20 @@ export default function HomeClient() {
   };
 
   const rule = RULES[inputs.platform];
-  const current = useMemo(() => calcFor(rule, inputs), [rule, inputs]);
+  // Pass offsite ads toggle only for Etsy
+  const shouldApplyOffsiteAds = inputs.platform === 'etsy' && etsyOffsiteAds;
+  const current = useMemo(
+    () => calcFor(rule, inputs, shouldApplyOffsiteAds),
+    [rule, inputs, shouldApplyOffsiteAds],
+  );
 
   // derive the comparison rows once so we can reference .length for analytics
   const tableComparison = useMemo(() => {
     return PLATFORMS.map((p) => {
       const r = RULES[p];
-      const c = calcFor(r, inputs);
+      // Apply offsite ads only to Etsy row when toggle is on
+      const applyAds = p === 'etsy' && etsyOffsiteAds;
+      const c = calcFor(r, inputs, applyAds);
       return {
         platform: p,
         profit: c.profit,
@@ -482,10 +494,11 @@ export default function HomeClient() {
         marketplaceFee: c.marketplaceFee,
         paymentFee: c.paymentFee,
         listingFee: c.listingFee,
+        offsiteAdsFee: c.offsiteAdsFee,
         totalFees: c.totalFees,
       };
     });
-  }, [inputs]);
+  }, [inputs, etsyOffsiteAds]);
 
   // theme helpers
   const pageBgText = isLight ? 'bg-white text-black' : 'bg-black text-white';
@@ -707,6 +720,23 @@ export default function HomeClient() {
                   </option>
                 ))}
               </select>
+              {/* Etsy-specific offsite ads toggle */}
+              {inputs.platform === 'etsy' && (
+                <label
+                  className={cx(
+                    'mt-3 flex cursor-pointer items-center gap-2 text-sm',
+                    subtleText,
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={etsyOffsiteAds}
+                    onChange={(e) => setEtsyOffsiteAds(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-400 accent-purple-500"
+                  />
+                  <span>Offsite Ads applied (15%)</span>
+                </label>
+              )}
             </div>
 
             <div>
