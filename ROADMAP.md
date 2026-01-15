@@ -4,7 +4,7 @@
 
 **Started:** January 14, 2025  
 **Last Updated:** January 14, 2025  
-**Progress:** 23 / 87 tasks complete
+**Progress:** 24 / 87 tasks complete
 
 ---
 
@@ -79,7 +79,7 @@
 - [ ] Add expandable breakdown for each fee type
 - [x] Add "Last verified" dates per platform ✅ 2025-01-14
 - [x] Add tooltips explaining each input field ✅ 2025-01-14
-- [ ] Add FAQ section
+- [x] Add FAQ section ✅ 2025-01-14
 - [ ] Add calculator accuracy guarantee statement
 
 ### 2.4 Accessibility

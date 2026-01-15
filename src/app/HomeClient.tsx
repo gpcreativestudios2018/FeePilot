@@ -492,6 +492,9 @@ export default function HomeClient() {
   // "How we calculate" section expanded state
   const [showBreakdown, setShowBreakdown] = useState(false);
 
+  // FAQ section - track which items are open
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+
   // Theme with synchronous init, too
   const [isLight, setIsLight] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -1338,6 +1341,67 @@ export default function HomeClient() {
           }}
           comparison={tableComparison}
         />
+
+        {/* FAQ Section */}
+        <section className="mt-10">
+          <h2 className={cx('mb-4 text-lg font-semibold', isLight ? 'text-gray-900' : 'text-white')}>
+            Frequently Asked Questions
+          </h2>
+          <div className={cx('rounded-2xl border', panelBorder)}>
+            {[
+              {
+                q: 'Why are fees different on each platform?',
+                a: 'Each marketplace has its own business model. Some charge flat fees, others take percentages, and most include payment processing fees.',
+              },
+              {
+                q: 'What are Etsy Offsite Ads?',
+                a: "When Etsy's advertising brings a buyer to your listing, they charge an extra 12-15% fee on that sale.",
+              },
+              {
+                q: 'Why is my profit negative?',
+                a: 'Your costs (item + shipping + fees) exceed your sale price. Try raising your price or finding cheaper shipping.',
+              },
+              {
+                q: 'How often do you update fees?',
+                a: 'We verify fees regularly and show the last verified date for each platform. Fees can change, so always double-check official sources before major sales.',
+              },
+              {
+                q: "What's the best platform to sell on?",
+                a: "It depends on what you're selling! Use our comparison feature to see which platform gives you the best profit for your specific item.",
+              },
+            ].map((faq, idx) => (
+              <div
+                key={idx}
+                className={cx(idx > 0 && 'border-t', panelBorder)}
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
+                  className={cx(
+                    'flex w-full items-center justify-between px-5 py-4 text-left',
+                    subtleText,
+                  )}
+                  aria-expanded={openFaqIndex === idx}
+                >
+                  <span className="text-sm font-medium">{faq.q}</span>
+                  <span
+                    className={cx(
+                      'transform transition-transform duration-200',
+                      openFaqIndex === idx && 'rotate-180',
+                    )}
+                  >
+                    ▼
+                  </span>
+                </button>
+                {openFaqIndex === idx && (
+                  <div className={cx('border-t px-5 pb-4 pt-3', panelBorder)}>
+                    <p className={cx('text-sm', subtleText)}>{faq.a}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
 
         <div className="mt-10">
           <Footer />
