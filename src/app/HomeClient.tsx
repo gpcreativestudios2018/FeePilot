@@ -1135,59 +1135,59 @@ export default function HomeClient() {
           </div>
         </section>
 
-        {/* Cards – ALL 8 */}
-        <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className={cx('rounded-2xl border p-5', panelBorder)}>
-            <div className={cx('text-sm', subtleText)}>Discounted price</div>
-            <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
-              {formatMoneyWithParens(current.discounted)}
-            </div>
-          </div>
+        {/* Empty state when no price entered */}
+        {inputs.price <= 0 && (
+          <section className={cx('mt-8 rounded-2xl border p-8 text-center', panelBorder)}>
+            <div className={cx('text-4xl mb-3', subtleText)}>📊</div>
+            <p className={cx('text-lg font-medium mb-2', isLight ? 'text-gray-800' : 'text-gray-200')}>
+              Ready to calculate your profit?
+            </p>
+            <p className={cx('text-sm', subtleText)}>
+              Enter a sale price above to see your fees, profit, and compare across platforms.
+            </p>
+          </section>
+        )}
 
-          <div className={cx('rounded-2xl border p-5', panelBorder)}>
-            <div className={cx('text-sm', subtleText)}>Marketplace fee</div>
-            <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
-              {formatMoneyWithParens(current.marketplaceFee)}
-            </div>
-          </div>
-
-          <div className={cx('rounded-2xl border p-5', panelBorder)}>
-            <div className={cx('text-sm', subtleText)}>Payment fee</div>
-            <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
-              {formatMoneyWithParens(current.paymentFee)}
-            </div>
-          </div>
-
-          <div className={cx('rounded-2xl border p-5', panelBorder)}>
-            <div className={cx('text-sm', subtleText)}>Listing fee</div>
-            <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
-              {formatMoneyWithParens(current.listingFee)}
-            </div>
-          </div>
-
-          <div className={cx('rounded-2xl border p-5', panelBorder)}>
-            <div className={cx('text-sm', subtleText)}>Total fees</div>
-            <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
-              {formatMoneyWithParens(current.totalFees)}
-            </div>
-          </div>
-
-          <div className={cx('rounded-2xl border p-5', panelBorder)}>
-            <div className={cx('text-sm', subtleText)}>Profit after fees</div>
-            <div
-              className={cx(
-                'mt-2 text-3xl font-semibold',
-                getProfitColorClass(current.marginPct, isLight),
-              )}
-              suppressHydrationWarning
-            >
-              {formatMoneyWithParens(current.profitAfterFees)}
-            </div>
-          </div>
-
-          {inputs.cogs > 0 && (
+        {/* Cards – ALL 8 (only show when price > 0) */}
+        {inputs.price > 0 && (
+          <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className={cx('rounded-2xl border p-5', panelBorder)}>
-              <div className={cx('text-sm', subtleText)}>Net profit (after cost)</div>
+              <div className={cx('text-sm', subtleText)}>Discounted price</div>
+              <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+                {formatMoneyWithParens(current.discounted)}
+              </div>
+            </div>
+
+            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+              <div className={cx('text-sm', subtleText)}>Marketplace fee</div>
+              <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+                {formatMoneyWithParens(current.marketplaceFee)}
+              </div>
+            </div>
+
+            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+              <div className={cx('text-sm', subtleText)}>Payment fee</div>
+              <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+                {formatMoneyWithParens(current.paymentFee)}
+              </div>
+            </div>
+
+            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+              <div className={cx('text-sm', subtleText)}>Listing fee</div>
+              <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+                {formatMoneyWithParens(current.listingFee)}
+              </div>
+            </div>
+
+            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+              <div className={cx('text-sm', subtleText)}>Total fees</div>
+              <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+                {formatMoneyWithParens(current.totalFees)}
+              </div>
+            </div>
+
+            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+              <div className={cx('text-sm', subtleText)}>Profit after fees</div>
               <div
                 className={cx(
                   'mt-2 text-3xl font-semibold',
@@ -1195,43 +1195,55 @@ export default function HomeClient() {
                 )}
                 suppressHydrationWarning
               >
-                {formatMoneyWithParens(current.profit)}
+                {formatMoneyWithParens(current.profitAfterFees)}
               </div>
             </div>
-          )}
 
-          <div className={cx('rounded-2xl border p-5', panelBorder)}>
-            <div className={cx('text-sm', subtleText)}>Margin</div>
-            <div
-              className={cx(
-                'mt-2 text-3xl font-semibold',
-                getProfitColorClass(current.marginPct, isLight),
-              )}
-              suppressHydrationWarning
-            >
-              {current.marginPct.toFixed(1)}%
+            {inputs.cogs > 0 && (
+              <div className={cx('rounded-2xl border p-5', panelBorder)}>
+                <div className={cx('text-sm', subtleText)}>Net profit (after cost)</div>
+                <div
+                  className={cx(
+                    'mt-2 text-3xl font-semibold',
+                    getProfitColorClass(current.marginPct, isLight),
+                  )}
+                  suppressHydrationWarning
+                >
+                  {formatMoneyWithParens(current.profit)}
+                </div>
+              </div>
+            )}
+
+            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+              <div className={cx('text-sm', subtleText)}>Margin</div>
+              <div
+                className={cx(
+                  'mt-2 text-3xl font-semibold',
+                  getProfitColorClass(current.marginPct, isLight),
+                )}
+                suppressHydrationWarning
+              >
+                {current.marginPct.toFixed(1)}%
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
-        {/* Friendly helper messages */}
-        <div className="mt-3 space-y-2 text-center">
-          {inputs.price <= 0 && (
-            <p className={cx('text-sm', subtleText)}>
-              Enter a sale price to see your profit
-            </p>
-          )}
-          {inputs.price > 0 && current.profit < 0 && (
-            <p className="text-sm text-red-500">
-              You&apos;d lose money at this price. Try raising your price or lowering costs.
-            </p>
-          )}
-          {inputs.price > 0 && current.profit >= 0 && current.marginPct > 0 && current.marginPct < 10 && (
-            <p className={cx('text-sm', isLight ? 'text-amber-600' : 'text-amber-400')}>
-              Tight margin — consider if it&apos;s worth the effort
-            </p>
-          )}
-        </div>
+        {/* Friendly helper messages (only when price > 0) */}
+        {inputs.price > 0 && (
+          <div className="mt-3 space-y-2 text-center">
+            {current.profit < 0 && (
+              <p className="text-sm text-red-500">
+                You&apos;d lose money at this price. Try raising your price or lowering costs.
+              </p>
+            )}
+            {current.profit >= 0 && current.marginPct > 0 && current.marginPct < 10 && (
+              <p className={cx('text-sm', isLight ? 'text-amber-600' : 'text-amber-400')}>
+                Tight margin — consider if it&apos;s worth the effort
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Official source link and verification date */}
         {(rule.sourceUrl || rule.lastVerified) && (
