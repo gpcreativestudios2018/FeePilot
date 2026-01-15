@@ -47,6 +47,13 @@ export default function ComparisonTableSection({
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
+  // Find the best platform(s) - highest profit, handles ties
+  const maxProfit = Math.max(...comparison.map((r) => r.profit));
+  const bestPlatforms = new Set(
+    comparison.filter((r) => r.profit === maxProfit && r.profit > 0).map((r) => r.platform)
+  );
+  const hasBest = bestPlatforms.size > 0;
+
   const onExportCsv = React.useCallback(() => {
     const rows: (string | number)[][] = [
       [
@@ -139,19 +146,43 @@ export default function ComparisonTableSection({
           </thead>
 
           <tbody className={cx('border-t', border)}>
-            {comparison.map((row, idx) => (
+            {comparison.map((row, idx) => {
+              const isBest = mounted && hasBest && bestPlatforms.has(row.platform);
+              return (
               <tr
                 key={row.platform}
                 className={cx(
                   'border-t first:border-0',
                   idx % 2 === 1 && zebraRow,
+                  isBest && (isLight ? 'bg-emerald-50' : 'bg-emerald-900/20'),
                 )}
               >
                 <td className="py-2.5 pr-4">
                   <span className="inline-flex items-center gap-2">
-                    <span className={cx('rounded-lg border px-2 py-1 text-xs', border)}>
+                    <span
+                      className={cx(
+                        'rounded-lg border px-2 py-1 text-xs',
+                        isBest
+                          ? isLight
+                            ? 'border-emerald-600 bg-emerald-100 text-emerald-800'
+                            : 'border-emerald-500 bg-emerald-900/40 text-emerald-300'
+                          : border
+                      )}
+                    >
                       {row.platform.slice(0, 1).toUpperCase() + row.platform.slice(1)}
                     </span>
+                    {isBest && (
+                      <span
+                        className={cx(
+                          'rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase',
+                          isLight
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-emerald-500 text-black'
+                        )}
+                      >
+                        Best
+                      </span>
+                    )}
                   </span>
                 </td>
 
@@ -201,7 +232,8 @@ export default function ComparisonTableSection({
                   </span>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
 

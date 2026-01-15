@@ -4,7 +4,7 @@
 
 **Started:** January 14, 2025  
 **Last Updated:** January 14, 2025  
-**Progress:** 14 / 87 tasks complete
+**Progress:** 15 / 87 tasks complete
 
 ---
 
@@ -66,7 +66,7 @@
 - [x] Add item cost input with profit after fees vs net profit display ✅ 2025-01-14
 - [x] Add shipping cost input to profit calculation ✅ 2025-01-14
 - [x] Add profit indicator colors (green/yellow/red based on margin) ✅ 2025-01-14
-- [ ] Highlight best platform in comparison table
+- [x] Highlight best platform in comparison table ✅ 2025-01-14
 - [ ] Add visual fee comparison chart (bar chart)
 - [ ] Improve mobile touch targets and spacing
 - [ ] Add empty state messages with helpful prompts
