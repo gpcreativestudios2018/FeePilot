@@ -46,6 +46,8 @@ export type FeeRule = {
   listingFixed?: number;
   /** % offsite ads fee (Etsy-specific) */
   offsiteAdsPct?: number;
+  /** Official source URL for fee information */
+  sourceUrl?: string;
 };
 
 export const RULES: Record<PlatformKey, FeeRule> = {
@@ -56,6 +58,7 @@ export const RULES: Record<PlatformKey, FeeRule> = {
     paymentFixed: 0.25,
     listingFixed: 0.2,
     offsiteAdsPct: 15, // 15% for shops under $10k/year, 12% for $10k+
+    sourceUrl: 'https://www.etsy.com/legal/fees/',
   },
   stockx: {
     // Source: https://stockx.com/about/selling/
@@ -63,24 +66,28 @@ export const RULES: Record<PlatformKey, FeeRule> = {
     marketplacePct: 10,
     paymentPct: 3,
     paymentFixed: 0,
+    sourceUrl: 'https://stockx.com/about/selling/',
   },
   ebay: {
     // Source: https://www.ebay.com/sellercenter/selling/selling-fees
     marketplacePct: 13.25,
     paymentPct: 0,
     paymentFixed: 0.3,
+    sourceUrl: 'https://www.ebay.com/sellercenter/selling/selling-fees',
   },
   depop: {
     // Source: https://www.depop.com/sellingfees/
     marketplacePct: 10,
     paymentPct: 3.3,
     paymentFixed: 0.45,
+    sourceUrl: 'https://www.depop.com/sellingfees/',
   },
   mercari: {
     // Source: https://www.mercari.com/us/help_center/topics/selling/fees/
     marketplacePct: 10,
     paymentPct: 2.9,
     paymentFixed: 0.5,
+    sourceUrl: 'https://www.mercari.com/us/help_center/topics/selling/fees/',
   },
   poshmark: {
     // Source: https://poshmark.com/posh_protect
@@ -88,6 +95,7 @@ export const RULES: Record<PlatformKey, FeeRule> = {
     marketplacePct: 20,
     paymentPct: 0,
     paymentFixed: 0,
+    sourceUrl: 'https://poshmark.com/posh_protect',
   },
 };
 

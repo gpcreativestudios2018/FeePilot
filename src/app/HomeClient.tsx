@@ -966,6 +966,25 @@ export default function HomeClient() {
           </div>
         </section>
 
+        {/* Official source link */}
+        {rule.sourceUrl && (
+          <div className="mt-4 text-center">
+            <a
+              href={rule.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cx(
+                'inline-flex items-center gap-1 text-xs',
+                isLight
+                  ? 'text-gray-500 hover:text-purple-700'
+                  : 'text-gray-400 hover:text-purple-300',
+              )}
+            >
+              View official {PLATFORM_LABELS[inputs.platform]} fees →
+            </a>
+          </div>
+        )}
+
         {/* Comparison table */}
         <ComparisonTableSection
           className={cx('mt-10', 'border', panelBorder, 'rounded-2xl')}
