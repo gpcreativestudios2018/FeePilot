@@ -97,10 +97,12 @@ type CalcOptions = {
   offsiteAdsEnabled?: boolean;
   ebayCategory?: EbayCategoryKey;
   stockxLevel?: StockXLevelKey;
+  promotedEnabled?: boolean;
+  promotedPct?: number;
 };
 
 function calcFor(rule: FeeRule, inputs: Inputs, options: CalcOptions = {}) {
-  const { offsiteAdsEnabled = false, ebayCategory, stockxLevel } = options;
+  const { offsiteAdsEnabled = false, ebayCategory, stockxLevel, promotedEnabled = false, promotedPct = 0 } = options;
   const discounted = clamp(inputs.price * (1 - pct(inputs.discountPct)));
   const base = discounted + inputs.shipCharge;
 
@@ -125,8 +127,9 @@ function calcFor(rule: FeeRule, inputs: Inputs, options: CalcOptions = {}) {
     clamp(base * pct(rule.paymentPct ?? 0)) + (rule.paymentFixed ?? 0);
   const listingFee = getListingFixed(rule);
   const offsiteAdsFee = offsiteAdsEnabled ? clamp(base * pct(rule.offsiteAdsPct ?? 0)) : 0;
+  const promotedFee = promotedEnabled ? clamp(base * pct(promotedPct)) : 0;
 
-  const totalFees = marketplaceFee + paymentFee + listingFee + offsiteAdsFee;
+  const totalFees = marketplaceFee + paymentFee + listingFee + offsiteAdsFee + promotedFee;
 
   // Profit after fees only (before item cost)
   const profitAfterFees =
@@ -146,6 +149,7 @@ function calcFor(rule: FeeRule, inputs: Inputs, options: CalcOptions = {}) {
     paymentFee,
     listingFee,
     offsiteAdsFee,
+    promotedFee,
     totalFees,
     net: profit, // keep 'net' as alias for backward compatibility
     profitAfterFees,
@@ -478,6 +482,13 @@ export default function HomeClient() {
   // StockX-specific: seller level selection
   const [stockxLevel, setStockxLevel] = useState<StockXLevelKey>('level1');
 
+  // Promoted listing settings (eBay and Etsy)
+  const [promotedEnabled, setPromotedEnabled] = useState(false);
+  const [promotedPct, setPromotedPct] = useState(() => {
+    // Default to platform's default rate
+    return RULES.ebay.promotedPctDefault ?? 5;
+  });
+
   // Theme with synchronous init, too
   const [isLight, setIsLight] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -538,26 +549,34 @@ export default function HomeClient() {
   };
 
   const rule = RULES[inputs.platform];
+  // Check if current platform supports promoted listings
+  const supportsPromoted = inputs.platform === 'ebay' || inputs.platform === 'etsy';
   // Build calculation options for current platform
   const calcOptions: CalcOptions = {
     offsiteAdsEnabled: inputs.platform === 'etsy' && etsyOffsiteAds,
     ebayCategory: inputs.platform === 'ebay' ? ebayCategory : undefined,
     stockxLevel: inputs.platform === 'stockx' ? stockxLevel : undefined,
+    promotedEnabled: supportsPromoted && promotedEnabled,
+    promotedPct: supportsPromoted && promotedEnabled ? promotedPct : 0,
   };
   const current = useMemo(
     () => calcFor(rule, inputs, calcOptions),
-    [rule, inputs, calcOptions.offsiteAdsEnabled, calcOptions.ebayCategory, calcOptions.stockxLevel],
+    [rule, inputs, calcOptions.offsiteAdsEnabled, calcOptions.ebayCategory, calcOptions.stockxLevel, calcOptions.promotedEnabled, calcOptions.promotedPct],
   );
 
   // derive the comparison rows once so we can reference .length for analytics
   const tableComparison = useMemo(() => {
     return PLATFORMS.map((p) => {
       const r = RULES[p];
+      // Check if this platform supports promoted listings
+      const platformSupportsPromoted = p === 'ebay' || p === 'etsy';
       // Apply platform-specific options
       const opts: CalcOptions = {
         offsiteAdsEnabled: p === 'etsy' && etsyOffsiteAds,
         ebayCategory: p === 'ebay' ? ebayCategory : undefined,
         stockxLevel: p === 'stockx' ? stockxLevel : undefined,
+        promotedEnabled: platformSupportsPromoted && promotedEnabled,
+        promotedPct: platformSupportsPromoted && promotedEnabled ? promotedPct : 0,
       };
       const c = calcFor(r, inputs, opts);
       return {
@@ -571,7 +590,7 @@ export default function HomeClient() {
         totalFees: c.totalFees,
       };
     });
-  }, [inputs, etsyOffsiteAds, ebayCategory, stockxLevel]);
+  }, [inputs, etsyOffsiteAds, ebayCategory, stockxLevel, promotedEnabled, promotedPct]);
 
   // theme helpers
   const pageBgText = isLight ? 'bg-white text-black' : 'bg-black text-white';
@@ -855,6 +874,53 @@ export default function HomeClient() {
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+              {/* Promoted listing toggle (eBay and Etsy) */}
+              {(inputs.platform === 'ebay' || inputs.platform === 'etsy') && (
+                <div className="mt-3">
+                  <label
+                    className={cx(
+                      'flex cursor-pointer items-center gap-2 text-sm',
+                      subtleText,
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={promotedEnabled}
+                      onChange={(e) => {
+                        setPromotedEnabled(e.target.checked);
+                        // Reset to platform default when enabling
+                        if (e.target.checked) {
+                          const defaultPct = RULES[inputs.platform].promotedPctDefault ?? 5;
+                          setPromotedPct(defaultPct);
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-400 accent-purple-500"
+                    />
+                    <span>Promoted listing</span>
+                  </label>
+                  {promotedEnabled && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <label className={cx('text-xs', subtleText)}>Ad rate:</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        inputMode="decimal"
+                        className={cx(
+                          'w-20 rounded-lg border bg-transparent px-2 py-1 text-sm outline-none',
+                          controlBorder,
+                        )}
+                        value={promotedPct}
+                        onChange={(e) =>
+                          setPromotedPct(clamp(parseNum(e.target.value), 0, 100))
+                        }
+                      />
+                      <span className={cx('text-xs', subtleText)}>%</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

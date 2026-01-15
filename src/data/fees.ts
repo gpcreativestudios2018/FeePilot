@@ -78,6 +78,8 @@ export type FeeRule = {
   levels?: Record<StockXLevelKey, StockXLevel>;
   /** Default seller level key */
   defaultLevel?: StockXLevelKey;
+  /** Default promoted listing % (for platforms that support it) */
+  promotedPctDefault?: number;
 };
 
 export const RULES: Record<PlatformKey, FeeRule> = {
@@ -88,6 +90,7 @@ export const RULES: Record<PlatformKey, FeeRule> = {
     paymentFixed: 0.25,
     listingFixed: 0.2,
     offsiteAdsPct: 15, // 15% for shops under $10k/year, 12% for $10k+
+    promotedPctDefault: 10, // Etsy Ads: typically 1-30%, default 10%
     sourceUrl: 'https://www.etsy.com/legal/fees/',
   },
   stockx: {
@@ -117,6 +120,7 @@ export const RULES: Record<PlatformKey, FeeRule> = {
     marketplacePct: 13.25, // fallback for comparison table
     paymentPct: 0,
     paymentFixed: 0.3,
+    promotedPctDefault: 5, // eBay Promoted Listings: typically 2-15%, default 5%
     sourceUrl: 'https://www.ebay.com/sellercenter/selling/selling-fees',
   },
   depop: {
