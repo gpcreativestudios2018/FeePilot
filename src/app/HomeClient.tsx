@@ -16,6 +16,7 @@ import {
   type PlatformKey,
   type FeeRule,
   type EbayCategoryKey,
+  type StockXLevelKey,
 } from '@/data/fees';
 
 import { cx, formatMoneyWithParens } from '../lib/format';
@@ -62,10 +63,11 @@ const getListingFixed = (rule: FeeRule): number => {
 type CalcOptions = {
   offsiteAdsEnabled?: boolean;
   ebayCategory?: EbayCategoryKey;
+  stockxLevel?: StockXLevelKey;
 };
 
 function calcFor(rule: FeeRule, inputs: Inputs, options: CalcOptions = {}) {
-  const { offsiteAdsEnabled = false, ebayCategory } = options;
+  const { offsiteAdsEnabled = false, ebayCategory, stockxLevel } = options;
   const discounted = clamp(inputs.price * (1 - pct(inputs.discountPct)));
   const base = discounted + inputs.shipCharge;
 
@@ -74,10 +76,13 @@ function calcFor(rule: FeeRule, inputs: Inputs, options: CalcOptions = {}) {
     rule.flatFeeThreshold !== undefined && rule.flatFee !== undefined;
   const useFlatFee = hasTieredFee && discounted < (rule.flatFeeThreshold ?? 0);
 
-  // Get marketplace percentage (use eBay category if available)
+  // Get marketplace percentage (use eBay category or StockX level if available)
   let marketplacePct = rule.marketplacePct ?? 0;
   if (ebayCategory && rule.categories) {
     marketplacePct = rule.categories[ebayCategory]?.marketplacePct ?? marketplacePct;
+  }
+  if (stockxLevel && rule.levels) {
+    marketplacePct = rule.levels[stockxLevel]?.marketplacePct ?? marketplacePct;
   }
 
   const marketplaceFee = useFlatFee
@@ -435,6 +440,9 @@ export default function HomeClient() {
   // eBay-specific: category selection
   const [ebayCategory, setEbayCategory] = useState<EbayCategoryKey>('most');
 
+  // StockX-specific: seller level selection
+  const [stockxLevel, setStockxLevel] = useState<StockXLevelKey>('level1');
+
   // Theme with synchronous init, too
   const [isLight, setIsLight] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -499,10 +507,11 @@ export default function HomeClient() {
   const calcOptions: CalcOptions = {
     offsiteAdsEnabled: inputs.platform === 'etsy' && etsyOffsiteAds,
     ebayCategory: inputs.platform === 'ebay' ? ebayCategory : undefined,
+    stockxLevel: inputs.platform === 'stockx' ? stockxLevel : undefined,
   };
   const current = useMemo(
     () => calcFor(rule, inputs, calcOptions),
-    [rule, inputs, calcOptions.offsiteAdsEnabled, calcOptions.ebayCategory],
+    [rule, inputs, calcOptions.offsiteAdsEnabled, calcOptions.ebayCategory, calcOptions.stockxLevel],
   );
 
   // derive the comparison rows once so we can reference .length for analytics
@@ -513,6 +522,7 @@ export default function HomeClient() {
       const opts: CalcOptions = {
         offsiteAdsEnabled: p === 'etsy' && etsyOffsiteAds,
         ebayCategory: p === 'ebay' ? ebayCategory : undefined,
+        stockxLevel: p === 'stockx' ? stockxLevel : undefined,
       };
       const c = calcFor(r, inputs, opts);
       return {
@@ -526,7 +536,7 @@ export default function HomeClient() {
         totalFees: c.totalFees,
       };
     });
-  }, [inputs, etsyOffsiteAds, ebayCategory]);
+  }, [inputs, etsyOffsiteAds, ebayCategory, stockxLevel]);
 
   // theme helpers
   const pageBgText = isLight ? 'bg-white text-black' : 'bg-black text-white';
@@ -782,6 +792,28 @@ export default function HomeClient() {
                     {Object.entries(RULES.ebay.categories).map(([key, cat]) => (
                       <option key={key} value={key} className={selectOption}>
                         {cat.name} ({cat.marketplacePct}%)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {/* StockX-specific seller level dropdown */}
+              {inputs.platform === 'stockx' && RULES.stockx.levels && (
+                <div className="mt-3">
+                  <label className={cx('mb-1 block text-xs', subtleText)}>
+                    Seller Level
+                  </label>
+                  <select
+                    className={cx(
+                      'w-full rounded-lg border bg-transparent px-2 py-1.5 text-sm outline-none',
+                      controlBorder,
+                    )}
+                    value={stockxLevel}
+                    onChange={(e) => setStockxLevel(e.target.value as StockXLevelKey)}
+                  >
+                    {Object.entries(RULES.stockx.levels).map(([key, level]) => (
+                      <option key={key} value={key} className={selectOption}>
+                        {level.name} ({level.marketplacePct}%)
                       </option>
                     ))}
                   </select>

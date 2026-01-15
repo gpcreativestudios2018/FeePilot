@@ -4,7 +4,7 @@
 
 **Started:** January 14, 2025  
 **Last Updated:** January 14, 2025  
-**Progress:** 6 / 87 tasks complete
+**Progress:** 11 / 87 tasks complete
 
 ---
 
@@ -18,16 +18,16 @@
 - [x] Research and verify Depop fees (US vs UK differences) ✅ 2025-01-14
 - [x] Research and verify Mercari fees (current 2025 rates) ✅ 2025-01-14
 - [x] Research and verify StockX fees (seller level tiers 1-4) ✅ 2025-01-14
-- [ ] Add official source links for each platform's fee page
+- [x] Add official source links for each platform's fee page ✅ 2025-01-14
 - [ ] Update `RULES_UPDATED_AT` with accurate date
 - [ ] Remove "example" comments from fees.ts
 - [ ] Add fee update verification process documentation
 
 ### 1.2 Tiered/Complex Fee Logic
-- [ ] Implement Poshmark tiered fees ($2.95 under $15, 20% over $15)
-- [ ] Implement eBay category-specific fees
-- [ ] Implement StockX seller level tiers
-- [ ] Implement Etsy offsite ads fee (12-15% when applicable)
+- [x] Implement Poshmark tiered fees ($2.95 under $15, 20% over $15) ✅ 2025-01-14
+- [x] Implement eBay category-specific fees ✅ 2025-01-14
+- [x] Implement StockX seller level tiers ✅ 2025-01-14
+- [x] Implement Etsy offsite ads fee (12-15% when applicable) ✅ 2025-01-14
 - [ ] Add promoted listings fee option (eBay, Etsy)
 - [ ] Add payment processing variations by platform
 

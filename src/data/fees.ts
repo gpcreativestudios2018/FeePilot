@@ -42,6 +42,15 @@ export type EbayCategory = {
   marketplacePct: number;
 };
 
+/** StockX seller level keys */
+export type StockXLevelKey = 'level1' | 'level2' | 'level3' | 'level4';
+
+/** StockX seller level config */
+export type StockXLevel = {
+  name: string;
+  marketplacePct: number;
+};
+
 export type FeeRule = {
   /** % of (discounted price + shipping charged to buyer) */
   marketplacePct?: number;
@@ -65,6 +74,10 @@ export type FeeRule = {
   categories?: Record<EbayCategoryKey, EbayCategory>;
   /** Default category key */
   defaultCategory?: EbayCategoryKey;
+  /** StockX seller level fees */
+  levels?: Record<StockXLevelKey, StockXLevel>;
+  /** Default seller level key */
+  defaultLevel?: StockXLevelKey;
 };
 
 export const RULES: Record<PlatformKey, FeeRule> = {
@@ -79,8 +92,14 @@ export const RULES: Record<PlatformKey, FeeRule> = {
   },
   stockx: {
     // Source: https://stockx.com/about/selling/
-    // Note: Fees decrease with seller level (Level 4 = 8% transaction)
-    marketplacePct: 10,
+    levels: {
+      level1: { name: 'Level 1', marketplacePct: 10 },
+      level2: { name: 'Level 2', marketplacePct: 9.5 },
+      level3: { name: 'Level 3', marketplacePct: 9 },
+      level4: { name: 'Level 4', marketplacePct: 8 },
+    },
+    defaultLevel: 'level1',
+    marketplacePct: 10, // fallback for comparison table
     paymentPct: 3,
     paymentFixed: 0,
     sourceUrl: 'https://stockx.com/about/selling/',
