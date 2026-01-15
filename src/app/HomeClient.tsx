@@ -23,6 +23,23 @@ import { cx, formatMoneyWithParens } from '../lib/format';
 import copyWithToast from '../lib/copyWithToast';
 import ComparisonTableSection from './components/ComparisonTableSection';
 
+/* -------------------------------- tooltip ---------------------------------- */
+function InfoTooltip({ tip, isLight }: { tip: string; isLight: boolean }) {
+  return (
+    <span
+      title={tip}
+      className={cx(
+        'ml-1 inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full text-[10px] font-medium',
+        isLight
+          ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+      )}
+    >
+      ?
+    </span>
+  );
+}
+
 /* -------------------------------- analytics -------------------------------- */
 declare global {
   interface Window {
@@ -742,7 +759,10 @@ export default function HomeClient() {
                   subtleText,
                 )}
               >
-                <span>Platform</span>
+                <span>
+                  Platform
+                  <InfoTooltip tip="Different marketplaces charge different fees. Select where you plan to sell." isLight={isLight} />
+                </span>
                 {currentPlatformDoc && (
                   <span className="text-xs sm:text-[11px]">
                     {currentPlatformDoc.name} fee guide{' '}
@@ -842,6 +862,7 @@ export default function HomeClient() {
             <div>
               <label className={cx('mb-2 block text-sm', subtleText)}>
                 Item price ($)
+                <InfoTooltip tip="The price you'll list and sell the item for, before any discounts." isLight={isLight} />
                 <span className="mt-1 block text-xs opacity-70">
                   Sale price for the item, before shipping and tax.
                 </span>
@@ -867,6 +888,7 @@ export default function HomeClient() {
             <div>
               <label className={cx('mb-2 block text-sm', subtleText)}>
                 Item cost ($)
+                <InfoTooltip tip="What you paid for the item (COGS). This is subtracted from profit." isLight={isLight} />
                 <span className="mt-1 block text-xs opacity-70">
                   What you paid for the item (inventory cost).
                 </span>
@@ -892,6 +914,7 @@ export default function HomeClient() {
             <div>
               <label className={cx('mb-2 block text-sm', subtleText)}>
                 Shipping cost ($)
+                <InfoTooltip tip="Your cost to ship (not what the buyer pays). This reduces your profit." isLight={isLight} />
                 <span className="mt-1 block text-xs opacity-70">
                   Your actual shipping expense (labels, postage, etc.).
                 </span>
@@ -917,6 +940,7 @@ export default function HomeClient() {
             <div>
               <label className={cx('mb-2 block text-sm', subtleText)}>
                 Discount (%)
+                <InfoTooltip tip="Percentage off the sale price (e.g., for offers or promotions)." isLight={isLight} />
                 <span className="mt-1 block text-xs opacity-70">
                   Percent off the original price (offers, promos, coupons).
                 </span>
@@ -942,6 +966,7 @@ export default function HomeClient() {
             <div>
               <label className={cx('mb-2 block text-sm', subtleText)}>
                 Shipping charged to buyer ($)
+                <InfoTooltip tip="What the buyer pays for shipping. Fees are often calculated on this too." isLight={isLight} />
                 <span className="mt-1 block text-xs opacity-70">
                   What the buyer pays for shipping. Use 0 for &quot;free shipping&quot;.
                 </span>
@@ -967,6 +992,7 @@ export default function HomeClient() {
             <div>
               <label className={cx('mb-2 block text-sm', subtleText)}>
                 Tax collected ($)
+                <InfoTooltip tip="Sales tax or VAT you collect. Usually remitted to the government." isLight={isLight} />
                 <span className="mt-1 block text-xs opacity-70">
                   Sales tax / VAT collected on the order.
                 </span>
