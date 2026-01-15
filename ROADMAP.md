@@ -4,7 +4,7 @@
 
 **Started:** January 14, 2025  
 **Last Updated:** January 14, 2025  
-**Progress:** 24 / 87 tasks complete
+**Progress:** 25 / 87 tasks complete
 
 ---
 
@@ -71,7 +71,7 @@
 - [ ] Improve mobile touch targets and spacing
 - [ ] Add empty state messages with helpful prompts
 - [x] Add friendly error messages ("Negative profit? Try raising your price!") ✅ 2025-01-14
-- [ ] Add keyboard shortcuts (Tab navigation, Enter to calculate)
+- [x] Add keyboard shortcuts (Tab navigation, Enter to calculate) ✅ 2025-01-14
 - [ ] Add calculation animations/transitions
 
 ### 2.3 Trust & Transparency

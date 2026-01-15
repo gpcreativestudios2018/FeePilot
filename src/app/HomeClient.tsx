@@ -520,6 +520,48 @@ export default function HomeClient() {
     } catch {}
   }, [isLight]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in input fields
+      const target = e.target as HTMLElement;
+      const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+
+      // Escape: reset form (works even in input fields)
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        const next = makeDefaults();
+        setInputs(next);
+        try {
+          window.localStorage.removeItem(INPUTS_KEY);
+        } catch {}
+        try {
+          const url = new URL(window.location.href);
+          url.search = '';
+          window.history.replaceState({}, '', url.toString());
+        } catch {}
+        // Blur any focused input
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        return;
+      }
+
+      // Skip other shortcuts if user is typing in an input field
+      if (isInputField) return;
+
+      // Number keys 1-6: quick-select platform
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= 6 && PLATFORMS[num - 1]) {
+        e.preventDefault();
+        setInputs((s) => ({ ...s, platform: PLATFORMS[num - 1] }));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Share / Copy use permalink with current inputs
   const shareLink = async (): Promise<void> => {
     const url = buildPermalinkUrl(inputs);
@@ -821,6 +863,10 @@ export default function HomeClient() {
                   </option>
                 ))}
               </select>
+              {/* Keyboard shortcuts hint */}
+              <p className={cx('mt-1 text-[10px]', subtleText, 'opacity-60')}>
+                Press 1-6 to switch platforms • Esc to reset
+              </p>
               {/* Etsy-specific offsite ads toggle */}
               {inputs.platform === 'etsy' && (
                 <label
