@@ -1162,6 +1162,25 @@ export default function HomeClient() {
           </div>
         </section>
 
+        {/* Friendly helper messages */}
+        <div className="mt-3 space-y-2 text-center">
+          {inputs.price <= 0 && (
+            <p className={cx('text-sm', subtleText)}>
+              Enter a sale price to see your profit
+            </p>
+          )}
+          {inputs.price > 0 && current.profit < 0 && (
+            <p className="text-sm text-red-500">
+              You&apos;d lose money at this price. Try raising your price or lowering costs.
+            </p>
+          )}
+          {inputs.price > 0 && current.profit >= 0 && current.marginPct > 0 && current.marginPct < 10 && (
+            <p className={cx('text-sm', isLight ? 'text-amber-600' : 'text-amber-400')}>
+              Tight margin — consider if it&apos;s worth the effort
+            </p>
+          )}
+        </div>
+
         {/* Official source link */}
         {rule.sourceUrl && (
           <div className="mt-4 text-center">
