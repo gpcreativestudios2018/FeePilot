@@ -4,7 +4,7 @@
 
 **Started:** January 14, 2025  
 **Last Updated:** January 14, 2025  
-**Progress:** 26 / 87 tasks complete
+**Progress:** 27 / 87 tasks complete
 
 ---
 
@@ -72,7 +72,7 @@
 - [x] Add empty state messages with helpful prompts ✅ 2025-01-14
 - [x] Add friendly error messages ("Negative profit? Try raising your price!") ✅ 2025-01-14
 - [x] Add keyboard shortcuts (Tab navigation, Enter to calculate) ✅ 2025-01-14
-- [ ] Add calculation animations/transitions
+- [x] Add calculation animations/transitions ✅ 2025-01-14
 
 ### 2.3 Trust & Transparency
 - [x] Add "How we calculate" section with formulas shown ✅ 2025-01-14

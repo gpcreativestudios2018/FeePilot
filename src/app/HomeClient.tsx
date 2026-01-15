@@ -1137,7 +1137,7 @@ export default function HomeClient() {
 
         {/* Empty state when no price entered */}
         {inputs.price <= 0 && (
-          <section className={cx('mt-8 rounded-2xl border p-8 text-center', panelBorder)}>
+          <section className={cx('mt-8 rounded-2xl border p-8 text-center transition-all duration-200', panelBorder)}>
             <div className={cx('text-4xl mb-3', subtleText)}>📊</div>
             <p className={cx('text-lg font-medium mb-2', isLight ? 'text-gray-800' : 'text-gray-200')}>
               Ready to calculate your profit?
@@ -1151,46 +1151,46 @@ export default function HomeClient() {
         {/* Cards – ALL 8 (only show when price > 0) */}
         {inputs.price > 0 && (
           <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+            <div className={cx('rounded-2xl border p-5 transition-all duration-150', panelBorder)}>
               <div className={cx('text-sm', subtleText)}>Discounted price</div>
-              <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+              <div className="mt-2 text-3xl font-semibold transition-all duration-150" suppressHydrationWarning>
                 {formatMoneyWithParens(current.discounted)}
               </div>
             </div>
 
-            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+            <div className={cx('rounded-2xl border p-5 transition-all duration-150', panelBorder)}>
               <div className={cx('text-sm', subtleText)}>Marketplace fee</div>
-              <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+              <div className="mt-2 text-3xl font-semibold transition-all duration-150" suppressHydrationWarning>
                 {formatMoneyWithParens(current.marketplaceFee)}
               </div>
             </div>
 
-            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+            <div className={cx('rounded-2xl border p-5 transition-all duration-150', panelBorder)}>
               <div className={cx('text-sm', subtleText)}>Payment fee</div>
-              <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+              <div className="mt-2 text-3xl font-semibold transition-all duration-150" suppressHydrationWarning>
                 {formatMoneyWithParens(current.paymentFee)}
               </div>
             </div>
 
-            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+            <div className={cx('rounded-2xl border p-5 transition-all duration-150', panelBorder)}>
               <div className={cx('text-sm', subtleText)}>Listing fee</div>
-              <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+              <div className="mt-2 text-3xl font-semibold transition-all duration-150" suppressHydrationWarning>
                 {formatMoneyWithParens(current.listingFee)}
               </div>
             </div>
 
-            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+            <div className={cx('rounded-2xl border p-5 transition-all duration-150', panelBorder)}>
               <div className={cx('text-sm', subtleText)}>Total fees</div>
-              <div className="mt-2 text-3xl font-semibold" suppressHydrationWarning>
+              <div className="mt-2 text-3xl font-semibold transition-all duration-150" suppressHydrationWarning>
                 {formatMoneyWithParens(current.totalFees)}
               </div>
             </div>
 
-            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+            <div className={cx('rounded-2xl border p-5 transition-all duration-150', panelBorder)}>
               <div className={cx('text-sm', subtleText)}>Profit after fees</div>
               <div
                 className={cx(
-                  'mt-2 text-3xl font-semibold',
+                  'mt-2 text-3xl font-semibold transition-all duration-150',
                   getProfitColorClass(current.marginPct, isLight),
                 )}
                 suppressHydrationWarning
@@ -1200,11 +1200,11 @@ export default function HomeClient() {
             </div>
 
             {inputs.cogs > 0 && (
-              <div className={cx('rounded-2xl border p-5', panelBorder)}>
+              <div className={cx('rounded-2xl border p-5 transition-all duration-150', panelBorder)}>
                 <div className={cx('text-sm', subtleText)}>Net profit (after cost)</div>
                 <div
                   className={cx(
-                    'mt-2 text-3xl font-semibold',
+                    'mt-2 text-3xl font-semibold transition-all duration-150',
                     getProfitColorClass(current.marginPct, isLight),
                   )}
                   suppressHydrationWarning
@@ -1214,11 +1214,11 @@ export default function HomeClient() {
               </div>
             )}
 
-            <div className={cx('rounded-2xl border p-5', panelBorder)}>
+            <div className={cx('rounded-2xl border p-5 transition-all duration-150', panelBorder)}>
               <div className={cx('text-sm', subtleText)}>Margin</div>
               <div
                 className={cx(
-                  'mt-2 text-3xl font-semibold',
+                  'mt-2 text-3xl font-semibold transition-all duration-150',
                   getProfitColorClass(current.marginPct, isLight),
                 )}
                 suppressHydrationWarning
@@ -1233,12 +1233,12 @@ export default function HomeClient() {
         {inputs.price > 0 && (
           <div className="mt-3 space-y-2 text-center">
             {current.profit < 0 && (
-              <p className="text-sm text-red-500">
+              <p className="text-sm text-red-500 transition-all duration-150">
                 You&apos;d lose money at this price. Try raising your price or lowering costs.
               </p>
             )}
             {current.profit >= 0 && current.marginPct > 0 && current.marginPct < 10 && (
-              <p className={cx('text-sm', isLight ? 'text-amber-600' : 'text-amber-400')}>
+              <p className={cx('text-sm transition-all duration-150', isLight ? 'text-amber-600' : 'text-amber-400')}>
                 Tight margin — consider if it&apos;s worth the effort
               </p>
             )}
