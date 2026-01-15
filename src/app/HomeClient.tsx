@@ -60,6 +60,22 @@ const getListingFixed = (rule: FeeRule): number => {
   return anyRule.listingFixed ?? 0;
 };
 
+/**
+ * Returns color class for profit/margin based on margin percentage:
+ * - Green: margin >= 30%
+ * - Yellow/Orange: margin 10-29%
+ * - Red: margin < 10% or negative
+ */
+const getProfitColorClass = (marginPct: number, isLight: boolean): string => {
+  if (marginPct < 10) {
+    return 'text-red-500';
+  }
+  if (marginPct < 30) {
+    return isLight ? 'text-amber-600' : 'text-amber-400';
+  }
+  return isLight ? 'text-emerald-700' : 'text-emerald-300';
+};
+
 type CalcOptions = {
   offsiteAdsEnabled?: boolean;
   ebayCategory?: EbayCategoryKey;
@@ -1017,11 +1033,7 @@ export default function HomeClient() {
             <div
               className={cx(
                 'mt-2 text-3xl font-semibold',
-                current.profitAfterFees < 0
-                  ? 'text-red-500'
-                  : isLight
-                  ? 'text-emerald-700'
-                  : 'text-emerald-300',
+                getProfitColorClass(current.marginPct, isLight),
               )}
               suppressHydrationWarning
             >
@@ -1035,11 +1047,7 @@ export default function HomeClient() {
               <div
                 className={cx(
                   'mt-2 text-3xl font-semibold',
-                  current.profit < 0
-                    ? 'text-red-500'
-                    : isLight
-                    ? 'text-emerald-700'
-                    : 'text-emerald-300',
+                  getProfitColorClass(current.marginPct, isLight),
                 )}
                 suppressHydrationWarning
               >
@@ -1053,7 +1061,7 @@ export default function HomeClient() {
             <div
               className={cx(
                 'mt-2 text-3xl font-semibold',
-                current.marginPct < 0 && 'text-red-500',
+                getProfitColorClass(current.marginPct, isLight),
               )}
               suppressHydrationWarning
             >
