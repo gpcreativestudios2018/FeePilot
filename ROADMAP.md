@@ -4,7 +4,7 @@
 
 **Started:** January 14, 2025  
 **Last Updated:** January 14, 2025  
-**Progress:** 33 / 87 tasks complete
+**Progress:** 34 / 87 tasks complete
 
 ---
 
@@ -80,7 +80,7 @@
 - [x] Add "Last verified" dates per platform ✅ 2025-01-14
 - [x] Add tooltips explaining each input field ✅ 2025-01-14
 - [x] Add FAQ section ✅ 2025-01-14
-- [ ] Add calculator accuracy guarantee statement
+- [x] Add calculator accuracy guarantee statement ✅ 2025-01-18
 
 ### 2.4 Accessibility
 - [x] Full ARIA labels audit and fix ✅ 2025-01-18

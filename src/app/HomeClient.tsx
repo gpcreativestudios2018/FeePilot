@@ -1573,7 +1573,7 @@ export default function HomeClient() {
         />
 
         {/* FAQ Section */}
-        <section className="mt-10">
+        <section id="faq" className="mt-10">
           <h2 className={cx('mb-4 text-lg font-semibold', isLight ? 'text-gray-900' : 'text-white')}>
             Frequently Asked Questions
           </h2>
@@ -1636,6 +1636,32 @@ export default function HomeClient() {
             ))}
           </div>
         </section>
+
+        {/* Accuracy guarantee statement */}
+        <div className={cx('mt-8 text-center text-xs', isLight ? 'text-gray-500' : 'text-gray-400')}>
+          <p>
+            Fee data verified against{' '}
+            <a
+              href="#faq"
+              className={cx(
+                'underline decoration-dotted rounded-sm',
+                isLight
+                  ? 'text-purple-700 hover:text-purple-900'
+                  : 'text-purple-300 hover:text-purple-100',
+                focusRingClasses,
+              )}
+              onClick={(e) => {
+                e.preventDefault();
+                // Find and open the "How often do you update fees?" FAQ
+                setOpenFaqIndex(3);
+                document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              official platform sources
+            </a>
+            . Last updated: {RULES_UPDATED_AT}. Always confirm with platform before major sales.
+          </p>
+        </div>
 
         <div className="mt-10">
           <Footer />
