@@ -24,10 +24,13 @@ import copyWithToast from '../lib/copyWithToast';
 import ComparisonTableSection from './components/ComparisonTableSection';
 
 /* -------------------------------- tooltip ---------------------------------- */
-function InfoTooltip({ tip, isLight }: { tip: string; isLight: boolean }) {
+function InfoTooltip({ tip, isLight, id }: { tip: string; isLight: boolean; id?: string }) {
   return (
     <span
+      role="img"
+      aria-label={`Help: ${tip}`}
       title={tip}
+      id={id}
       className={cx(
         'ml-1 inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full text-[10px] font-medium',
         isLight
@@ -830,6 +833,7 @@ export default function HomeClient() {
           <div className="grid grid-cols-1 gap-5 sm:gap-4 sm:grid-cols-3">
             <div>
               <label
+                htmlFor="input-platform"
                 className={cx(
                   'mb-2 flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between',
                   subtleText,
@@ -837,7 +841,7 @@ export default function HomeClient() {
               >
                 <span>
                   Platform
-                  <InfoTooltip tip="Different marketplaces charge different fees. Select where you plan to sell." isLight={isLight} />
+                  <InfoTooltip tip="Different marketplaces charge different fees. Select where you plan to sell." isLight={isLight} id="tip-platform" />
                 </span>
                 {currentPlatformDoc && (
                   <span className="text-xs sm:text-[11px]">
@@ -858,6 +862,8 @@ export default function HomeClient() {
                 )}
               </label>
               <select
+                id="input-platform"
+                aria-describedby="tip-platform"
                 className={cx(
                   selectClasses,
                   controlBorder,
@@ -989,17 +995,19 @@ export default function HomeClient() {
             </div>
 
             <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>
+              <label htmlFor="input-price" className={cx('mb-2 block text-sm', subtleText)}>
                 Item price ($)
-                <InfoTooltip tip="The price you'll list and sell the item for, before any discounts." isLight={isLight} />
-                <span className="mt-1 block text-xs opacity-70">
+                <InfoTooltip tip="The price you'll list and sell the item for, before any discounts." isLight={isLight} id="tip-price" />
+                <span id="desc-price" className="mt-1 block text-xs opacity-70">
                   Sale price for the item, before shipping and tax.
                 </span>
               </label>
               <input
+                id="input-price"
                 type="number"
                 step="any"
                 inputMode="decimal"
+                aria-describedby="desc-price tip-price"
                 className={cx(
                   inputClasses,
                   controlBorder,
@@ -1015,17 +1023,19 @@ export default function HomeClient() {
             </div>
 
             <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>
+              <label htmlFor="input-cogs" className={cx('mb-2 block text-sm', subtleText)}>
                 Item cost ($)
-                <InfoTooltip tip="What you paid for the item (COGS). This is subtracted from profit." isLight={isLight} />
-                <span className="mt-1 block text-xs opacity-70">
+                <InfoTooltip tip="What you paid for the item (COGS). This is subtracted from profit." isLight={isLight} id="tip-cogs" />
+                <span id="desc-cogs" className="mt-1 block text-xs opacity-70">
                   What you paid for the item (inventory cost).
                 </span>
               </label>
               <input
+                id="input-cogs"
                 type="number"
                 step="any"
                 inputMode="decimal"
+                aria-describedby="desc-cogs tip-cogs"
                 className={cx(
                   inputClasses,
                   controlBorder,
@@ -1041,17 +1051,19 @@ export default function HomeClient() {
             </div>
 
             <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>
+              <label htmlFor="input-shipcost" className={cx('mb-2 block text-sm', subtleText)}>
                 Shipping cost ($)
-                <InfoTooltip tip="Your cost to ship (not what the buyer pays). This reduces your profit." isLight={isLight} />
-                <span className="mt-1 block text-xs opacity-70">
+                <InfoTooltip tip="Your cost to ship (not what the buyer pays). This reduces your profit." isLight={isLight} id="tip-shipcost" />
+                <span id="desc-shipcost" className="mt-1 block text-xs opacity-70">
                   Your actual shipping expense (labels, postage, etc.).
                 </span>
               </label>
               <input
+                id="input-shipcost"
                 type="number"
                 step="any"
                 inputMode="decimal"
+                aria-describedby="desc-shipcost tip-shipcost"
                 className={cx(
                   inputClasses,
                   controlBorder,
@@ -1067,17 +1079,19 @@ export default function HomeClient() {
             </div>
 
             <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>
+              <label htmlFor="input-discount" className={cx('mb-2 block text-sm', subtleText)}>
                 Discount (%)
-                <InfoTooltip tip="Percentage off the sale price (e.g., for offers or promotions)." isLight={isLight} />
-                <span className="mt-1 block text-xs opacity-70">
+                <InfoTooltip tip="Percentage off the sale price (e.g., for offers or promotions)." isLight={isLight} id="tip-discount" />
+                <span id="desc-discount" className="mt-1 block text-xs opacity-70">
                   Percent off the original price (offers, promos, coupons).
                 </span>
               </label>
               <input
+                id="input-discount"
                 type="number"
                 step="any"
                 inputMode="decimal"
+                aria-describedby="desc-discount tip-discount"
                 className={cx(
                   inputClasses,
                   controlBorder,
@@ -1093,17 +1107,19 @@ export default function HomeClient() {
             </div>
 
             <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>
+              <label htmlFor="input-shipcharge" className={cx('mb-2 block text-sm', subtleText)}>
                 Shipping charged to buyer ($)
-                <InfoTooltip tip="What the buyer pays for shipping. Fees are often calculated on this too." isLight={isLight} />
-                <span className="mt-1 block text-xs opacity-70">
+                <InfoTooltip tip="What the buyer pays for shipping. Fees are often calculated on this too." isLight={isLight} id="tip-shipcharge" />
+                <span id="desc-shipcharge" className="mt-1 block text-xs opacity-70">
                   What the buyer pays for shipping. Use 0 for &quot;free shipping&quot;.
                 </span>
               </label>
               <input
+                id="input-shipcharge"
                 type="number"
                 step="any"
                 inputMode="decimal"
+                aria-describedby="desc-shipcharge tip-shipcharge"
                 className={cx(
                   inputClasses,
                   controlBorder,
@@ -1119,17 +1135,19 @@ export default function HomeClient() {
             </div>
 
             <div>
-              <label className={cx('mb-2 block text-sm', subtleText)}>
+              <label htmlFor="input-tax" className={cx('mb-2 block text-sm', subtleText)}>
                 Tax collected ($)
-                <InfoTooltip tip="Sales tax or VAT you collect. Usually remitted to the government." isLight={isLight} />
-                <span className="mt-1 block text-xs opacity-70">
+                <InfoTooltip tip="Sales tax or VAT you collect. Usually remitted to the government." isLight={isLight} id="tip-tax" />
+                <span id="desc-tax" className="mt-1 block text-xs opacity-70">
                   Sales tax / VAT collected on the order.
                 </span>
               </label>
               <input
+                id="input-tax"
                 type="number"
                 step="any"
                 inputMode="decimal"
+                aria-describedby="desc-tax tip-tax"
                 className={cx(
                   inputClasses,
                   controlBorder,
@@ -1161,7 +1179,12 @@ export default function HomeClient() {
 
         {/* Cards – ALL 8 (only show when price > 0) */}
         {inputs.price > 0 && (
-          <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <section
+            className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            role="status"
+            aria-live="polite"
+            aria-label="Calculation results"
+          >
             <div className={cx('rounded-2xl border p-5 transition-all duration-150', panelBorder)}>
               <div className={cx('text-sm', subtleText)}>Discounted price</div>
               <div className="mt-2 text-3xl font-semibold transition-all duration-150" suppressHydrationWarning>
@@ -1242,7 +1265,7 @@ export default function HomeClient() {
 
         {/* Friendly helper messages (only when price > 0) */}
         {inputs.price > 0 && (
-          <div className="mt-3 space-y-2 text-center">
+          <div className="mt-3 space-y-2 text-center" role="status" aria-live="polite">
             {current.profit < 0 && (
               <p className="text-sm text-red-500 transition-all duration-150">
                 You&apos;d lose money at this price. Try raising your price or lowering costs.
@@ -1299,6 +1322,7 @@ export default function HomeClient() {
               focusRingClasses,
             )}
             aria-expanded={showBreakdown}
+            aria-controls="breakdown-content"
           >
             <span className="text-base font-medium">How we calculate your profit</span>
             <span
@@ -1306,12 +1330,13 @@ export default function HomeClient() {
                 'transform transition-transform duration-200',
                 showBreakdown && 'rotate-180',
               )}
+              aria-hidden="true"
             >
               ▼
             </span>
           </button>
           {showBreakdown && (
-            <div className={cx('border-t px-5 pb-5 pt-4', panelBorder)}>
+            <div id="breakdown-content" className={cx('border-t px-5 pb-5 pt-4', panelBorder)}>
               <div className="space-y-2 font-mono text-sm">
                 {/* Sale Price */}
                 <div className="flex justify-between">
@@ -1455,6 +1480,7 @@ export default function HomeClient() {
                     focusRingClasses,
                   )}
                   aria-expanded={openFaqIndex === idx}
+                  aria-controls={`faq-content-${idx}`}
                 >
                   <span className="text-base font-medium pr-4">{faq.q}</span>
                   <span
@@ -1462,12 +1488,13 @@ export default function HomeClient() {
                       'transform transition-transform duration-200 shrink-0',
                       openFaqIndex === idx && 'rotate-180',
                     )}
+                    aria-hidden="true"
                   >
                     ▼
                   </span>
                 </button>
                 {openFaqIndex === idx && (
-                  <div className={cx('border-t px-5 pb-5 pt-4', panelBorder)}>
+                  <div id={`faq-content-${idx}`} className={cx('border-t px-5 pb-5 pt-4', panelBorder)}>
                     <p className={cx('text-base leading-relaxed', subtleText)}>{faq.a}</p>
                   </div>
                 )}
