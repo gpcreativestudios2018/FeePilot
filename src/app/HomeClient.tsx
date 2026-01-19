@@ -88,12 +88,15 @@ const getListingFixed = (rule: FeeRule): number => {
  */
 const getProfitColorClass = (marginPct: number, isLight: boolean): string => {
   if (marginPct < 10) {
-    return 'text-red-500';
+    // Red for low/negative margin - darker shades for better contrast
+    return isLight ? 'text-red-700' : 'text-red-400';
   }
   if (marginPct < 30) {
-    return isLight ? 'text-amber-600' : 'text-amber-400';
+    // Amber/yellow for moderate margin - darker shades for WCAG AA
+    return isLight ? 'text-amber-700' : 'text-amber-300';
   }
-  return isLight ? 'text-emerald-700' : 'text-emerald-300';
+  // Green for good margin - darker shades for better contrast
+  return isLight ? 'text-emerald-700' : 'text-emerald-400';
 };
 
 type CalcOptions = {
@@ -653,7 +656,8 @@ export default function HomeClient() {
 
   // theme helpers
   const pageBgText = isLight ? 'bg-white text-black' : 'bg-black text-white';
-  const subtleText = isLight ? 'text-gray-700' : 'text-gray-300';
+  // Subtle text with WCAG AA compliant contrast (4.5:1 minimum)
+  const subtleText = isLight ? 'text-gray-600' : 'text-gray-300';
   const selectOption = isLight ? 'bg-white text-black' : 'bg-black text-white';
   const panelBorder = isLight ? 'border-purple-800/70' : 'border-purple-600/40';
   const controlBorder = isLight ? 'border-purple-800/70' : 'border-purple-600/50';
@@ -880,7 +884,7 @@ export default function HomeClient() {
                 ))}
               </select>
               {/* Keyboard shortcuts hint */}
-              <p className={cx('mt-2 text-xs', subtleText, 'opacity-60')}>
+              <p className={cx('mt-2 text-xs', isLight ? 'text-gray-500' : 'text-gray-400')}>
                 Press 1-6 to switch platforms • Esc to reset
               </p>
               {/* Etsy-specific offsite ads toggle */}
@@ -998,7 +1002,7 @@ export default function HomeClient() {
               <label htmlFor="input-price" className={cx('mb-2 block text-sm', subtleText)}>
                 Item price ($)
                 <InfoTooltip tip="The price you'll list and sell the item for, before any discounts." isLight={isLight} id="tip-price" />
-                <span id="desc-price" className="mt-1 block text-xs opacity-70">
+                <span id="desc-price" className={cx('mt-1 block text-xs', isLight ? 'text-gray-500' : 'text-gray-400')}>
                   Sale price for the item, before shipping and tax.
                 </span>
               </label>
@@ -1026,7 +1030,7 @@ export default function HomeClient() {
               <label htmlFor="input-cogs" className={cx('mb-2 block text-sm', subtleText)}>
                 Item cost ($)
                 <InfoTooltip tip="What you paid for the item (COGS). This is subtracted from profit." isLight={isLight} id="tip-cogs" />
-                <span id="desc-cogs" className="mt-1 block text-xs opacity-70">
+                <span id="desc-cogs" className={cx('mt-1 block text-xs', isLight ? 'text-gray-500' : 'text-gray-400')}>
                   What you paid for the item (inventory cost).
                 </span>
               </label>
@@ -1054,7 +1058,7 @@ export default function HomeClient() {
               <label htmlFor="input-shipcost" className={cx('mb-2 block text-sm', subtleText)}>
                 Shipping cost ($)
                 <InfoTooltip tip="Your cost to ship (not what the buyer pays). This reduces your profit." isLight={isLight} id="tip-shipcost" />
-                <span id="desc-shipcost" className="mt-1 block text-xs opacity-70">
+                <span id="desc-shipcost" className={cx('mt-1 block text-xs', isLight ? 'text-gray-500' : 'text-gray-400')}>
                   Your actual shipping expense (labels, postage, etc.).
                 </span>
               </label>
@@ -1082,7 +1086,7 @@ export default function HomeClient() {
               <label htmlFor="input-discount" className={cx('mb-2 block text-sm', subtleText)}>
                 Discount (%)
                 <InfoTooltip tip="Percentage off the sale price (e.g., for offers or promotions)." isLight={isLight} id="tip-discount" />
-                <span id="desc-discount" className="mt-1 block text-xs opacity-70">
+                <span id="desc-discount" className={cx('mt-1 block text-xs', isLight ? 'text-gray-500' : 'text-gray-400')}>
                   Percent off the original price (offers, promos, coupons).
                 </span>
               </label>
@@ -1110,7 +1114,7 @@ export default function HomeClient() {
               <label htmlFor="input-shipcharge" className={cx('mb-2 block text-sm', subtleText)}>
                 Shipping charged to buyer ($)
                 <InfoTooltip tip="What the buyer pays for shipping. Fees are often calculated on this too." isLight={isLight} id="tip-shipcharge" />
-                <span id="desc-shipcharge" className="mt-1 block text-xs opacity-70">
+                <span id="desc-shipcharge" className={cx('mt-1 block text-xs', isLight ? 'text-gray-500' : 'text-gray-400')}>
                   What the buyer pays for shipping. Use 0 for &quot;free shipping&quot;.
                 </span>
               </label>
@@ -1138,7 +1142,7 @@ export default function HomeClient() {
               <label htmlFor="input-tax" className={cx('mb-2 block text-sm', subtleText)}>
                 Tax collected ($)
                 <InfoTooltip tip="Sales tax or VAT you collect. Usually remitted to the government." isLight={isLight} id="tip-tax" />
-                <span id="desc-tax" className="mt-1 block text-xs opacity-70">
+                <span id="desc-tax" className={cx('mt-1 block text-xs', isLight ? 'text-gray-500' : 'text-gray-400')}>
                   Sales tax / VAT collected on the order.
                 </span>
               </label>
@@ -1267,12 +1271,12 @@ export default function HomeClient() {
         {inputs.price > 0 && (
           <div className="mt-3 space-y-2 text-center" role="status" aria-live="polite">
             {current.profit < 0 && (
-              <p className="text-sm text-red-500 transition-all duration-150">
+              <p className={cx('text-sm transition-all duration-150', isLight ? 'text-red-700' : 'text-red-400')}>
                 You&apos;d lose money at this price. Try raising your price or lowering costs.
               </p>
             )}
             {current.profit >= 0 && current.marginPct > 0 && current.marginPct < 10 && (
-              <p className={cx('text-sm transition-all duration-150', isLight ? 'text-amber-600' : 'text-amber-400')}>
+              <p className={cx('text-sm transition-all duration-150', isLight ? 'text-amber-700' : 'text-amber-300')}>
                 Tight margin — consider if it&apos;s worth the effort
               </p>
             )}
@@ -1300,8 +1304,8 @@ export default function HomeClient() {
                 className={cx(
                   'inline-flex items-center gap-1 text-xs rounded-sm',
                   isLight
-                    ? 'text-gray-500 hover:text-purple-700'
-                    : 'text-gray-400 hover:text-purple-300',
+                    ? 'text-gray-600 hover:text-purple-700'
+                    : 'text-gray-300 hover:text-purple-300',
                   focusRingClasses,
                 )}
               >
@@ -1352,7 +1356,7 @@ export default function HomeClient() {
                 <div className={cx('border-t pt-2', panelBorder)} />
 
                 {/* Fees breakdown */}
-                <div className="flex justify-between text-red-500">
+                <div className="flex justify-between text-red-600">
                   <span>
                     − Marketplace Fee
                     {rule.marketplacePct && ` (${rule.marketplacePct}%)`}
@@ -1360,7 +1364,7 @@ export default function HomeClient() {
                   <span>−{formatMoneyWithParens(current.marketplaceFee)}</span>
                 </div>
                 {current.paymentFee > 0 && (
-                  <div className="flex justify-between text-red-500">
+                  <div className="flex justify-between text-red-600">
                     <span>
                       − Payment Fee
                       {rule.paymentPct ? ` (${rule.paymentPct}%` : ''}
@@ -1370,19 +1374,19 @@ export default function HomeClient() {
                   </div>
                 )}
                 {current.listingFee > 0 && (
-                  <div className="flex justify-between text-red-500">
+                  <div className="flex justify-between text-red-600">
                     <span>− Listing Fee</span>
                     <span>−{formatMoneyWithParens(current.listingFee)}</span>
                   </div>
                 )}
                 {current.offsiteAdsFee > 0 && (
-                  <div className="flex justify-between text-red-500">
+                  <div className="flex justify-between text-red-600">
                     <span>− Offsite Ads ({rule.offsiteAdsPct}%)</span>
                     <span>−{formatMoneyWithParens(current.offsiteAdsFee)}</span>
                   </div>
                 )}
                 {current.promotedFee > 0 && (
-                  <div className="flex justify-between text-red-500">
+                  <div className="flex justify-between text-red-600">
                     <span>− Promoted Listing ({promotedPct}%)</span>
                     <span>−{formatMoneyWithParens(current.promotedFee)}</span>
                   </div>
@@ -1390,19 +1394,19 @@ export default function HomeClient() {
 
                 {/* Costs */}
                 {inputs.shipCost > 0 && (
-                  <div className="flex justify-between text-red-500">
+                  <div className="flex justify-between text-red-600">
                     <span>− Shipping Cost</span>
                     <span>−{formatMoneyWithParens(inputs.shipCost)}</span>
                   </div>
                 )}
                 {inputs.tax > 0 && (
-                  <div className="flex justify-between text-red-500">
+                  <div className="flex justify-between text-red-600">
                     <span>− Tax</span>
                     <span>−{formatMoneyWithParens(inputs.tax)}</span>
                   </div>
                 )}
                 {inputs.cogs > 0 && (
-                  <div className="flex justify-between text-red-500">
+                  <div className="flex justify-between text-red-600">
                     <span>− Item Cost</span>
                     <span>−{formatMoneyWithParens(inputs.cogs)}</span>
                   </div>

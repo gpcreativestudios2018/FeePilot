@@ -43,7 +43,7 @@ export default function Footer() {
           className={pillLinkClass}
         >
           <span className="mr-2">Reverse calculator</span>
-          <span className="rounded-full border px-2 py-0.5 text-[10px] align-middle opacity-70">
+          <span className="rounded-full border px-2 py-0.5 text-[10px] align-middle opacity-80">
             Pro
           </span>
         </Link>
@@ -76,7 +76,7 @@ export default function Footer() {
       </nav>
 
       {/* Existing metadata / links */}
-      <div className="flex flex-col items-center gap-2 text-sm text-neutral-400">
+      <div className="flex flex-col items-center gap-2 text-sm text-neutral-300">
         <div className="text-center">
           FeePilot by{' '}
           <span className="bg-gradient-to-r from-sky-400 via-purple-400 to-purple-500 bg-clip-text text-transparent">

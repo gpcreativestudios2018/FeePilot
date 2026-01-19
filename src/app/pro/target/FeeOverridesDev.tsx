@@ -85,7 +85,7 @@ export default function FeeOverridesDev({
         </div>
       </div>
 
-      <p className="mb-4 text-xs text-amber-500/80">
+      <p className="mb-4 text-xs text-amber-600 dark:text-amber-400">
         Leave a field blank to use the platform’s default. These overrides affect calculations immediately,
         and are not persisted.
       </p>
@@ -135,9 +135,9 @@ function Field(props: {
   const { label, base, value, onChange } = props;
   return (
     <label className="block">
-      <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">
+      <span className="mb-1 block text-xs text-gray-600 dark:text-gray-300">
         {label}{' '}
-        <span className="opacity-70">(base {base})</span>
+        <span className="opacity-80">(base {base})</span>
       </span>
       <input
         type="number"

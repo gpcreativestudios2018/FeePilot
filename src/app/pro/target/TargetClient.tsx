@@ -889,7 +889,7 @@ export default function ReverseCalcPage() {
         <h1 className="text-3xl font-semibold tracking-tight">
           Reverse calculator
         </h1>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
           Set a target profit <i>or</i> margin — we’ll suggest the listing
           price.
         </p>
@@ -973,7 +973,7 @@ export default function ReverseCalcPage() {
               value={targetProfit}
               onChange={(e) => setTargetProfit(e.target.value)}
             />
-            <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+            <span className="mt-1 block text-xs text-gray-600 dark:text-gray-300">
               Set this OR margin; profit is used if both are set.
             </span>
           </label>
@@ -1104,7 +1104,7 @@ export default function ReverseCalcPage() {
               value={taxPct}
               onChange={(e) => setTaxPct(e.target.value)}
             />
-            <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+            <span className="mt-1 block text-xs text-gray-600 dark:text-gray-300">
               Reference only — doesn’t change profit/fees (affects Buyer
               total).
             </span>
@@ -1206,7 +1206,7 @@ export default function ReverseCalcPage() {
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
               Estimated profit
             </div>
             <div
@@ -1218,7 +1218,7 @@ export default function ReverseCalcPage() {
           </div>
 
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
               Estimated margin
             </div>
             <div
@@ -1231,7 +1231,7 @@ export default function ReverseCalcPage() {
 
           {/* Buyer totals with optional tax */}
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
               Buyer subtotal (price after discount + shipping)
             </div>
             <div className="mt-2" suppressHydrationWarning>
@@ -1239,7 +1239,7 @@ export default function ReverseCalcPage() {
             </div>
           </div>
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
               Buyer total {includeTax ? '(w/ tax)' : '(no tax)'}
             </div>
             <div
@@ -1250,7 +1250,7 @@ export default function ReverseCalcPage() {
             </div>
             {includeTax ? (
               <div
-                className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                className="mt-1 text-xs text-gray-600 dark:text-gray-300"
                 suppressHydrationWarning
               >
                 Tax {buyerTaxPct.toFixed(2)}% = ${formatMoney(buyerTaxAmount)}
@@ -1259,7 +1259,7 @@ export default function ReverseCalcPage() {
           </div>
 
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
               Marketplace fee
             </div>
             <div className="mt-2" suppressHydrationWarning>
@@ -1267,7 +1267,7 @@ export default function ReverseCalcPage() {
             </div>
           </div>
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
               Payment fee
             </div>
             <div className="mt-2" suppressHydrationWarning>
@@ -1275,7 +1275,7 @@ export default function ReverseCalcPage() {
             </div>
           </div>
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
               Listing fee
             </div>
             <div className="mt-2" suppressHydrationWarning>
@@ -1283,7 +1283,7 @@ export default function ReverseCalcPage() {
             </div>
           </div>
           <div className="rounded-2xl border border-purple-600/40 p-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
               Total fees
             </div>
             <div className="mt-2" suppressHydrationWarning>
@@ -1292,13 +1292,13 @@ export default function ReverseCalcPage() {
           </div>
         </div>
 
-        <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mt-3 text-xs text-gray-600 dark:text-gray-300">
           Sales tax is usually collected from the buyer and remitted (not
           profit). Toggle “Include tax” to change buyer total only.
         </p>
       </section>
 
-      <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+      <p className="mt-4 text-xs text-gray-600 dark:text-gray-300">
         California note: the dropdown shows base and a commonly-cited minimum
         combined reference (7.25%). Use the exact local rate for the item’s
         destination in the “Sales tax (%)” field if needed.
