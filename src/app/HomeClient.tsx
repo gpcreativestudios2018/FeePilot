@@ -509,6 +509,9 @@ export default function HomeClient() {
   // FAQ section - track which items are open
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
+  // Fee details expanded state (shows actual dollar amounts)
+  const [showFeeDetails, setShowFeeDetails] = useState(false);
+
   // Theme with synchronous init, too
   const [isLight, setIsLight] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -1280,6 +1283,99 @@ export default function HomeClient() {
               </div>
             </div>
           </section>
+        )}
+
+        {/* Expandable fee details (shows actual dollar amounts) */}
+        {inputs.price > 0 && (
+          <div className={cx('mt-4 rounded-2xl border', panelBorder)}>
+            <button
+              type="button"
+              onClick={() => setShowFeeDetails((v) => !v)}
+              className={cx(
+                'flex w-full items-center justify-between px-5 py-4 text-left min-h-[52px] rounded-2xl',
+                subtleText,
+                focusRingClasses,
+              )}
+              aria-expanded={showFeeDetails}
+              aria-controls="fee-details-content"
+            >
+              <span className="text-base font-medium">See fee details</span>
+              <span
+                className={cx(
+                  'transform transition-transform duration-200',
+                  showFeeDetails && 'rotate-180',
+                )}
+                aria-hidden="true"
+              >
+                ▼
+              </span>
+            </button>
+            {showFeeDetails && (
+              <div id="fee-details-content" className={cx('border-t px-5 pb-5 pt-4', panelBorder)}>
+                <div className="space-y-3">
+                  {/* Marketplace fee */}
+                  <div className="flex justify-between items-center">
+                    <span className={subtleText}>
+                      Marketplace fee
+                      {rule.marketplacePct ? ` (${rule.marketplacePct}%)` : ''}
+                      {rule.marketplaceFixed ? ` + $${rule.marketplaceFixed.toFixed(2)}` : ''}
+                    </span>
+                    <span className="font-medium">{formatMoneyWithParens(current.marketplaceFee)}</span>
+                  </div>
+
+                  {/* Payment processing fee */}
+                  <div className="flex justify-between items-center">
+                    <span className={subtleText}>
+                      Payment processing
+                      {rule.paymentPct ? ` (${rule.paymentPct}%` : ''}
+                      {rule.paymentFixed ? ` + $${rule.paymentFixed.toFixed(2)})` : rule.paymentPct ? ')' : ''}
+                    </span>
+                    <span className="font-medium">{formatMoneyWithParens(current.paymentFee)}</span>
+                  </div>
+
+                  {/* Listing fee - only show if applicable */}
+                  {current.listingFee > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className={subtleText}>Listing fee</span>
+                      <span className="font-medium">{formatMoneyWithParens(current.listingFee)}</span>
+                    </div>
+                  )}
+
+                  {/* Offsite ads fee - only show if enabled */}
+                  {current.offsiteAdsFee > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className={subtleText}>
+                        Offsite ads ({rule.offsiteAdsPct}%)
+                      </span>
+                      <span className="font-medium">{formatMoneyWithParens(current.offsiteAdsFee)}</span>
+                    </div>
+                  )}
+
+                  {/* Promoted listing fee - only show if enabled */}
+                  {current.promotedFee > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className={subtleText}>
+                        Promoted listing ({promotedPct}%)
+                      </span>
+                      <span className="font-medium">{formatMoneyWithParens(current.promotedFee)}</span>
+                    </div>
+                  )}
+
+                  {/* Divider and total */}
+                  <div className={cx('border-t pt-3 mt-3', panelBorder)}>
+                    <div className="flex justify-between items-center">
+                      <span className={cx('font-semibold', isLight ? 'text-gray-900' : 'text-white')}>
+                        Total fees
+                      </span>
+                      <span className={cx('font-semibold text-lg', isLight ? 'text-gray-900' : 'text-white')}>
+                        {formatMoneyWithParens(current.totalFees)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Friendly helper messages (only when price > 0) */}

@@ -4,7 +4,7 @@
 
 **Started:** January 14, 2025  
 **Last Updated:** January 14, 2025  
-**Progress:** 31 / 87 tasks complete
+**Progress:** 32 / 87 tasks complete
 
 ---
 
@@ -76,7 +76,7 @@
 
 ### 2.3 Trust & Transparency
 - [x] Add "How we calculate" section with formulas shown ✅ 2025-01-14
-- [ ] Add expandable breakdown for each fee type
+- [x] Add expandable breakdown for each fee type ✅ 2025-01-18
 - [x] Add "Last verified" dates per platform ✅ 2025-01-14
 - [x] Add tooltips explaining each input field ✅ 2025-01-14
 - [x] Add FAQ section ✅ 2025-01-14
