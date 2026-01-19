@@ -4,6 +4,10 @@ import * as React from 'react';
 import { PILL_CLASS } from '@/lib/ui';
 import type { FeeRule, PlatformKey } from '@/data/fees';
 
+// Consistent focus ring style for accessibility
+const focusRingClass =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-black';
+
 export type FeeOverrides = Partial<FeeRule> & { listingFixed?: number };
 
 type Props = {
@@ -139,7 +143,7 @@ function Field(props: {
         type="number"
         inputMode="decimal"
         placeholder="blank = base"
-        className="w-full rounded-xl border border-amber-500/40 bg-transparent px-3 py-2 outline-none"
+        className={`w-full rounded-xl border border-amber-500/40 bg-transparent px-3 py-2 outline-none ${focusRingClass}`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />

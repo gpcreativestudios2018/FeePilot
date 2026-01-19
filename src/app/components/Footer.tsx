@@ -5,6 +5,12 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { track } from '@/lib/analytics';
 
+// Consistent focus ring style for accessibility
+const focusRingClass =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-black';
+
+const pillLinkClass = `inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 transition hover:bg-purple-500/10 ${focusRingClass}`;
+
 export default function Footer() {
   const supportUrl =
     process.env.NEXT_PUBLIC_SUPPORT_URL || 'https://www.buymeacoffee.com/';
@@ -19,14 +25,14 @@ export default function Footer() {
       <nav className="mb-4 flex flex-wrap items-center justify-center gap-3 text-sm">
         <Link
           href={'/' as Route}
-          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 transition hover:bg-purple-500/10"
+          className={pillLinkClass}
         >
           Home
         </Link>
 
         <Link
           href={'/pro' as Route}
-          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 transition hover:bg-purple-500/10"
+          className={pillLinkClass}
         >
           Pro
         </Link>
@@ -34,7 +40,7 @@ export default function Footer() {
         {/* Route Reverse calculator to /pro (Pro-only overview), not /pro/target */}
         <Link
           href={'/pro' as Route}
-          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 transition hover:bg-purple-500/10"
+          className={pillLinkClass}
         >
           <span className="mr-2">Reverse calculator</span>
           <span className="rounded-full border px-2 py-0.5 text-[10px] align-middle opacity-70">
@@ -44,14 +50,14 @@ export default function Footer() {
 
         <Link
           href={'/about' as Route}
-          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 transition hover:bg-purple-500/10"
+          className={pillLinkClass}
         >
           About
         </Link>
 
         <Link
           href={'/docs' as Route}
-          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 transition hover:bg-purple-500/10"
+          className={pillLinkClass}
         >
           Docs
         </Link>
@@ -61,7 +67,7 @@ export default function Footer() {
           target="_blank"
           rel="noopener noreferrer"
           onClick={onSupportClick}
-          className="inline-flex items-center rounded-full border px-4 py-2 text-base select-none border-purple-600/50 transition hover:bg-purple-500/10"
+          className={pillLinkClass}
           title="Support the project"
           aria-label="Support the project"
         >
@@ -78,7 +84,7 @@ export default function Footer() {
           </span>{' '}
           <a
             href="mailto:gpcreativestudios2018@gmail.com"
-            className="underline decoration-dotted hover:text-purple-400"
+            className={`underline decoration-dotted hover:text-purple-400 rounded-sm ${focusRingClass}`}
           >
             (contact)
           </a>{' '}
@@ -86,7 +92,7 @@ export default function Footer() {
             href="https://github.com/gpcreativestudios2018/FeePilot/blob/main/docs/command-palette.md"
             target="_blank"
             rel="noopener noreferrer"
-            className="underline decoration-dotted hover:text-purple-400"
+            className={`underline decoration-dotted hover:text-purple-400 rounded-sm ${focusRingClass}`}
           >
             (docs)
           </a>

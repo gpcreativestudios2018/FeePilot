@@ -272,11 +272,13 @@ type ScenarioPreset = {
   apply: (platform: PlatformKey, previous: Inputs) => Partial<Inputs>;
 };
 
-// Common input styles for mobile-friendly touch targets
-const inputClasses = 'w-full rounded-xl border bg-transparent px-4 py-3 text-base outline-none min-h-[48px]';
-const selectClasses = 'w-full rounded-xl border bg-transparent px-4 py-3 text-base outline-none min-h-[48px]';
-const smallSelectClasses = 'w-full rounded-lg border bg-transparent px-3 py-2.5 text-base outline-none min-h-[44px]';
+// Common input styles for mobile-friendly touch targets with accessible focus states
+const focusRingClasses = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-black';
+const inputClasses = `w-full rounded-xl border bg-transparent px-4 py-3 text-base outline-none min-h-[48px] ${focusRingClasses}`;
+const selectClasses = `w-full rounded-xl border bg-transparent px-4 py-3 text-base outline-none min-h-[48px] ${focusRingClasses}`;
+const smallSelectClasses = `w-full rounded-lg border bg-transparent px-3 py-2.5 text-base outline-none min-h-[44px] ${focusRingClasses}`;
 const checkboxLabelClasses = 'flex cursor-pointer items-center gap-3 text-base py-2 min-h-[44px]';
+const checkboxClasses = `h-5 w-5 rounded border-gray-400 accent-purple-500 ${focusRingClasses}`;
 
 const SCENARIO_PRESETS: ScenarioPreset[] = [
   {
@@ -744,7 +746,7 @@ export default function HomeClient() {
               aria-hidden="true"
               className="inline-block h-3 w-3 rounded-full bg-purple-500 ring-2 ring-purple-400/50"
             />
-            <Link href={'/' as Route} className="outline-none focus:underline">
+            <Link href={'/' as Route} className={cx('rounded-sm', focusRingClasses)}>
               FeePilot
             </Link>
           </h1>
@@ -809,6 +811,7 @@ export default function HomeClient() {
                     pillButton,
                     'px-4 py-2 text-sm',
                     'border-dashed',
+                    focusRingClasses,
                   )}
                   title={preset.description}
                   onClick={() =>
@@ -842,10 +845,11 @@ export default function HomeClient() {
                     <Link
                       href={currentPlatformDoc.href}
                       className={cx(
-                        'underline decoration-dotted',
+                        'underline decoration-dotted rounded-sm',
                         isLight
                           ? 'text-purple-700 hover:text-purple-900'
                           : 'text-purple-300 hover:text-purple-100',
+                        focusRingClasses,
                       )}
                     >
                       here
@@ -886,7 +890,7 @@ export default function HomeClient() {
                     type="checkbox"
                     checked={etsyOffsiteAds}
                     onChange={(e) => setEtsyOffsiteAds(e.target.checked)}
-                    className="h-5 w-5 rounded border-gray-400 accent-purple-500"
+                    className={checkboxClasses}
                   />
                   <span>Offsite Ads applied (15%)</span>
                 </label>
@@ -955,7 +959,7 @@ export default function HomeClient() {
                           setPromotedPct(defaultPct);
                         }
                       }}
-                      className="h-5 w-5 rounded border-gray-400 accent-purple-500"
+                      className={checkboxClasses}
                     />
                     <span>Promoted listing</span>
                   </label>
@@ -969,7 +973,7 @@ export default function HomeClient() {
                         max="100"
                         inputMode="decimal"
                         className={cx(
-                          'w-24 rounded-lg border bg-transparent px-3 py-2.5 text-base outline-none min-h-[44px]',
+                          `w-24 rounded-lg border bg-transparent px-3 py-2.5 text-base outline-none min-h-[44px] ${focusRingClasses}`,
                           controlBorder,
                         )}
                         value={promotedPct}
@@ -1271,10 +1275,11 @@ export default function HomeClient() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cx(
-                  'inline-flex items-center gap-1 text-xs',
+                  'inline-flex items-center gap-1 text-xs rounded-sm',
                   isLight
                     ? 'text-gray-500 hover:text-purple-700'
                     : 'text-gray-400 hover:text-purple-300',
+                  focusRingClasses,
                 )}
               >
                 View official {PLATFORM_LABELS[inputs.platform]} fees →
@@ -1289,8 +1294,9 @@ export default function HomeClient() {
             type="button"
             onClick={() => setShowBreakdown((v) => !v)}
             className={cx(
-              'flex w-full items-center justify-between px-5 py-4 text-left min-h-[52px]',
+              'flex w-full items-center justify-between px-5 py-4 text-left min-h-[52px] rounded-2xl',
               subtleText,
+              focusRingClasses,
             )}
             aria-expanded={showBreakdown}
           >
@@ -1444,7 +1450,9 @@ export default function HomeClient() {
                   onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
                   className={cx(
                     'flex w-full items-center justify-between px-5 py-4 text-left min-h-[52px]',
+                    idx === 0 && 'rounded-t-2xl',
                     subtleText,
+                    focusRingClasses,
                   )}
                   aria-expanded={openFaqIndex === idx}
                 >

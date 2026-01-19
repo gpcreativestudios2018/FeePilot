@@ -108,9 +108,10 @@ export default function ComparisonTableSection({
           onClick={onExportCsv}
           className={cx(
             'shrink-0 rounded-full px-5 py-2.5 text-base select-none border min-h-[44px] inline-flex items-center justify-center',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2',
             isLight
-              ? 'border-purple-800/70 text-black hover:bg-purple-50'
-              : 'border-purple-600/50 text-white hover:bg-white/5',
+              ? 'border-purple-800/70 text-black hover:bg-purple-50 focus-visible:ring-offset-white'
+              : 'border-purple-600/50 text-white hover:bg-white/5 focus-visible:ring-offset-black',
           )}
           aria-label="Export comparison as CSV"
           title="Export comparison as CSV"

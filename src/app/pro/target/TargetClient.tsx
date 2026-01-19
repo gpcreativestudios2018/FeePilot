@@ -16,6 +16,12 @@ import { STATE_RATES, type USStateCode, formatPct } from '@/data/us-tax';
 import SolvingForPill from './SolvingForPill';
 import FeeOverridesDev, { type FeeOverrides } from './FeeOverridesDev';
 
+// Consistent focus ring style for accessibility
+const focusRingClass =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-black';
+const inputClass = `w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none ${focusRingClass}`;
+const checkboxClass = `h-4 w-4 rounded border-gray-400 accent-purple-500 ${focusRingClass}`;
+
 // ------- Inline presets helpers (avoid '@/lib/presets' import) -------
 type TargetPreset = {
   platform: string;
@@ -406,7 +412,7 @@ function LocalPresetsControls(props: {
           <input
             type="text"
             placeholder="e.g. Mercari 30% margin"
-            className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+            className={inputClass}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -422,7 +428,7 @@ function LocalPresetsControls(props: {
             Saved presets
           </span>
           <select
-            className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+            className={inputClass}
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
           >
@@ -939,7 +945,7 @@ export default function ReverseCalcPage() {
               Platform
             </span>
             <select
-              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              className={inputClass}
               value={platform}
               onChange={(e) => {
                 setPlatform(e.target.value as PlatformKey);
@@ -963,7 +969,7 @@ export default function ReverseCalcPage() {
               type="number"
               inputMode="decimal"
               placeholder="e.g. 25"
-              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              className={inputClass}
               value={targetProfit}
               onChange={(e) => setTargetProfit(e.target.value)}
             />
@@ -981,7 +987,7 @@ export default function ReverseCalcPage() {
               type="number"
               inputMode="decimal"
               placeholder="e.g. 30"
-              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              className={inputClass}
               value={targetMarginPct}
               onChange={(e) => setTargetMarginPct(e.target.value)}
             />
@@ -996,7 +1002,7 @@ export default function ReverseCalcPage() {
               type="number"
               inputMode="decimal"
               placeholder="e.g. 12"
-              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              className={inputClass}
               value={cogs}
               onChange={(e) => setCogs(e.target.value)}
             />
@@ -1011,7 +1017,7 @@ export default function ReverseCalcPage() {
               type="number"
               inputMode="decimal"
               placeholder="e.g. 5"
-              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              className={inputClass}
               value={shipCost}
               onChange={(e) => setShipCost(e.target.value)}
             />
@@ -1026,7 +1032,7 @@ export default function ReverseCalcPage() {
               type="number"
               inputMode="decimal"
               placeholder="e.g. 10"
-              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              className={inputClass}
               value={discountPct}
               onChange={(e) => setDiscountPct(e.target.value)}
             />
@@ -1041,7 +1047,7 @@ export default function ReverseCalcPage() {
               type="number"
               inputMode="decimal"
               placeholder="e.g. 8"
-              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              className={inputClass}
               value={shipCharge}
               onChange={(e) => setShipCharge(e.target.value)}
             />
@@ -1053,6 +1059,7 @@ export default function ReverseCalcPage() {
               type="checkbox"
               checked={includeTax}
               onChange={(e) => setIncludeTax(e.target.checked)}
+              className={checkboxClass}
             />
             <span className="text-sm text-gray-600 dark:text-gray-300">
               Include tax in Buyer total only
@@ -1065,7 +1072,7 @@ export default function ReverseCalcPage() {
               State (fills base rate)
             </span>
             <select
-              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              className={inputClass}
               value={taxState}
               onChange={(e) => onSelectState(e.target.value)}
             >
@@ -1093,7 +1100,7 @@ export default function ReverseCalcPage() {
               type="number"
               inputMode="decimal"
               placeholder="e.g. 7.25"
-              className="w-full rounded-xl border border-purple-600/40 bg-transparent px-3 py-2 outline-none"
+              className={inputClass}
               value={taxPct}
               onChange={(e) => setTaxPct(e.target.value)}
             />
@@ -1141,7 +1148,7 @@ export default function ReverseCalcPage() {
           <button
             type="button"
             onClick={handleCopyPrice}
-            className="cursor-pointer rounded-lg px-1 text-3xl font-semibold hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600/40"
+            className={`cursor-pointer rounded-lg px-1 text-3xl font-semibold hover:opacity-90 ${focusRingClass}`}
             title="Click to copy suggested price"
             aria-label="Copy suggested price"
           >
