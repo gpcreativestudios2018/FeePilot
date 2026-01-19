@@ -853,11 +853,12 @@ export default function HomeClient() {
           </div>
 
           <div className="grid grid-cols-1 gap-5 sm:gap-4 sm:grid-cols-3">
+            {/* Platform selector - first in tab order */}
             <div>
               <label
                 htmlFor="input-platform"
                 className={cx(
-                  'mb-2 flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between',
+                  'mb-2 flex flex-col gap-1 text-sm',
                   subtleText,
                 )}
               >
@@ -865,23 +866,6 @@ export default function HomeClient() {
                   Platform
                   <InfoTooltip tip="Different marketplaces charge different fees. Select where you plan to sell." isLight={isLight} id="tip-platform" />
                 </span>
-                {currentPlatformDoc && (
-                  <span className="text-xs sm:text-[11px]">
-                    {currentPlatformDoc.name} fee guide{' '}
-                    <Link
-                      href={currentPlatformDoc.href}
-                      className={cx(
-                        'underline decoration-dotted rounded-sm',
-                        isLight
-                          ? 'text-purple-700 hover:text-purple-900'
-                          : 'text-purple-300 hover:text-purple-100',
-                        focusRingClasses,
-                      )}
-                    >
-                      here
-                    </Link>
-                  </span>
-                )}
               </label>
               <select
                 id="input-platform"
@@ -905,117 +889,27 @@ export default function HomeClient() {
               <p className={cx('mt-2 text-xs', isLight ? 'text-gray-500' : 'text-gray-400')}>
                 Press 1-6 to switch platforms • Esc to reset
               </p>
-              {/* Etsy-specific offsite ads toggle */}
-              {inputs.platform === 'etsy' && (
-                <label
-                  className={cx(
-                    checkboxLabelClasses,
-                    'mt-3',
-                    subtleText,
-                  )}
-                >
-                  <input
-                    type="checkbox"
-                    checked={etsyOffsiteAds}
-                    onChange={(e) => setEtsyOffsiteAds(e.target.checked)}
-                    className={checkboxClasses}
-                  />
-                  <span>Offsite Ads applied (15%)</span>
-                </label>
-              )}
-              {/* eBay-specific category dropdown */}
-              {inputs.platform === 'ebay' && RULES.ebay.categories && (
-                <div className="mt-4">
-                  <label className={cx('mb-2 block text-sm', subtleText)}>
-                    Category
-                  </label>
-                  <select
+              {/* Fee guide link - moved outside label for cleaner tab order */}
+              {currentPlatformDoc && (
+                <p className={cx('mt-2 text-xs sm:text-[11px]', subtleText)}>
+                  {currentPlatformDoc.name} fee guide{' '}
+                  <Link
+                    href={currentPlatformDoc.href}
                     className={cx(
-                      smallSelectClasses,
-                      controlBorder,
-                    )}
-                    value={ebayCategory}
-                    onChange={(e) => setEbayCategory(e.target.value as EbayCategoryKey)}
-                  >
-                    {Object.entries(RULES.ebay.categories).map(([key, cat]) => (
-                      <option key={key} value={key} className={selectOption}>
-                        {cat.name} ({cat.marketplacePct}%)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {/* StockX-specific seller level dropdown */}
-              {inputs.platform === 'stockx' && RULES.stockx.levels && (
-                <div className="mt-4">
-                  <label className={cx('mb-2 block text-sm', subtleText)}>
-                    Seller Level
-                  </label>
-                  <select
-                    className={cx(
-                      smallSelectClasses,
-                      controlBorder,
-                    )}
-                    value={stockxLevel}
-                    onChange={(e) => setStockxLevel(e.target.value as StockXLevelKey)}
-                  >
-                    {Object.entries(RULES.stockx.levels).map(([key, level]) => (
-                      <option key={key} value={key} className={selectOption}>
-                        {level.name} ({level.marketplacePct}%)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {/* Promoted listing toggle (eBay and Etsy) */}
-              {(inputs.platform === 'ebay' || inputs.platform === 'etsy') && (
-                <div className="mt-4">
-                  <label
-                    className={cx(
-                      checkboxLabelClasses,
-                      subtleText,
+                      'underline decoration-dotted rounded-sm',
+                      isLight
+                        ? 'text-purple-700 hover:text-purple-900'
+                        : 'text-purple-300 hover:text-purple-100',
+                      focusRingClasses,
                     )}
                   >
-                    <input
-                      type="checkbox"
-                      checked={promotedEnabled}
-                      onChange={(e) => {
-                        setPromotedEnabled(e.target.checked);
-                        // Reset to platform default when enabling
-                        if (e.target.checked) {
-                          const defaultPct = RULES[inputs.platform].promotedPctDefault ?? 5;
-                          setPromotedPct(defaultPct);
-                        }
-                      }}
-                      className={checkboxClasses}
-                    />
-                    <span>Promoted listing</span>
-                  </label>
-                  {promotedEnabled && (
-                    <div className="mt-3 flex items-center gap-3">
-                      <label className={cx('text-sm', subtleText)}>Ad rate:</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
-                        inputMode="decimal"
-                        className={cx(
-                          `w-24 rounded-lg border bg-transparent px-3 py-2.5 text-base outline-none min-h-[44px] ${focusRingClasses}`,
-                          controlBorder,
-                        )}
-                        value={promotedPct}
-                        onChange={(e) =>
-                          setPromotedPct(clamp(parseNum(e.target.value), 0, 100))
-                        }
-                      />
-                      <span className={cx('text-sm', subtleText)}>%</span>
-                    </div>
-                  )}
-                </div>
+                    here
+                  </Link>
+                </p>
               )}
             </div>
 
+            {/* Item price - second in tab order */}
             <div>
               <label htmlFor="input-price" className={cx('mb-2 block text-sm', subtleText)}>
                 Item price ($)
@@ -1044,6 +938,7 @@ export default function HomeClient() {
               />
             </div>
 
+            {/* Item cost - third in tab order */}
             <div>
               <label htmlFor="input-cogs" className={cx('mb-2 block text-sm', subtleText)}>
                 Item cost ($)
@@ -1072,6 +967,7 @@ export default function HomeClient() {
               />
             </div>
 
+            {/* Shipping cost - fourth in tab order */}
             <div>
               <label htmlFor="input-shipcost" className={cx('mb-2 block text-sm', subtleText)}>
                 Shipping cost ($)
@@ -1100,6 +996,7 @@ export default function HomeClient() {
               />
             </div>
 
+            {/* Discount - fifth in tab order */}
             <div>
               <label htmlFor="input-discount" className={cx('mb-2 block text-sm', subtleText)}>
                 Discount (%)
@@ -1128,6 +1025,7 @@ export default function HomeClient() {
               />
             </div>
 
+            {/* Shipping charged to buyer - sixth in tab order */}
             <div>
               <label htmlFor="input-shipcharge" className={cx('mb-2 block text-sm', subtleText)}>
                 Shipping charged to buyer ($)
@@ -1156,6 +1054,7 @@ export default function HomeClient() {
               />
             </div>
 
+            {/* Tax collected - seventh in tab order */}
             <div>
               <label htmlFor="input-tax" className={cx('mb-2 block text-sm', subtleText)}>
                 Tax collected ($)
@@ -1184,6 +1083,126 @@ export default function HomeClient() {
               />
             </div>
           </div>
+
+          {/* Platform-specific options - after main inputs for logical tab order */}
+          {(inputs.platform === 'etsy' || inputs.platform === 'ebay' || inputs.platform === 'stockx') && (
+            <div className={cx('mt-5 pt-5 border-t', panelBorder)}>
+              <p className={cx('mb-3 text-sm font-medium', subtleText)}>
+                {PLATFORM_LABELS[inputs.platform]} options
+              </p>
+              <div className="flex flex-wrap gap-4 items-start">
+                {/* Etsy-specific offsite ads toggle */}
+                {inputs.platform === 'etsy' && (
+                  <label
+                    className={cx(
+                      checkboxLabelClasses,
+                      subtleText,
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={etsyOffsiteAds}
+                      onChange={(e) => setEtsyOffsiteAds(e.target.checked)}
+                      className={checkboxClasses}
+                    />
+                    <span>Offsite Ads applied (15%)</span>
+                  </label>
+                )}
+                {/* eBay-specific category dropdown */}
+                {inputs.platform === 'ebay' && RULES.ebay.categories && (
+                  <label className="block">
+                    <span className={cx('mb-1 block text-sm', subtleText)}>
+                      Category
+                    </span>
+                    <select
+                      className={cx(
+                        smallSelectClasses,
+                        controlBorder,
+                      )}
+                      value={ebayCategory}
+                      onChange={(e) => setEbayCategory(e.target.value as EbayCategoryKey)}
+                    >
+                      {Object.entries(RULES.ebay.categories).map(([key, cat]) => (
+                        <option key={key} value={key} className={selectOption}>
+                          {cat.name} ({cat.marketplacePct}%)
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {/* StockX-specific seller level dropdown */}
+                {inputs.platform === 'stockx' && RULES.stockx.levels && (
+                  <label className="block">
+                    <span className={cx('mb-1 block text-sm', subtleText)}>
+                      Seller Level
+                    </span>
+                    <select
+                      className={cx(
+                        smallSelectClasses,
+                        controlBorder,
+                      )}
+                      value={stockxLevel}
+                      onChange={(e) => setStockxLevel(e.target.value as StockXLevelKey)}
+                    >
+                      {Object.entries(RULES.stockx.levels).map(([key, level]) => (
+                        <option key={key} value={key} className={selectOption}>
+                          {level.name} ({level.marketplacePct}%)
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {/* Promoted listing toggle (eBay and Etsy) */}
+                {(inputs.platform === 'ebay' || inputs.platform === 'etsy') && (
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label
+                      className={cx(
+                        checkboxLabelClasses,
+                        subtleText,
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={promotedEnabled}
+                        onChange={(e) => {
+                          setPromotedEnabled(e.target.checked);
+                          // Reset to platform default when enabling
+                          if (e.target.checked) {
+                            const defaultPct = RULES[inputs.platform].promotedPctDefault ?? 5;
+                            setPromotedPct(defaultPct);
+                          }
+                        }}
+                        className={checkboxClasses}
+                      />
+                      <span>Promoted listing</span>
+                    </label>
+                    {promotedEnabled && (
+                      <div className="flex items-center gap-2">
+                        <label htmlFor="input-promoted-rate" className={cx('text-sm', subtleText)}>Ad rate:</label>
+                        <input
+                          id="input-promoted-rate"
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          inputMode="decimal"
+                          className={cx(
+                            `w-20 rounded-lg border bg-transparent px-3 py-2 text-base outline-none min-h-[44px] ${focusRingClasses}`,
+                            controlBorder,
+                          )}
+                          value={promotedPct}
+                          onChange={(e) =>
+                            setPromotedPct(clamp(parseNum(e.target.value), 0, 100))
+                          }
+                        />
+                        <span className={cx('text-sm', subtleText)}>%</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Empty state when no price entered */}
