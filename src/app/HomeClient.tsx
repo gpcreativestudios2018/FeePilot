@@ -745,6 +745,21 @@ export default function HomeClient() {
 
   return (
     <div className={cx('min-h-dvh', pageBgText)}>
+      {/* Skip to content link for keyboard/screen reader users */}
+      <a
+        href="#calculator"
+        className={cx(
+          'sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50',
+          'rounded-lg px-4 py-2 font-medium',
+          isLight
+            ? 'bg-purple-600 text-white focus:ring-2 focus:ring-purple-400'
+            : 'bg-purple-500 text-white focus:ring-2 focus:ring-purple-300',
+          focusRingClasses,
+        )}
+      >
+        Skip to calculator
+      </a>
+
       <header className="mx-auto max-w-6xl px-4 py-6">
         <div className="flex items-center justify-between">
           <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight">
@@ -803,7 +818,7 @@ export default function HomeClient() {
         </section>
 
         {/* Inputs */}
-        <section className={cx('rounded-2xl border p-5 sm:p-6', panelBorder)}>
+        <section id="calculator" className={cx('rounded-2xl border p-5 sm:p-6', panelBorder)}>
           {/* Scenario presets row */}
           <div className="mb-5 flex flex-wrap items-center gap-3">
             <p className={cx('text-sm sm:text-sm', subtleText)}>
