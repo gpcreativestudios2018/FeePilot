@@ -84,9 +84,39 @@ export type FeeRule = {
   lastVerified?: string;
 };
 
+/**
+ * Fee rules for each platform.
+ *
+ * PAYMENT PROCESSING NOTES:
+ * -------------------------
+ * Payment processing fees vary by platform and region. The rates below are for US sellers.
+ *
+ * - Etsy: Payment processing (3% + $0.25) is the US rate via Etsy Payments.
+ *   International rates vary: UK (4% + £0.20), EU (4% + €0.30), etc.
+ *   All Etsy shops must use Etsy Payments in supported countries.
+ *
+ * - eBay: As of 2022, Managed Payments is mandatory for all sellers.
+ *   Payment processing is now bundled into the Final Value Fee (no separate line item).
+ *   The $0.30 fixed fee per order remains. International rates may vary.
+ *
+ * - Mercari: Fee structure changed in late 2023. Previously was a flat 10% selling fee.
+ *   Now split into 10% marketplace fee + 2.9% + $0.50 payment processing.
+ *   This matches current rates as of January 2025.
+ *
+ * - Poshmark: Unique model - all fees are bundled into the flat/tiered structure.
+ *   No separate payment processing fee. Poshmark handles payment internally.
+ *
+ * - StockX: Payment processing (3%) is separate from the seller level commission.
+ *   Both buyer and seller pay fees on StockX.
+ *
+ * - Depop: Payment processing (3.3% + $0.45) is for Depop Payments (US).
+ *   PayPal transactions may have different rates.
+ */
 export const RULES: Record<PlatformKey, FeeRule> = {
   etsy: {
     // Source: https://www.etsy.com/legal/fees/
+    // Payment processing: 3% + $0.25 is the US rate via Etsy Payments.
+    // International rates vary by country (UK: 4% + £0.20, EU: 4% + €0.30, etc.)
     marketplacePct: 6.5,
     paymentPct: 3.0,
     paymentFixed: 0.25,
@@ -98,6 +128,8 @@ export const RULES: Record<PlatformKey, FeeRule> = {
   },
   stockx: {
     // Source: https://stockx.com/about/selling/
+    // Payment processing (3%) is charged separately from seller level commission.
+    // Both buyers and sellers pay fees on StockX transactions.
     levels: {
       level1: { name: 'Level 1', marketplacePct: 10 },
       level2: { name: 'Level 2', marketplacePct: 9.5 },
@@ -113,6 +145,10 @@ export const RULES: Record<PlatformKey, FeeRule> = {
   },
   ebay: {
     // Source: https://www.ebay.com/sellercenter/selling/selling-fees
+    // IMPORTANT: As of 2022, Managed Payments is mandatory for all eBay sellers.
+    // Payment processing is now bundled into the Final Value Fee - no separate % line item.
+    // Only the $0.30 per-order fixed fee remains as a separate charge.
+    // The category percentages below already include payment processing.
     categories: {
       most: { name: 'Most categories', marketplacePct: 13.25 },
       clothing: { name: 'Clothing & Accessories', marketplacePct: 12.9 },
@@ -122,14 +158,16 @@ export const RULES: Record<PlatformKey, FeeRule> = {
     },
     defaultCategory: 'most',
     marketplacePct: 13.25, // fallback for comparison table
-    paymentPct: 0,
-    paymentFixed: 0.3,
+    paymentPct: 0, // bundled into Final Value Fee (Managed Payments)
+    paymentFixed: 0.3, // per-order fixed fee still applies
     promotedPctDefault: 5, // eBay Promoted Listings: typically 2-15%, default 5%
     sourceUrl: 'https://www.ebay.com/sellercenter/selling/selling-fees',
     lastVerified: '2025-01-14',
   },
   depop: {
     // Source: https://www.depop.com/sellingfees/
+    // Payment processing (3.3% + $0.45) is for Depop Payments in the US.
+    // PayPal transactions may have different rates. UK rates also differ.
     marketplacePct: 10,
     paymentPct: 3.3,
     paymentFixed: 0.45,
@@ -138,6 +176,10 @@ export const RULES: Record<PlatformKey, FeeRule> = {
   },
   mercari: {
     // Source: https://www.mercari.com/us/help_center/topics/selling/fees/
+    // Fee structure changed in late 2023:
+    // - Previously: flat 10% selling fee (all-inclusive)
+    // - Now: 10% marketplace fee + 2.9% + $0.50 payment processing (separate)
+    // This matches current rates as of January 2025.
     marketplacePct: 10,
     paymentPct: 2.9,
     paymentFixed: 0.5,
@@ -147,11 +189,14 @@ export const RULES: Record<PlatformKey, FeeRule> = {
   poshmark: {
     // Source: https://poshmark.com/posh_protect
     // Tiered: flat $2.95 under $15, 20% for $15+
+    // Unique model: ALL fees are bundled into the flat/tiered structure.
+    // No separate payment processing fee - Poshmark handles payments internally.
+    // This is why paymentPct and paymentFixed are both 0.
     marketplacePct: 20,
     flatFeeThreshold: 15,
     flatFee: 2.95,
-    paymentPct: 0,
-    paymentFixed: 0,
+    paymentPct: 0, // bundled into Poshmark's fee structure
+    paymentFixed: 0, // no separate payment fee
     sourceUrl: 'https://poshmark.com/posh_protect',
     lastVerified: '2025-01-14',
   },

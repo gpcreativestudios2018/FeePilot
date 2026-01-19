@@ -4,7 +4,7 @@
 
 **Started:** January 14, 2025  
 **Last Updated:** January 14, 2025  
-**Progress:** 34 / 87 tasks complete
+**Progress:** 35 / 87 tasks complete
 
 ---
 
@@ -29,7 +29,7 @@
 - [x] Implement StockX seller level tiers ✅ 2025-01-14
 - [x] Implement Etsy offsite ads fee (12-15% when applicable) ✅ 2025-01-14
 - [x] Add promoted listings fee option (eBay, Etsy) ✅ 2025-01-14
-- [ ] Add payment processing variations by platform
+- [x] Add payment processing variations by platform ✅ 2025-01-18
 
 ### 1.3 Code Refactoring
 - [ ] Split HomeClient.tsx into smaller components
