@@ -5,7 +5,7 @@
 - **Platform:** Web
 - **Tech stack:** Next.js / React / TypeScript / Tailwind CSS
 - **Backend:** None (static calculations)
-- **Status:** In Development — 36/87 tasks complete (41%)
+- **Status:** In Development — 37/88 tasks complete (42%)
 
 ## Project Structure
 ```
@@ -32,7 +32,7 @@ FeePilot-Web/
 - [x] Phases 2-7 partially complete (see ROADMAP.md)
 
 ## In Progress
-- [ ] Continuing roadmap to gold standard (41% complete)
+- [ ] Continuing roadmap to gold standard (42% complete)
 
 ## Known Issues / Bugs
 - None documented
@@ -44,7 +44,7 @@ FeePilot-Web/
 
 ## Key Files
 - `src/` — Main application code
-- `ROADMAP.md` — 87-item roadmap to gold standard
+- `ROADMAP.md` — 88-item roadmap to gold standard
 - `CHANGELOG.md` — Version history
 
 ## Dependencies / Packages
@@ -63,5 +63,5 @@ FeePilot-Web/
 - What's next: Continue roadmap phases
 
 ### March 13, 2026
-- What was done: Updated fees.ts with verified 2026 fee data — eBay categories/rates, Mercari (no payment fees), Depop (0% US/UK marketplace fee), StockX (5 Flex levels), Etsy/Poshmark lastVerified
+- What was done: Updated fees.ts with verified 2026 fee data — eBay categories/rates, Mercari (no payment fees), Depop (0% US/UK marketplace fee), StockX (5 Flex levels), Etsy/Poshmark lastVerified. Updated ROADMAP.md with fee audit task. Rewrote Playwright calculation tests (33 passing) to match new fee values.
 - What's next: Continue roadmap phases
