@@ -34,7 +34,7 @@ export const PLATFORM_LABELS: Record<PlatformKey, string> = {
 };
 
 /** eBay category keys */
-export type EbayCategoryKey = 'most' | 'clothing' | 'sneakers' | 'electronics' | 'books';
+export type EbayCategoryKey = 'most' | 'handbags_jewelry_watches' | 'guitars' | 'trading_cards_electronics' | 'books';
 
 /** eBay category config */
 export type EbayCategory = {
@@ -43,7 +43,7 @@ export type EbayCategory = {
 };
 
 /** StockX seller level keys */
-export type StockXLevelKey = 'level1' | 'level2' | 'level3' | 'level4';
+export type StockXLevelKey = 'level1' | 'level2' | 'level3' | 'level4' | 'level5';
 
 /** StockX seller level config */
 export type StockXLevel = {
@@ -99,9 +99,8 @@ export type FeeRule = {
  *   Payment processing is now bundled into the Final Value Fee (no separate line item).
  *   The $0.30 fixed fee per order remains. International rates may vary.
  *
- * - Mercari: Fee structure changed in late 2023. Previously was a flat 10% selling fee.
- *   Now split into 10% marketplace fee + 2.9% + $0.50 payment processing.
- *   This matches current rates as of January 2025.
+ * - Mercari: As of January 2026, payment processing fees were eliminated for sellers.
+ *   Seller fee is a flat 10% marketplace fee only. Buyers pay a 3.6% protection fee separately.
  *
  * - Poshmark: Unique model - all fees are bundled into the flat/tiered structure.
  *   No separate payment processing fee. Poshmark handles payment internally.
@@ -124,67 +123,65 @@ export const RULES: Record<PlatformKey, FeeRule> = {
     offsiteAdsPct: 15, // 15% for shops under $10k/year, 12% for $10k+
     promotedPctDefault: 10, // Etsy Ads: typically 1-30%, default 10%
     sourceUrl: 'https://www.etsy.com/legal/fees/',
-    lastVerified: '2025-01-14',
+    lastVerified: '2026-03-13',
   },
   stockx: {
     // Source: https://stockx.com/about/selling/
-    // Payment processing (3%) is charged separately from seller level commission.
-    // Both buyers and sellers pay fees on StockX transactions.
+    // Flex fulfillment fee ($5) removed March 2026; Flex fees increased by 2% across all levels.
+    // Standard (non-Flex) seller shipping fee is $5 US. Payment processing 3% is separate.
     levels: {
-      level1: { name: 'Level 1', marketplacePct: 10 },
-      level2: { name: 'Level 2', marketplacePct: 9.5 },
-      level3: { name: 'Level 3', marketplacePct: 9 },
-      level4: { name: 'Level 4', marketplacePct: 8 },
+      level1: { name: 'Level 1', marketplacePct: 9 },
+      level2: { name: 'Level 2', marketplacePct: 8.5 },
+      level3: { name: 'Level 3', marketplacePct: 8 },
+      level4: { name: 'Level 4', marketplacePct: 7.5 },
+      level5: { name: 'Level 5', marketplacePct: 7 },
     },
     defaultLevel: 'level1',
-    marketplacePct: 10, // fallback for comparison table
+    marketplacePct: 9, // fallback for comparison table
     paymentPct: 3,
     paymentFixed: 0,
     sourceUrl: 'https://stockx.com/about/selling/',
-    lastVerified: '2025-01-14',
+    lastVerified: '2026-03-13',
   },
   ebay: {
-    // Source: https://www.ebay.com/sellercenter/selling/selling-fees
+    // Source: https://www.ebay.com/sellercenter/selling/selling-fees (2026 rates)
     // IMPORTANT: As of 2022, Managed Payments is mandatory for all eBay sellers.
     // Payment processing is now bundled into the Final Value Fee - no separate % line item.
-    // Only the $0.30 per-order fixed fee remains as a separate charge.
     // The category percentages below already include payment processing.
     categories: {
-      most: { name: 'Most categories', marketplacePct: 13.25 },
-      clothing: { name: 'Clothing & Accessories', marketplacePct: 12.9 },
-      sneakers: { name: 'Sneakers (authenticated)', marketplacePct: 8.0 },
-      electronics: { name: 'Electronics', marketplacePct: 14.6 },
-      books: { name: 'Books & Media', marketplacePct: 14.6 },
+      most: { name: 'Most categories', marketplacePct: 13.6 },
+      handbags_jewelry_watches: { name: 'Handbags, Jewelry & Watches', marketplacePct: 15 },
+      guitars: { name: 'Guitars & Basses', marketplacePct: 6.6 },
+      trading_cards_electronics: { name: 'Trading Cards & Electronics', marketplacePct: 13.6 },
+      books: { name: 'Books, DVDs & Music', marketplacePct: 14.6 },
     },
     defaultCategory: 'most',
-    marketplacePct: 13.25, // fallback for comparison table
+    marketplacePct: 13.6, // fallback for comparison table
     paymentPct: 0, // bundled into Final Value Fee (Managed Payments)
-    paymentFixed: 0.3, // per-order fixed fee still applies
+    paymentFixed: 0.4, // $0.40 per-order fee for orders >$10 (most common case); $0.30 for orders ≤$10
     promotedPctDefault: 5, // eBay Promoted Listings: typically 2-15%, default 5%
     sourceUrl: 'https://www.ebay.com/sellercenter/selling/selling-fees',
-    lastVerified: '2025-01-14',
+    lastVerified: '2026-03-13',
   },
   depop: {
     // Source: https://www.depop.com/sellingfees/
-    // Payment processing (3.3% + $0.45) is for Depop Payments in the US.
-    // PayPal transactions may have different rates. UK rates also differ.
-    marketplacePct: 10,
+    // As of July 2024, Depop removed the 10% selling fee for US and UK sellers on new/updated listings.
+    // International sellers still pay 10%. Only payment processing fees apply for US/UK sellers.
+    marketplacePct: 0,
     paymentPct: 3.3,
     paymentFixed: 0.45,
     sourceUrl: 'https://www.depop.com/sellingfees/',
-    lastVerified: '2025-01-14',
+    lastVerified: '2026-03-13',
   },
   mercari: {
     // Source: https://www.mercari.com/us/help_center/topics/selling/fees/
-    // Fee structure changed in late 2023:
-    // - Previously: flat 10% selling fee (all-inclusive)
-    // - Now: 10% marketplace fee + 2.9% + $0.50 payment processing (separate)
-    // This matches current rates as of January 2025.
+    // As of January 2026, Mercari eliminated payment processing fees for sellers.
+    // Buyers pay a 3.6% protection fee separately. Seller fee is a flat 10%.
     marketplacePct: 10,
-    paymentPct: 2.9,
-    paymentFixed: 0.5,
+    paymentPct: 0,
+    paymentFixed: 0,
     sourceUrl: 'https://www.mercari.com/us/help_center/topics/selling/fees/',
-    lastVerified: '2025-01-14',
+    lastVerified: '2026-03-13',
   },
   poshmark: {
     // Source: https://poshmark.com/posh_protect
@@ -198,8 +195,8 @@ export const RULES: Record<PlatformKey, FeeRule> = {
     paymentPct: 0, // bundled into Poshmark's fee structure
     paymentFixed: 0, // no separate payment fee
     sourceUrl: 'https://poshmark.com/posh_protect',
-    lastVerified: '2025-01-14',
+    lastVerified: '2026-03-13',
   },
 };
 
-export const RULES_UPDATED_AT = '2025-01-14';
+export const RULES_UPDATED_AT = '2026-03-13';
