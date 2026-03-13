@@ -61,3 +61,7 @@ FeePilot-Web/
 ### February 26, 2026
 - What was done: Created claude.md by scanning project
 - What's next: Continue roadmap phases
+
+### March 13, 2026
+- What was done: Updated fees.ts with verified 2026 fee data — eBay categories/rates, Mercari (no payment fees), Depop (0% US/UK marketplace fee), StockX (5 Flex levels), Etsy/Poshmark lastVerified
+- What's next: Continue roadmap phases
